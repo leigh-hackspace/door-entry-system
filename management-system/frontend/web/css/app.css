@@ -1,0 +1,79 @@
+.btn {
+  --bs-btn-border-color: #ddd;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: #f5f5f5;
+}
+
+#app > .container {
+  background: var(--bs-body-bg);
+  box-shadow: 0 0 10px var(--bs-gray-500);
+  min-height: 100vh;
+  padding-bottom: 1rem;
+}
+
+header {
+  padding: 1rem 0;
+
+  h1 {
+    margin: 0;
+  }
+}
+
+.navbar {
+  border-bottom: solid 1px var(--bs-border-color);
+}
+
+.card {
+  box-shadow: 0 0 10px var(--bs-gray-500);
+}
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+.modal {
+  backdrop-filter: blur(3px);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.modal-content {
+  box-shadow: 0 0 10px var(--bs-gray-700);
+}
+
+.value-undefined {
+  background: repeating-linear-gradient(45deg, #f7f7f7, #f7f7f7 10px, #fbfbfb 10px, #fbfbfb 20px);
+}
+.value-null {
+  background: repeating-linear-gradient(45deg, #c7c7c7, #c7c7c7 10px, #cfcfcf 10px, #cfcfcf 20px);
+}
+
+.column-actions,
+.column-created,
+.column-updated {
+  width: 1%;
+}
+
+.tile {
+  background: var(--bs-red);
+  color: var(--bs-light);
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  text-decoration: none;
+  border-radius: 0.5rem;
+}
+.tile-number {
+  font-size: 4em;
+}

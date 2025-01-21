@@ -1,0 +1,17 @@
+[target.xtensa-esp32-none-elf]
+runner = "espflash flash --monitor -B 921600 --partition-table=partitions.csv"
+
+[env]
+ESP_LOG = "INFO"
+SSID = "SSID"
+PASSWORD = "PASSWORD"
+NOTIFY_URL = "http://10.3.1.20:8472/"
+ESP32_IP = "10.3.2.30"
+
+[build]
+rustflags = ["-C", "link-arg=-nostartfiles"]
+
+target = "xtensa-esp32-none-elf"
+
+[unstable]
+build-std = ["alloc", "core"]

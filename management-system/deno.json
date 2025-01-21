@@ -1,0 +1,25 @@
+{
+  "nodeModulesDir": "auto",
+  "workspace": [
+    "./common",
+    "./backend",
+    "./frontend"
+  ],
+  "tasks": {
+    "dev": "deno task -f frontend dev & deno task -f backend dev & deno task -f frontend serve",
+    "build": "deno task -f frontend build",
+    "start": "deno task -f frontend start & deno task -f backend start",
+    "push": "deno task -f backend push"
+  },
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "solid-js",
+    "lib": [
+      "ESNext",
+      "dom",
+      "dom.iterable",
+      "dom.asynciterable",
+      "deno.ns"
+    ]
+  }
+}

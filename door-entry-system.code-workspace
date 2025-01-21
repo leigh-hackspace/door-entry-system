@@ -1,0 +1,87 @@
+{
+  "folders": [
+    {
+      "path": "esp32-firmware"
+    },
+    {
+      "path": "management-system"
+    },
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "rust-analyzer.cargo.allTargets": false,
+    "rust-analyzer.cargo.target": "xtensa-esp32-none-elf",
+    "prettier.printWidth": 120,
+    "cSpell.words": [
+      "assoc",
+      "asynch",
+      "atqa",
+      "bleps",
+      "dhcpv",
+      "dialogs",
+      "dont",
+      "Eeuo",
+      "espflash",
+      "extglob",
+      "fatfs",
+      "gatt",
+      "gnused",
+      "heapless",
+      "ilike",
+      "mfrc",
+      "miso",
+      "mktemp",
+      "mosi",
+      "Mwdt",
+      "nixos",
+      "nixpkgs",
+      "nostartfiles",
+      "numtide",
+      "picklist",
+      "picoserve",
+      "pkgs",
+      "pname",
+      "reqa",
+      "rustflags",
+      "sass",
+      "sclk",
+      "shopt",
+      "smoltcp",
+      "solidjs",
+      "stdenv",
+      "timg",
+      "toggler",
+      "Uninit",
+      "Unsubscribable",
+      "valibot",
+      "wifi",
+      "xtensa"
+    ],
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "[typescriptreact]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "editor.formatOnSave": true,
+    "eslint.codeActionsOnSave.mode": "all",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "always",
+      "source.fixAll.ts": "always",
+      "source.organizeImports": "always"
+    },
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[nix]": {
+      "editor.defaultFormatter": "jnoortheen.nix-ide"
+    },
+    "deno.enable": true,
+    "terminal.integrated.environmentChangesRelaunch": true,
+    "[rust]": {
+      "editor.defaultFormatter": "rust-lang.rust-analyzer"
+    }
+  }
+}

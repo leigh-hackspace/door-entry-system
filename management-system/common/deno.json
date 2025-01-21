@@ -1,0 +1,8 @@
+{
+  "name": "@door-entry-management-system/common",
+  "exports": "./src/index.ts",
+  "imports": {
+    "ts-essentials": "npm:ts-essentials",
+    "valibot": "npm:valibot"
+  }
+}

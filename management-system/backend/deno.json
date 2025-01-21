@@ -1,0 +1,19 @@
+{
+  "name": "@door-entry-management-system/backend",
+  "exports": "./src/index.ts",
+  "tasks": {
+    "dev": "deno --env-file=../.env --watch --allow-env --allow-read --allow-net --cached-only src/index.ts",
+    "start": "deno --allow-env --allow-read --allow-net --cached-only src/index.ts",
+    "push": "drizzle-kit push"
+  },
+  "imports": {
+    "@types/jsonwebtoken": "npm:@types/jsonwebtoken@^9.0.7",
+    "drizzle-kit": "npm:drizzle-kit@^0.29.1",
+    "jsonwebtoken": "npm:jsonwebtoken@^9.0.2",
+    "pg": "npm:pg@^8.13.1",
+    "ts-essentials": "npm:ts-essentials",
+    "dotenv": "npm:dotenv",
+    "valibot": "npm:valibot",
+    "drizzle-orm": "npm:drizzle-orm"
+  }
+}
