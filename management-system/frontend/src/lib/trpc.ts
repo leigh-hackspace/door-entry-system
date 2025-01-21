@@ -19,7 +19,7 @@ export function getApiBaseUrl() {
   ) {
     return `http://${globalThis.location.hostname}:${parseInt(globalThis.location.port, 10) - 1}`;
   } else {
-    return globalThis.location.origin.replace("://", "://api.");
+    return globalThis.location.origin.replace("://", "://api-");
   }
 }
 
