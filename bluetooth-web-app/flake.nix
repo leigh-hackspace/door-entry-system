@@ -2,22 +2,19 @@
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
-  outputs =
-    { self, nixpkgs, flake-utils, ... }:
+  outputs = { self, nixpkgs, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
 
-    let
-      pkgs = import nixpkgs { inherit system; };
-    in
-    {
-      packages.default =
-        let
+      let pkgs = import nixpkgs { inherit system; };
+      in {
+        packages.default = let
           hashes = {
-            aarch64-darwin = "sha256-Lzu8tpfgUp06Oc6NF96YOgKYxQO7PiapabjO0kO+PZ0=";
-            x86_64-linux = "sha256-SXLbqo+M3rACCn3Eh07EqjLUutMCyqH0TaU3jdnPojc=";
+            aarch64-darwin =
+              "sha256-Lzu8tpfgUp06Oc6NF96YOgKYxQO7PiapabjO0kO+PZ0=";
+            x86_64-linux =
+              "sha256-SXLbqo+M3rACCn3Eh07EqjLUutMCyqH0TaU3jdnPojc=";
           };
-        in
-        pkgs.stdenv.mkDerivation {
+        in pkgs.stdenv.mkDerivation {
           pname = "door-entry-bluetooth-web-app";
           version = "0.1.0";
 
@@ -56,5 +53,5 @@
             rm -rf /tmp/build-inner
           '';
         };
-    });
+      });
 }
