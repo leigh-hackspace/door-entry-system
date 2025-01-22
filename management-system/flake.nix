@@ -2,32 +2,23 @@
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
-  outputs =
-    { self, nixpkgs, flake-utils, ... }:
+  outputs = { self, nixpkgs, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
 
-    let
-      pkgs = import nixpkgs { inherit system; };
-    in
-    {
-      devShell = pkgs.mkShell {
-        buildInputs = with pkgs; [
-          git
-          deno
-          gnused
-          sass
-          nixpkgs-fmt
-        ];
-      };
+      let pkgs = import nixpkgs { inherit system; };
+      in {
+        devShell = pkgs.mkShell {
+          buildInputs = with pkgs; [ git deno gnused sass nixpkgs-fmt ];
+        };
 
-      packages.default =
-        let
+        packages.default = let
           hashes = {
-            aarch64-darwin = "sha256-N4GxH/ItKUSatEq7NiMqgzvIS5bIZ8u9itKoVdhTz6g=";
-            x86_64-linux = "sha256-74eD29QkBUfI4bUvz9mmlUjnuy4JwpV3ZH8AK/MUvcU=";
+            aarch64-darwin =
+              "sha256-N4GxH/ItKUSatEq7NiMqgzvIS5bIZ8u9itKoVdhTz6g=";
+            x86_64-linux =
+              "sha256-k+T8oWnbFoZ0J66cKkx7mVw9ReqTrFFtRJzZxLNhc3w=";
           };
-        in
-        pkgs.stdenv.mkDerivation {
+        in pkgs.stdenv.mkDerivation {
           pname = "door-entry-management-system";
           version = "0.1.0";
 
@@ -68,5 +59,5 @@
             rm -rf /tmp/build-inner
           '';
         };
-    });
+      });
 }
