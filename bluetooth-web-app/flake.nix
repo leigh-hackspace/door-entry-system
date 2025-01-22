@@ -12,7 +12,7 @@
             aarch64-darwin =
               "sha256-Lzu8tpfgUp06Oc6NF96YOgKYxQO7PiapabjO0kO+PZ0=";
             x86_64-linux =
-              "sha256-oNMycMnE4nFlbNEQgw+K9DoPyPSvLJ7IcM3pCvz0TL0=";
+              "sha256-4rHeCYBFKWsHLJlyml3BdSRiaXayPVsXr0Jh8+yjYKA=";
           };
         in pkgs.stdenv.mkDerivation {
           pname = "door-entry-bluetooth-web-app";
@@ -32,11 +32,13 @@
           installPhase = ''
             shopt -s extglob
 
-            export HOME="$(mktemp -d)"
+            rm -rf /tmp/build-inner
 
-            mkdir -p /tmp/build-inner
+            mkdir -p /tmp/build-inner/home
             mv * /tmp/build-inner/
             cd /tmp/build-inner
+
+            export HOME="/tmp/build-inner/home"
 
             ${pkgs.deno}/bin/deno i
 
