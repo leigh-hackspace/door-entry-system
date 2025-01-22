@@ -13,7 +13,7 @@
       packages.default =
         let
           hashes = {
-            aarch64-darwin = "sha256-SXLbqo+M3rACCn3Eh07EqjLUutMCyqH0TaU3jdnPojc=";
+            aarch64-darwin = "sha256-Lzu8tpfgUp06Oc6NF96YOgKYxQO7PiapabjO0kO+PZ0=";
             x86_64-linux = "sha256-SXLbqo+M3rACCn3Eh07EqjLUutMCyqH0TaU3jdnPojc=";
           };
         in
@@ -37,7 +37,7 @@
 
             export HOME="$(mktemp -d)"
 
-            mkdir /tmp/build-inner
+            mkdir -p /tmp/build-inner
             mv * /tmp/build-inner/
             cd /tmp/build-inner
 
