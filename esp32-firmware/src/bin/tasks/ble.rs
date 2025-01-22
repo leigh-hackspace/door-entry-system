@@ -1,3 +1,8 @@
+use crate::{
+    services::common::{MainPublisher, SystemMessage},
+    utils::local_fs::LocalFs,
+};
+use alloc::borrow::ToOwned;
 use bleps::{
     ad_structure::{create_advertising_data, AdStructure, BR_EDR_NOT_SUPPORTED, LE_GENERAL_DISCOVERABLE},
     async_attribute_server::AttributeServer,
@@ -15,11 +20,16 @@ use esp_hal::{
     time,
 };
 use esp_println::println;
+use esp_storage::FlashStorage;
 use esp_wifi::ble::controller::BleConnector;
 use log::info;
 
+// TODO: Figure out how to use constants...
+static SERVICE_ID: &str = "10000000-0000-0000-0000-000000008472";
+static CHAR_ID: &str = "20000000-0000-0000-0000-000000008472";
+
 #[embassy_executor::task]
-pub async fn ble_task(connector: BleConnector<'static>) -> ! {
+pub async fn ble_task(connector: BleConnector<'static>, publisher: MainPublisher) -> ! {
     Timer::after(Duration::from_millis(5_000)).await;
     info!("BLE Task Started");
 
@@ -33,6 +43,11 @@ pub async fn ble_task(connector: BleConnector<'static>) -> ! {
     let pin_ref = RefCell::new(button);
     let pin_ref = &pin_ref;
 
+    let mut flash = FlashStorage::new();
+    let local_fs = LocalFs::new(&mut flash);
+
+    let name = local_fs.read_text_file("name.txt").unwrap_or("Unnamed ESP32".to_owned());
+
     loop {
         println!("{:?}", ble.init().await);
         println!("{:?}", ble.cmd_set_le_advertising_parameters().await);
@@ -42,7 +57,7 @@ pub async fn ble_task(connector: BleConnector<'static>) -> ! {
                 create_advertising_data(&[
                     AdStructure::Flags(LE_GENERAL_DISCOVERABLE | BR_EDR_NOT_SUPPORTED),
                     AdStructure::ServiceUuids16(&[Uuid::Uuid16(0x1809)]),
-                    AdStructure::CompleteLocalName("Door Entry (Test)"),
+                    AdStructure::CompleteLocalName(&name),
                 ])
                 .unwrap()
             )
@@ -58,6 +73,7 @@ pub async fn ble_task(connector: BleConnector<'static>) -> ! {
         };
         let mut wf3 = |offset: usize, data: &[u8]| {
             println!("RECEIVED: Offset {}, data {:?}", offset, data);
+            publisher.publish_immediate(SystemMessage::ButtonPressed);
         };
 
         gatt!([service {

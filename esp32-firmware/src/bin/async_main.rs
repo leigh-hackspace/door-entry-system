@@ -112,7 +112,9 @@ async fn main(spawner: Spawner) {
 
     let bluetooth = unsafe { Peripherals::steal() }.BT;
 
-    spawner.spawn(ble_task(BleConnector::new(wifi_init, bluetooth))).ok();
+    spawner
+        .spawn(ble_task(BleConnector::new(wifi_init, bluetooth), channel.publisher().unwrap()))
+        .ok();
     spawner.spawn(rfid_task(channel.publisher().unwrap())).ok();
     spawner.spawn(net_task(runner)).ok();
     spawner.spawn(connection_task(wifi_controller, wifi_signal)).ok();

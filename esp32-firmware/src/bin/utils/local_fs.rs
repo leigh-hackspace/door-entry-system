@@ -13,8 +13,7 @@ impl<'a> LocalFs<'a> {
     pub fn new(flash: &'a mut FlashStorage) -> Self {
         let flash_stream = FlashStream::new(flash, 0x310000, 0xF0000);
 
-        let fs =
-            FileSystem::new(flash_stream, FsOptions::new()).expect("Failed to create FileSystem");
+        let fs = FileSystem::new(flash_stream, FsOptions::new()).expect("Failed to create FileSystem");
 
         info!("FS Type: {:?}", fs.fat_type());
 
@@ -51,30 +50,18 @@ impl<'a> LocalFs<'a> {
         Err(FsError::OpenError("File not found".to_string()))
     }
 
-    pub fn open_file(
-        &self,
-        file_name: &str,
-    ) -> Result<fatfs::File<'_, FlashStream<'a>, NullTimeProvider, LossyOemCpConverter>, FsError>
-    {
+    pub fn open_file(&self, file_name: &str) -> Result<fatfs::File<'_, FlashStream<'a>, NullTimeProvider, LossyOemCpConverter>, FsError> {
         let root_dir = self.fs.root_dir();
 
-        let file = root_dir
-            .open_file(file_name)
-            .map_err(|err| FsError::OpenError(err.to_string()))?;
+        let file = root_dir.open_file(file_name).map_err(|err| FsError::OpenError(err.to_string()))?;
 
         Ok(file)
     }
 
-    pub fn create_file(
-        &self,
-        file_name: &str,
-    ) -> Result<fatfs::File<'_, FlashStream<'a>, NullTimeProvider, LossyOemCpConverter>, FsError>
-    {
+    pub fn create_file(&self, file_name: &str) -> Result<fatfs::File<'_, FlashStream<'a>, NullTimeProvider, LossyOemCpConverter>, FsError> {
         let root_dir = self.fs.root_dir();
 
-        let file = root_dir
-            .create_file(file_name)
-            .map_err(|err| FsError::OpenError(err.to_string()))?;
+        let file = root_dir.create_file(file_name).map_err(|err| FsError::OpenError(err.to_string()))?;
 
         Ok(file)
     }
@@ -82,9 +69,7 @@ impl<'a> LocalFs<'a> {
     pub fn delete_file(&self, file_name: &str) -> Result<(), FsError> {
         let root_dir = self.fs.root_dir();
 
-        root_dir
-            .remove(file_name)
-            .map_err(|err| FsError::OpenError(err.to_string()))?;
+        root_dir.remove(file_name).map_err(|err| FsError::OpenError(err.to_string()))?;
 
         Ok(())
     }
@@ -94,15 +79,15 @@ impl<'a> LocalFs<'a> {
 
         let mut buf = [0u8; 128];
 
-        let mut file = root_dir
-            .open_file(file_name)
-            .map_err(|err| FsError::OpenError(err.to_string()))?;
+        let len = self
+            .get_file_size(file_name)
+            .map_err(|err| FsError::OpenError("Could not read length".to_string()))?;
 
-        let _read_bytes = file
-            .read(&mut buf)
-            .map_err(|err| FsError::ReadError(err.to_string()))?;
+        let mut file = root_dir.open_file(file_name).map_err(|err| FsError::OpenError(err.to_string()))?;
 
-        Ok(from_utf8(&buf).unwrap().to_string())
+        let _read_bytes = file.read(&mut buf).map_err(|err| FsError::ReadError(err.to_string()))?;
+
+        Ok(from_utf8(&buf[0..(len as usize)]).unwrap().to_string())
     }
 }
 

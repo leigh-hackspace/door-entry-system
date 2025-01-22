@@ -8,6 +8,9 @@
     },
     {
       "path": "."
+    },
+    {
+      "path": "bluetooth-web-app"
     }
   ],
   "settings": {
@@ -17,6 +20,7 @@
     "cSpell.words": [
       "assoc",
       "asynch",
+      "asynciterable",
       "atqa",
       "Authentik",
       "bleps",
@@ -32,6 +36,7 @@
       "Hackspace",
       "heapless",
       "ilike",
+      "luca",
       "mfrc",
       "miso",
       "mktemp",
