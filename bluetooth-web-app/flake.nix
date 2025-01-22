@@ -12,7 +12,7 @@
             aarch64-darwin =
               "sha256-Lzu8tpfgUp06Oc6NF96YOgKYxQO7PiapabjO0kO+PZ0=";
             x86_64-linux =
-              "sha256-SXLbqo+M3rACCn3Eh07EqjLUutMCyqH0TaU3jdnPojc=";
+              "sha256-oNMycMnE4nFlbNEQgw+K9DoPyPSvLJ7IcM3pCvz0TL0=";
           };
         in pkgs.stdenv.mkDerivation {
           pname = "door-entry-bluetooth-web-app";
