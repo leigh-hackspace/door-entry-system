@@ -12,7 +12,7 @@ const ActivityLogTableSchema = v.object({
 });
 
 export function ActivityLogs(props: RouteSectionProps) {
-  const { navigate, tRPC } = beginPage("admin");
+  const { tRPC } = beginPage(["admin", "user"]);
 
   const onFetch = async (params: FetchParameters) => {
     return tRPC.ActivityLog.Search.query(params);
@@ -25,7 +25,7 @@ export function ActivityLogs(props: RouteSectionProps) {
         <Card.Body>
           <MagicBrowser
             schema={ActivityLogTableSchema}
-            // rowActions={[{ name: "Edit", colour: "info", onClick: (e) => navigate(`/activity-log/${e.id}`) }]}
+            initialSort={{ sort: "created", dir: "desc" }}
             onFetch={onFetch}
           />
         </Card.Body>

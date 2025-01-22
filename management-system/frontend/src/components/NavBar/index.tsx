@@ -44,19 +44,19 @@ export function NavBar() {
                   Users
                 </a>
               </li>
-
-              <li class="nav-item">
-                <a class="nav-link active" href="/tags">
-                  Tags
-                </a>
-              </li>
-
-              <li class="nav-item">
-                <a class="nav-link active" href="/activity-log">
-                  Logs
-                </a>
-              </li>
             </Show>
+
+            <li class="nav-item">
+              <a class="nav-link active" href="/tags">
+                Tags
+              </a>
+            </li>
+
+            <li class="nav-item">
+              <a class="nav-link active" href="/activity-log">
+                Logs
+              </a>
+            </li>
           </ul>
 
           <Show when={user()}>

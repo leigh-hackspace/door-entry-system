@@ -61,9 +61,9 @@ export function DataTable<TRow>(props: Props<TRow>) {
                     {column.label ?? column.name}
                     {props.sort?.sort === column.name &&
                       (props.sort?.dir === "asc" ? (
-                        <span>&nbsp;↓</span>
-                      ) : props.sort?.dir === "desc" ? (
                         <span>&nbsp;↑</span>
+                      ) : props.sort?.dir === "desc" ? (
+                        <span>&nbsp;↓</span>
                       ) : undefined)}
                   </div>
                 </th>

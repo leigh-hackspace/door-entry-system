@@ -8,14 +8,19 @@ const ActivityLogSearchSchema = v.intersect([PaginationSchema]);
 
 export const ActivityLogRouter = tRPC.router({
   Search: tRPC.ProtectedProcedure.input(v.parser(ActivityLogSearchSchema)).query(
-    async ({ input: { take, skip, orderBy, search } }) => {
+    async ({ ctx, input: { take, skip, orderBy, search } }) => {
       const quickSearchCondition = search
         ? or(ilike(ActivityLogTable.code, `%${search}%`), ilike(UserTable.name, `%${search}%`))
         : and();
 
-      let codeFilterCondition = and();
+      let user_id: string | undefined;
 
-      const condition = and(quickSearchCondition, codeFilterCondition);
+      // Normal users can only see logs belonging to them
+      if (ctx.session.user.role !== "admin") {
+        user_id = ctx.session.user.id;
+      }
+
+      const condition = and(quickSearchCondition, user_id ? eq(ActivityLogTable.user_id, user_id) : undefined);
 
       const query = db
         .select({ ...getTableColumns(ActivityLogTable), user_name: UserTable.name })

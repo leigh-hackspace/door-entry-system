@@ -14,7 +14,7 @@ const TagTableSchema = v.object({
 });
 
 export function Tags(props: RouteSectionProps) {
-  const { navigate, tRPC } = beginPage("admin");
+  const { navigate, tRPC } = beginPage(["admin", "user"]);
 
   const onFetch = async (params: FetchParameters) => {
     return tRPC.Tag.Search.query(params);
@@ -31,7 +31,7 @@ export function Tags(props: RouteSectionProps) {
 
   return (
     <main>
-      <Card colour="success">
+      <Card colour="warning">
         <Card.Header text="Tags" />
         <Card.Body>
           <MagicBrowser

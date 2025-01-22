@@ -14,6 +14,9 @@ export const ConfigSchema = v.object({
     v.decimal(),
     v.transform((s) => parseInt(s, 10))
   ),
+  DE_AUTHENTIK_HOST: v.string(),
+  DE_AUTHENTIK_CLIENT_ID: v.string(),
+  DE_AUTHENTIK_CLIENT_SECRET: v.string(),
 });
 
 let env = pickPrefix(process.env, "DE_");

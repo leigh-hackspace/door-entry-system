@@ -2,9 +2,9 @@ import { assertUnreachable, LoginDataSchema, type LoginData } from "@door-entry-
 import { Button, Card, MagicFields } from "@frontend/components";
 import { AlertDialog, openDialog } from "@frontend/dialogs";
 import { getLogoutReason } from "@frontend/helper";
-import { AppService } from "@frontend/lib";
+import { AppService, getAuthReturnUrl } from "@frontend/lib";
 import { useNavigate, type RouteSectionProps } from "npm:@solidjs/router";
-import { createSignal, onMount } from "npm:solid-js";
+import { createSignal, onMount, Show } from "npm:solid-js";
 
 export function Login(props: RouteSectionProps) {
   const navigate = useNavigate();
@@ -55,9 +55,29 @@ export function Login(props: RouteSectionProps) {
     }
   };
 
+  const onLoginWithAuthentik = async () => {
+    const { url } = await AppService.get().tRPC.Auth.BeginOAuth.query({
+      return_auth: getAuthReturnUrl(),
+    });
+
+    globalThis.location.href = url;
+  };
+
   return (
     <main>
       <div class="grid">
+        <div class="g-col-12 g-col-md-6 g-start-md-4">
+          <Card colour="danger">
+            <Card.Header text="Login with Authentik" />
+            <Card.Body>Use your Leigh Hackspace account to login</Card.Body>
+            <Card.Footer>
+              <Button colour="primary" on:click={() => onLoginWithAuthentik()}>
+                Login with Authentik
+              </Button>
+            </Card.Footer>
+          </Card>
+        </div>
+
         <form on:submit={onLogin} class="g-col-12 g-col-md-6 g-start-md-4">
           <Card colour="primary">
             <Card.Header text="Login" />
@@ -70,12 +90,14 @@ export function Login(props: RouteSectionProps) {
               />
             </Card.Body>
             <Card.Footer>
-              <Button colour="info" on:click={() => setLogin({ email: "admin@example.com", password: "password" })}>
-                Admin Demo
-              </Button>
-              {/* <Button colour="info" on:click={() => setLogin({ email: "user@example.com", password: "password" })}>
-                User Demo
-              </Button> */}
+              <Show when={globalThis.location.hostname === "localhost"}>
+                <Button colour="info" on:click={() => setLogin({ email: "admin@example.com", password: "password" })}>
+                  Admin Demo
+                </Button>
+                <Button colour="info" on:click={() => setLogin({ email: "user@example.com", password: "password" })}>
+                  User Demo
+                </Button>
+              </Show>
               <button class="btn btn-primary" type="submit">
                 Login
               </button>

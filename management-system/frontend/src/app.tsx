@@ -4,6 +4,7 @@ import { Route, Router, type RouteSectionProps } from "npm:@solidjs/router";
 import { type Component, Suspense } from "npm:solid-js";
 import { render } from "npm:solid-js/web";
 import { ActivityLogs } from "./routes/activity-log/index.tsx";
+import { AuthReturn } from "./routes/auth-return.tsx";
 import { Home } from "./routes/index.tsx";
 import { Login } from "./routes/login.tsx";
 import { TagEdit } from "./routes/tags/edit.tsx";
@@ -28,6 +29,7 @@ function App() {
     <Router root={root}>
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
+      <Route path="/auth-return" component={AuthReturn} />
 
       <Route path="/users/" component={Users} />
       <Route path="/users/new" component={UserNew} />

@@ -69,6 +69,18 @@ export class AppService {
     return result;
   }
 
+  public loginExternal(user: UserRecord, token: string) {
+    this.sessionService.newSession({
+      id: user.id,
+      role: user.role,
+      email: user.email,
+      name: user.name,
+      sessionToken: token,
+    });
+
+    this.subscribeToActivity();
+  }
+
   public logout() {
     this.sessionService.clearSession();
   }
@@ -147,4 +159,14 @@ class LookupService {
       assertUnreachable(type);
     }
   }
+}
+
+export function getAuthReturnUrl() {
+  const url = new URL(globalThis.location.href);
+
+  url.pathname = "/auth-return";
+  url.search = "";
+  url.hash = "";
+
+  return url.toString();
 }

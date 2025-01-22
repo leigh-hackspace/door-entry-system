@@ -6,18 +6,20 @@ import { createResource, createSignal, Show, Suspense } from "npm:solid-js";
 import * as v from "npm:valibot";
 
 export function TagEdit(props: RouteSectionProps) {
-  const { tRPC, toastService } = beginPage("admin");
+  const { tRPC, toastService, user } = beginPage(["admin", "user"]);
 
   const id = () => props.params.id;
 
   const [tag, { mutate }] = createResource(() => tRPC.Tag.One.query(props.params.id));
   const [submittedCount, setSubmittedCount] = createSignal(0);
 
+  const formSchema = user()?.role === "admin" ? TagUpdateSchema : v.omit(TagUpdateSchema, ["user_id"]);
+
   const onChange = (data: TagUpdate) => mutate({ ...tag()!, ...data });
 
   const onSave = async () => {
     setSubmittedCount(submittedCount() + 1);
-    const res = v.parse(TagUpdateSchema, tag());
+    const res = v.parse(formSchema, tag());
 
     await tRPC.Tag.Update.mutate([id(), res]);
 
@@ -26,7 +28,7 @@ export function TagEdit(props: RouteSectionProps) {
 
   return (
     <main>
-      <Card colour="success">
+      <Card colour="warning">
         <Card.Header text="Update Tag" />
         <Card.Body>
           <form>
@@ -35,7 +37,7 @@ export function TagEdit(props: RouteSectionProps) {
                 {(tag) => (
                   <div class="d-flex flex-column gap-3">
                     <MagicFields
-                      schema={TagUpdateSchema}
+                      schema={formSchema}
                       data={tag()}
                       validation={submittedCount() > 0}
                       onChange={onChange}

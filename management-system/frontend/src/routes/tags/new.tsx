@@ -6,10 +6,12 @@ import { createSignal } from "npm:solid-js";
 import * as v from "npm:valibot";
 
 export function TagNew(props: RouteSectionProps) {
-  const { navigate, tRPC, toastService } = beginPage("admin");
+  const { navigate, tRPC, toastService, user } = beginPage(["admin", "user"]);
 
   const [tag, setTag] = createSignal<Partial<TagCreate>>({ user_id: null });
   const [submittedCount, setSubmittedCount] = createSignal(0);
+
+  const formSchema = user()?.role === "admin" ? TagCreateSchema : v.omit(TagCreateSchema, ["user_id"]);
 
   const onChange = (data: Partial<TagCreate>) => {
     setTag({ ...tag(), ...data });
@@ -17,7 +19,7 @@ export function TagNew(props: RouteSectionProps) {
 
   const onSave = async () => {
     setSubmittedCount(submittedCount() + 1);
-    const res = v.parse(TagCreateSchema, tag());
+    const res = v.parse(formSchema, tag());
 
     const id = await tRPC.Tag.Create.mutate(res);
 
@@ -27,11 +29,11 @@ export function TagNew(props: RouteSectionProps) {
 
   return (
     <main>
-      <Card colour="success">
+      <Card colour="warning">
         <Card.Header text="Create Tag" />
         <Card.Body>
           <form>
-            <MagicFields schema={TagCreateSchema} data={tag()} validation={submittedCount() > 0} onChange={onChange} />
+            <MagicFields schema={formSchema} data={tag()} validation={submittedCount() > 0} onChange={onChange} />
           </form>
         </Card.Body>
         <Card.Footer>
