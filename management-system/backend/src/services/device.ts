@@ -49,3 +49,23 @@ export async function updateValidCodes() {
     }
   }
 }
+
+export async function setLatch(latch: boolean) {
+  for (let i = 0; i < 5; i++) {
+    try {
+      const res = await fetch(`http://${Config.DE_DEVICE_IP}/latch-${latch ? "on" : "off"}`, {
+        signal: AbortSignal.timeout(5000),
+        method: "POST",
+      });
+
+      if (res.status === 200) {
+        console.log("setLatch: Success");
+        break;
+      } else {
+        console.error("setLatch: Error!", await res.text());
+      }
+    } catch (err) {
+      console.error("setLatch:", err);
+    }
+  }
+}

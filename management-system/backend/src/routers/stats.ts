@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import * as v from "valibot";
 import { db } from "../db/index.ts";
 import { ActivityLogTable, TagTable, UserTable } from "../db/schema.ts";
+import { setLatch } from "../services/index.ts";
 import { assertRole } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 
@@ -21,5 +22,9 @@ export const StatsRouter = tRPC.router({
     const scanCount = await db.$count(ActivityLogTable, eq(ActivityLogTable.user_id, ctx.session.user.id));
 
     return { tagCount, scanCount };
+  }),
+
+  SetLatch: tRPC.ProtectedProcedure.input(v.parser(v.boolean())).mutation(async ({ ctx, input }) => {
+    await setLatch(input);
   }),
 });

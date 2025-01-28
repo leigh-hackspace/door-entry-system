@@ -1,4 +1,4 @@
-import { Card, Tile } from "@frontend/components";
+import { Button, Card, Tile } from "@frontend/components";
 import { beginPage } from "@frontend/helper";
 import { AppService } from "@frontend/lib";
 import { createResource, Match, Show, Switch } from "npm:solid-js";
@@ -19,8 +19,37 @@ export function Home() {
         </Switch>
       </div>
 
-      <div class="g-col-12 g-col-xl-6"></div>
+      <div class="g-col-12 g-col-xl-6">
+        <Switch>
+          <Match when={user()?.role === "admin"}>
+            <AdminControls />
+          </Match>
+        </Switch>
+      </div>
     </main>
+  );
+}
+
+function AdminControls() {
+  const setLatch = (latch: boolean) => {
+    AppService.get().tRPC.Stats.SetLatch.mutate(latch);
+  };
+
+  return (
+    <Card colour="danger">
+      <Card.Header text="Admin Controls" />
+      <Card.Body>
+        <p>Turning latch ON will disable the mag-lock and allow entry to all.</p>
+        <p>Turning latch OFF will re-enable security and a RFID tag will be required for entry.</p>
+        <Button colour="danger" on:click={() => setLatch(true)}>
+          Latch On
+        </Button>
+        &nbsp;
+        <Button colour="success" on:click={() => setLatch(false)}>
+          Latch Off
+        </Button>
+      </Card.Body>
+    </Card>
   );
 }
 

@@ -1,8 +1,11 @@
 use super::flash_stream::FlashStream;
-use alloc::string::{String, ToString};
+use alloc::{
+    format,
+    string::{String, ToString},
+};
 use core::str::from_utf8;
 use esp_storage::FlashStorage;
-use fatfs::{FileSystem, FsOptions, LossyOemCpConverter, NullTimeProvider, Read};
+use fatfs::{FileSystem, FsOptions, LossyOemCpConverter, NullTimeProvider, Read, Write};
 use log::info;
 
 pub struct LocalFs<'a> {
@@ -85,9 +88,29 @@ impl<'a> LocalFs<'a> {
 
         let mut file = root_dir.open_file(file_name).map_err(|err| FsError::OpenError(err.to_string()))?;
 
-        let _read_bytes = file.read(&mut buf).map_err(|err| FsError::ReadError(err.to_string()))?;
+        let read_bytes = file.read(&mut buf).map_err(|err| FsError::ReadError(err.to_string()))?;
+
+        if len != read_bytes as u64 {
+            return Err(FsError::ReadError(format!("Len={} Read={}", len, read_bytes)));
+        }
 
         Ok(from_utf8(&buf[0..(len as usize)]).unwrap().to_string())
+    }
+
+    pub fn write_text_file(&self, file_name: &str, content: &str) -> Result<(), FsError> {
+        let root_dir = self.fs.root_dir();
+
+        let mut file = root_dir.create_file(file_name).map_err(|err| FsError::OpenError(err.to_string()))?;
+
+        let buf = content.as_bytes();
+
+        file.write_all(&buf).map_err(|err| FsError::WriteError(err.to_string()))?;
+
+        file.truncate().map_err(|err| FsError::WriteError(err.to_string()))?;
+
+        file.flush().map_err(|err| FsError::WriteError(err.to_string()))?;
+
+        Ok(())
     }
 }
 
@@ -95,4 +118,5 @@ impl<'a> LocalFs<'a> {
 pub enum FsError {
     OpenError(String),
     ReadError(String),
+    WriteError(String),
 }

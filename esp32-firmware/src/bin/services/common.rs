@@ -10,10 +10,12 @@ pub enum SystemMessage {
     Authorised,
     Denied,
     ButtonPressed,
+    ButtonLongPressed,
     WifiOff,
     Watchdog,
     Ping,
     OtaStarting,
+    SetLatch(bool),
 }
 
 const CAP: usize = 4;

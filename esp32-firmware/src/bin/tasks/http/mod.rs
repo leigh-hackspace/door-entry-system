@@ -1,4 +1,5 @@
 use crate::services::common::{MainPublisher, SystemMessage};
+use crate::services::state::PermanentStateService;
 use alloc::sync::Arc;
 use core::marker::Sized;
 use embassy_executor::Spawner;
@@ -6,7 +7,7 @@ use embassy_net::Stack;
 use embassy_time::Duration;
 use ota::HandleOtaUpdate;
 use partitions_macro::partition_offset;
-use picoserve::routing::get_service;
+use picoserve::routing::{get_service, post};
 use picoserve::{make_static, routing::get, AppBuilder, AppRouter};
 use read_file::HandleFileRead;
 use write_file::HandleFileWrite;
@@ -21,6 +22,7 @@ const OTA_OFFSETS: [u32; 2] = [OTA_0_OFFSET, OTA_1_OFFSET];
 
 struct AppProps {
     publisher: MainPublisher,
+    state_service: PermanentStateService,
 }
 
 impl AppBuilder for AppProps {
@@ -28,13 +30,33 @@ impl AppBuilder for AppProps {
 
     fn build_app(self) -> picoserve::Router<Self::PathRouter> {
         let publisher = make_static!(Arc<MainPublisher>, Arc::new(self.publisher));
+        let state_service = make_static!(PermanentStateService, self.state_service.clone());
 
         picoserve::Router::new()
             .route(
                 "/",
                 get(|| async {
                     publisher.publish(SystemMessage::Ping).await;
-                    "Door Entry [ESP32]"
+
+                    if state_service.get_latch() {
+                        "Latch On"
+                    } else {
+                        "Latch Off"
+                    }
+
+                    // "Door Entry [ESP32]"
+                }),
+            )
+            .route(
+                "/latch-on",
+                post(|| async {
+                    publisher.publish(SystemMessage::SetLatch(true)).await;
+                }),
+            )
+            .route(
+                "/latch-off",
+                post(|| async {
+                    publisher.publish(SystemMessage::SetLatch(false)).await;
                 }),
             )
             .route("/file", get_service(HandleFileRead).post_service(HandleFileWrite))
@@ -67,8 +89,8 @@ async fn web_task(id: usize, stack: Stack<'static>, app: &'static AppRouter<AppP
     .await
 }
 
-pub fn start_http(spawner: Spawner, stack: Stack<'static>, publisher: MainPublisher) {
-    let app = make_static!(AppRouter<AppProps>, AppProps { publisher }.build_app());
+pub fn start_http(spawner: Spawner, stack: Stack<'static>, publisher: MainPublisher, state_service: PermanentStateService) {
+    let app = make_static!(AppRouter<AppProps>, AppProps { publisher, state_service }.build_app());
 
     let config = make_static!(
         picoserve::Config<Duration>,

@@ -4,3 +4,4 @@ pub mod common;
 pub mod door;
 pub mod http;
 pub mod ota;
+pub mod state;

@@ -21,22 +21,14 @@ struct DummyDns {}
 impl Dns for DummyDns {
     type Error = usize;
 
-    async fn get_host_by_name(
-        &self,
-        host: &str,
-        addr_type: embedded_nal_async::AddrType,
-    ) -> Result<core::net::IpAddr, usize> {
+    async fn get_host_by_name(&self, host: &str, addr_type: embedded_nal_async::AddrType) -> Result<core::net::IpAddr, usize> {
         info!("get_host_by_name: {}", host);
 
         // TODO: For now only parses IP addresses....
         Ok(IpAddr::V4(Ipv4Addr::parse_ascii(host.as_bytes()).unwrap()))
     }
 
-    async fn get_host_by_address(
-        &self,
-        addr: core::net::IpAddr,
-        result: &mut [u8],
-    ) -> Result<usize, usize> {
+    async fn get_host_by_address(&self, addr: core::net::IpAddr, result: &mut [u8]) -> Result<usize, usize> {
         info!("get_host_by_address: {}", addr);
 
         todo!()
@@ -80,23 +72,13 @@ impl<'a> HttpService<'a> {
 
         let mut rx_buf = [0; 1024];
 
-        let handle = client
-            .request(Method::POST, &url)
-            .await
-            .map_err(|_err| HttpError::RequestError)?;
+        let handle = client.request(Method::POST, &url).await.map_err(|_err| HttpError::RequestError)?;
 
         let mut builder = handle.body(s).content_type(ContentType::TextPlain);
 
-        let response = builder
-            .send(&mut rx_buf)
-            .await
-            .map_err(|_err| HttpError::SendError)?;
+        let response = builder.send(&mut rx_buf).await.map_err(|_err| HttpError::SendError)?;
 
-        let data = response
-            .body()
-            .read_to_end()
-            .await
-            .map_err(|_err| HttpError::ReadError)?;
+        let data = response.body().read_to_end().await.map_err(|_err| HttpError::ReadError)?;
 
         let text = from_utf8(data).map_err(|_err| HttpError::DecodeError)?;
 

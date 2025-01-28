@@ -66,6 +66,7 @@ bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5
     "macros",
     "async",
 ] }
+serde-json-core = "0.6.0"
 
 [profile.dev]
 # Rust debug is too slow.

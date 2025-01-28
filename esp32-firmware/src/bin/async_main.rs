@@ -24,6 +24,7 @@ use esp_hal::peripherals::Peripherals;
 use esp_hal::prelude::*;
 use esp_hal::timer::timg::MwdtStage;
 use esp_println::print;
+use esp_storage::FlashStorage;
 use esp_wifi::ble::controller::BleConnector;
 use esp_wifi::wifi::{self, WifiDevice, WifiStaDevice};
 use log::{error, info, warn};
@@ -31,6 +32,7 @@ use services::auth::check_code;
 use services::common::{MainChannel, MainPublisher, MainSubscriber, SystemMessage};
 use services::door::DoorService;
 use services::http::HttpService;
+use services::state::PermanentStateService;
 use static_cell::StaticCell;
 use tasks::audio::{audio_task, AudioSignal};
 use tasks::ble::ble_task;
@@ -38,6 +40,7 @@ use tasks::button::button_task;
 use tasks::http::start_http;
 use tasks::rfid::rfid_task;
 use tasks::wifi::{connection_task, WifiSignal};
+use utils::local_fs::{self, LocalFs};
 
 extern crate alloc;
 
@@ -103,6 +106,13 @@ async fn main(spawner: Spawner) {
     wdt.set_timeout(MwdtStage::Stage0, 30_000.millis());
     wdt.enable();
 
+    // List files for debug
+    let mut flash = FlashStorage::new();
+    let local_fs = LocalFs::new(&mut flash);
+    local_fs.dir();
+    drop(local_fs);
+    drop(flash);
+
     let channel = make_static!(MainChannel, MainChannel::new());
 
     let wifi_signal = make_static!(Signal::<CriticalSectionRawMutex, WifiSignal>, Signal::new());
@@ -124,10 +134,17 @@ async fn main(spawner: Spawner) {
 
     wifi_signal.signal(WifiSignal::Connect);
 
-    start_http(spawner, stack, channel.publisher().unwrap());
-
     let mut door_service = DoorService::new();
+    let mut state_service = PermanentStateService::new();
     let http_service = HttpService::new(stack);
+
+    if let Err(err) = state_service.init() {
+        error!("State Init Error: {:?}", err);
+    }
+
+    start_http(spawner, stack, channel.publisher().unwrap(), state_service.clone());
+
+    door_service.set_latch(state_service.get_latch());
 
     let main_publisher = channel.publisher().unwrap();
     let mut main_subscriber: MainSubscriber = channel.subscriber().unwrap();
@@ -138,10 +155,10 @@ async fn main(spawner: Spawner) {
 
     loop {
         if let WaitResult::Message(msg) = main_subscriber.next_message().await {
+            info!("==== SystemMessage: {:?}", msg);
+
             match msg {
                 SystemMessage::CodeDetected(code) => {
-                    info!("CodeDetected: {}", code);
-
                     let mut allowed = false;
 
                     match check_code(&code).await {
@@ -177,13 +194,17 @@ async fn main(spawner: Spawner) {
                     audio_signal.signal(AudioSignal::Play("success.wav".to_string()));
                     Timer::after(Duration::from_millis(1500)).await;
 
-                    door_service.release_door_lock().await;
+                    if state_service.get_latch() {
+                        continue;
+                    }
+
+                    door_service.release_door_lock();
                     audio_signal.signal(AudioSignal::Play("open.wav".to_string()));
 
                     Timer::after(Duration::from_millis(5000)).await;
 
                     audio_signal.signal(AudioSignal::Play("close.wav".to_string()));
-                    door_service.set_door_lock().await;
+                    door_service.set_door_lock();
                 }
                 SystemMessage::Denied => {
                     info!("Denied");
@@ -191,13 +212,26 @@ async fn main(spawner: Spawner) {
                     audio_signal.signal(AudioSignal::Play("failure.wav".to_string()));
                 }
                 SystemMessage::ButtonPressed => {
-                    door_service.release_door_lock().await;
+                    if state_service.get_latch() {
+                        continue;
+                    }
+
+                    door_service.release_door_lock();
                     audio_signal.signal(AudioSignal::Play("open.wav".to_string()));
 
                     Timer::after(Duration::from_millis(5000)).await;
 
                     audio_signal.signal(AudioSignal::Play("close.wav".to_string()));
-                    door_service.set_door_lock().await;
+                    door_service.set_door_lock();
+                }
+                SystemMessage::ButtonLongPressed => {
+                    let latch = state_service.toggle_latch();
+
+                    door_service.set_latch(latch);
+
+                    if let Err(err) = state_service.save() {
+                        error!("Error saving state: {:?}", err);
+                    }
                 }
                 SystemMessage::WifiOff => {
                     wifi_signal.signal(WifiSignal::Disconnect);
@@ -235,6 +269,15 @@ async fn main(spawner: Spawner) {
                         wdt.feed();
 
                         Timer::after(Duration::from_millis(10_000)).await;
+                    }
+                }
+                SystemMessage::SetLatch(latch) => {
+                    state_service.set_latch(latch);
+
+                    door_service.set_latch(latch);
+
+                    if let Err(err) = state_service.save() {
+                        error!("Error saving state: {:?}", err);
                     }
                 }
             }
