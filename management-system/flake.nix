@@ -16,7 +16,7 @@
             aarch64-darwin =
               "sha256-N4GxH/ItKUSatEq7NiMqgzvIS5bIZ8u9itKoVdhTz6g=";
             x86_64-linux =
-              "sha256-k+T8oWnbFoZ0J66cKkx7mVw9ReqTrFFtRJzZxLNhc3w=";
+              "sha256-fcxXqlVplvS4lvfZAo0dVBecB6RlErMuqbbTix0FLnY=";
           };
         in pkgs.stdenv.mkDerivation {
           pname = "door-entry-management-system";
