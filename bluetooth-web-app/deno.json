@@ -26,5 +26,6 @@
       "dom.asynciterable",
       "deno.ns"
     ]
-  }
+  },
+  "nodeModulesDir": "auto"
 }
