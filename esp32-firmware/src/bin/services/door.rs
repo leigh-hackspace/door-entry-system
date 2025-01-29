@@ -11,25 +11,25 @@ impl<'a> DoorService<'a> {
     pub fn new() -> DoorService<'a> {
         let peripherals = unsafe { Peripherals::steal() };
 
-        // On my dev board I blew up GPIO19 so we use GPIO18 as well...
+        // On my dev board I blew up GPIO19 so we use GPIO3 as well...
         let door = gpio::Output::new(peripherals.GPIO19, gpio::Level::High);
-        let door2 = gpio::Output::new(peripherals.GPIO18, gpio::Level::High);
+        let door2 = gpio::Output::new(peripherals.GPIO23, gpio::Level::High);
 
         DoorService { latch: false, door, door2 }
     }
 
     pub fn release_door_lock(&mut self) {
         if !self.latch {
+            info!("==== LOW ====");
             self.door.set_low();
             self.door2.set_low();
-            info!("Door is open!");
         }
     }
 
     pub fn set_door_lock(&mut self) {
         if !self.latch {
-            info!("Door is closed again!");
-            self.door2.set_low();
+            info!("==== HIGH ====");
+            self.door.set_high();
             self.door2.set_high();
         }
     }
@@ -38,9 +38,11 @@ impl<'a> DoorService<'a> {
         self.latch = latch;
 
         if latch {
+            info!("==== LOW ====");
             self.door.set_low();
             self.door2.set_low();
         } else {
+            info!("==== HIGH ====");
             self.door.set_high();
             self.door2.set_high();
         }

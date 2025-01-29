@@ -155,7 +155,9 @@ async fn main(spawner: Spawner) {
 
     loop {
         if let WaitResult::Message(msg) = main_subscriber.next_message().await {
-            info!("==== SystemMessage: {:?}", msg);
+            if msg != SystemMessage::Ping && msg != SystemMessage::Watchdog {
+                info!("==== SystemMessage: {:?}", msg);
+            }
 
             match msg {
                 SystemMessage::CodeDetected(code) => {
@@ -229,6 +231,12 @@ async fn main(spawner: Spawner) {
 
                     door_service.set_latch(latch);
 
+                    audio_signal.signal(AudioSignal::Play(if latch {
+                        "latchon.wav".to_string()
+                    } else {
+                        "latchoff.wav".to_string()
+                    }));
+
                     if let Err(err) = state_service.save() {
                         error!("Error saving state: {:?}", err);
                     }
@@ -240,7 +248,7 @@ async fn main(spawner: Spawner) {
                     let now = esp_hal::time::now().ticks();
                     let last_seen_ago = now - last_seen;
 
-                    info!("Last ping: {} seconds ago", last_seen_ago / 1_000_000);
+                    // info!("Last ping: {} seconds ago", last_seen_ago / 1_000_000);
 
                     if last_seen_ago < 5 * 60_000_000 {
                         // Keep feeding the watchdog if we've received a recent ping
@@ -279,6 +287,12 @@ async fn main(spawner: Spawner) {
                     if let Err(err) = state_service.save() {
                         error!("Error saving state: {:?}", err);
                     }
+
+                    audio_signal.signal(AudioSignal::Play(if latch {
+                        "latchon.wav".to_string()
+                    } else {
+                        "latchoff.wav".to_string()
+                    }));
                 }
             }
         };
@@ -293,9 +307,14 @@ async fn net_task(mut runner: Runner<'static, WifiDevice<'static, WifiStaDevice>
 
 #[embassy_executor::task]
 async fn watchdog_task(stack: Stack<'static>, publisher: MainPublisher) {
+    let mut shown_ip = false;
+
     loop {
-        if let Some(ip_info) = stack.config_v4() {
-            info!("IP ADDRESS: {:?}", ip_info.address.address());
+        if !shown_ip {
+            if let Some(ip_info) = stack.config_v4() {
+                shown_ip = true;
+                info!("IP ADDRESS: {:?}", ip_info.address.address());
+            }
         }
 
         publisher.publish(SystemMessage::Watchdog).await;

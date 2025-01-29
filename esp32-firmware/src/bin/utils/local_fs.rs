@@ -18,7 +18,7 @@ impl<'a> LocalFs<'a> {
 
         let fs = FileSystem::new(flash_stream, FsOptions::new()).expect("Failed to create FileSystem");
 
-        info!("FS Type: {:?}", fs.fat_type());
+        // info!("FS Type: {:?}", fs.fat_type());
 
         LocalFs { fs }
     }
