@@ -1,7 +1,9 @@
 import { Button, Card, Tile } from "@frontend/components";
 import { beginPage } from "@frontend/helper";
 import { AppService } from "@frontend/lib";
-import { createResource, Match, Show, Switch } from "npm:solid-js";
+import type { Unsubscribable } from "npm:@trpc/server/observable";
+import { createResource, Match, onCleanup, Show, Switch } from "npm:solid-js";
+import { createSignal, onMount } from "solid-js";
 
 export function Home() {
   const { user } = beginPage(["admin", "user"]);
@@ -31,21 +33,48 @@ export function Home() {
 }
 
 function AdminControls() {
-  const setLatch = (latch: boolean) => {
-    AppService.get().tRPC.Stats.SetLatch.mutate(latch);
+  const [latch, setLatch] = createSignal<boolean>();
+
+  let activitySubscription: Unsubscribable | undefined;
+
+  onMount(() => {
+    console.log("onMount");
+
+    activitySubscription = AppService.get().tRPC.Stats.DeviceState.subscribe(undefined, {
+      onData: (data) => {
+        console.log(data);
+        setLatch(data.latch);
+      },
+    });
+  });
+
+  onCleanup(() => {
+    if (activitySubscription) activitySubscription.unsubscribe();
+  });
+
+  const onClickSetLatch = (latch: boolean) => {
+    setLatch(undefined);
+
+    return AppService.get().tRPC.Stats.SetLatch.mutate(latch);
   };
 
   return (
     <Card colour="danger">
       <Card.Header text="Admin Controls" />
       <Card.Body>
+        <Show when={latch() !== undefined} fallback={<p>Loading...</p>}>
+          <p>
+            Latch is currently{" "}
+            <span class={`badge text-bg-${latch() ? "danger" : "success"}`}>{latch() ? "ON" : "OFF"}</span>
+          </p>
+        </Show>
         <p>Turning latch ON will disable the mag-lock and allow entry to all.</p>
         <p>Turning latch OFF will re-enable security and a RFID tag will be required for entry.</p>
-        <Button colour="danger" on:click={() => setLatch(true)}>
+        <Button colour="danger" on:click={() => onClickSetLatch(true)}>
           Latch On
         </Button>
         &nbsp;
-        <Button colour="success" on:click={() => setLatch(false)}>
+        <Button colour="success" on:click={() => onClickSetLatch(false)}>
           Latch Off
         </Button>
       </Card.Body>

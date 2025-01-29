@@ -1,6 +1,7 @@
 use crate::services::common::{MainPublisher, SystemMessage};
 use crate::services::state::PermanentStateService;
 use alloc::sync::Arc;
+use common::StringResponse;
 use core::marker::Sized;
 use embassy_executor::Spawner;
 use embassy_net::Stack;
@@ -12,6 +13,7 @@ use picoserve::{make_static, routing::get, AppBuilder, AppRouter};
 use read_file::HandleFileRead;
 use write_file::HandleFileWrite;
 
+mod common;
 mod ota;
 mod read_file;
 mod write_file;
@@ -37,14 +39,8 @@ impl AppBuilder for AppProps {
                 "/",
                 get(|| async {
                     publisher.publish(SystemMessage::Ping).await;
-
-                    if state_service.get_latch() {
-                        "Latch On"
-                    } else {
-                        "Latch Off"
-                    }
-
-                    // "Door Entry [ESP32]"
+                    let json = state_service.read_json();
+                    StringResponse { str: json }
                 }),
             )
             .route(
@@ -67,7 +63,7 @@ impl AppBuilder for AppProps {
     }
 }
 
-const WEB_TASK_POOL_SIZE: usize = 1;
+const WEB_TASK_POOL_SIZE: usize = 2;
 
 #[embassy_executor::task(pool_size = WEB_TASK_POOL_SIZE)]
 async fn web_task(id: usize, stack: Stack<'static>, app: &'static AppRouter<AppProps>, config: &'static picoserve::Config<Duration>) -> ! {

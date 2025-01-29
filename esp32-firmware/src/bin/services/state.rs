@@ -28,11 +28,15 @@ impl PermanentStateService {
         }
     }
 
-    pub fn init(&mut self) -> Result<(), StateError> {
+    pub fn read_json(&self) -> String {
         let mut flash = FlashStorage::new();
         let local_fs = LocalFs::new(&mut flash);
 
-        let json = local_fs.read_text_file(FILE_NAME).unwrap_or(r#"{"latch":false}"#.to_string());
+        local_fs.read_text_file(FILE_NAME).unwrap_or(r#"{"latch":false}"#.to_string())
+    }
+
+    pub fn init(&mut self) -> Result<(), StateError> {
+        let json = self.read_json();
 
         info!("PermanentStateService: init {}", json);
 

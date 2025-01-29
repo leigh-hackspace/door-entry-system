@@ -1,24 +1,44 @@
 import { getTableColumns } from "drizzle-orm/utils";
+import EventEmitter from "node:events";
 import { eq } from "npm:drizzle-orm";
+import * as v from "valibot";
 import { sleep } from "../../../common/src/index.ts";
 import { Config } from "../config/index.ts";
 import { db, TagTable, UserTable } from "../db/index.ts";
 
+interface DeviceEvents {
+  check: DeviceState[];
+}
+
+export const DeviceState = v.object({
+  latch: v.boolean(),
+});
+
+export type DeviceState = v.InferInput<typeof DeviceState>;
+
+export const DeviceEvents = new EventEmitter<DeviceEvents>();
+
 export async function startCheckDevice() {
   while (true) {
-    try {
-      const res = await fetch(`http://${Config.DE_DEVICE_IP}`, { signal: AbortSignal.timeout(5000) });
-
-      if (res.status === 200) {
-        console.log("Device OK");
-      } else {
-        console.error("Device NOT OK");
-      }
-    } catch (err) {
-      console.error("Device ping failed!", err);
-    }
+    await checkDevice();
 
     await sleep(5_000);
+  }
+}
+
+export async function checkDevice() {
+  try {
+    const res = await fetch(`http://${Config.DE_DEVICE_IP}`, { signal: AbortSignal.timeout(5000) });
+
+    if (res.status === 200) {
+      console.log("Device OK");
+
+      DeviceEvents.emit("check", v.parse(DeviceState, await res.json()));
+    } else {
+      console.error("Device NOT OK");
+    }
+  } catch (err) {
+    console.error("Device ping failed!", err);
   }
 }
 

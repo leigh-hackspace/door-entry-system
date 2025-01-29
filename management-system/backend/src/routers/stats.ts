@@ -1,8 +1,9 @@
 import { eq } from "drizzle-orm";
+import { on } from "node:events";
 import * as v from "valibot";
 import { db } from "../db/index.ts";
 import { ActivityLogTable, TagTable, UserTable } from "../db/schema.ts";
-import { setLatch } from "../services/index.ts";
+import { checkDevice, DeviceEvents, type DeviceState, setLatch } from "../services/index.ts";
 import { assertRole } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 
@@ -26,5 +27,15 @@ export const StatsRouter = tRPC.router({
 
   SetLatch: tRPC.ProtectedProcedure.input(v.parser(v.boolean())).mutation(async ({ ctx, input }) => {
     await setLatch(input);
+  }),
+
+  DeviceState: tRPC.ProtectedProcedure.subscription(async function* (opts) {
+    setTimeout(() => checkDevice(), 500);
+
+    for await (const [data] of on(DeviceEvents, "check", {
+      signal: opts.signal,
+    })) {
+      yield data as DeviceState;
+    }
   }),
 });
