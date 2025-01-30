@@ -3,7 +3,7 @@ use embassy_time::{Duration, Timer};
 use esp_hal::{gpio, peripherals::Peripherals};
 use log::info;
 
-const DEBOUNCE_WAIT_MS: u64 = 10;
+const DEBOUNCE_WAIT_MS: u64 = 20;
 const SHORT_PRESS_DELAY_MS: u64 = 200;
 const LONG_PRESS_DELAY_MS: u64 = 3_000;
 
@@ -18,16 +18,14 @@ pub async fn button_task(publisher: MainPublisher) {
 
         let down_time = esp_hal::time::now().ticks();
 
-        // Eliminate noise by delaying
-        Timer::after(Duration::from_millis(DEBOUNCE_WAIT_MS)).await;
-
         loop {
+            // Eliminate noise by delaying
+            Timer::after(Duration::from_millis(DEBOUNCE_WAIT_MS)).await;
+
             // Check button is released
             if door.is_high() {
                 break;
             }
-
-            Timer::after(Duration::from_millis(10)).await;
 
             let now = esp_hal::time::now().ticks();
 

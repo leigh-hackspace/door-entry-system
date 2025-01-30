@@ -79,7 +79,7 @@ export async function setLatch(latch: boolean) {
       });
 
       if (res.status === 200) {
-        console.log("setLatch: Success");
+        console.log("setLatch: Success", latch);
         break;
       } else {
         console.error("setLatch: Error!", await res.text());
