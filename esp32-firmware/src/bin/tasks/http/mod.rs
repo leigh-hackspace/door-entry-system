@@ -1,5 +1,7 @@
-use crate::services::common::{MainPublisher, SystemMessage};
+use crate::services::common::{DeviceConfig, DeviceState, MainPublisher, SystemMessage};
 use crate::services::state::PermanentStateService;
+use alloc::format;
+use alloc::string::ToString;
 use alloc::sync::Arc;
 use common::StringResponse;
 use core::marker::Sized;
@@ -24,7 +26,8 @@ const OTA_OFFSETS: [u32; 2] = [OTA_0_OFFSET, OTA_1_OFFSET];
 
 struct AppProps {
     publisher: MainPublisher,
-    state_service: PermanentStateService,
+    config_service: PermanentStateService<DeviceConfig>,
+    state_service: PermanentStateService<DeviceState>,
 }
 
 impl AppBuilder for AppProps {
@@ -32,14 +35,27 @@ impl AppBuilder for AppProps {
 
     fn build_app(self) -> picoserve::Router<Self::PathRouter> {
         let publisher = make_static!(Arc<MainPublisher>, Arc::new(self.publisher));
-        let state_service = make_static!(PermanentStateService, self.state_service.clone());
+        let config_service = make_static!(PermanentStateService<DeviceConfig>, self.config_service.clone());
+        let state_service = make_static!(PermanentStateService<DeviceState>, self.state_service.clone());
 
         picoserve::Router::new()
             .route(
                 "/",
                 get(|| async {
                     publisher.publish(SystemMessage::Ping).await;
-                    let json = state_service.read_json();
+
+                    let json = format!(
+                        "[{},{}]",
+                        config_service
+                            .get_json()
+                            .map(|str| str.to_string())
+                            .unwrap_or_else(|err| format!("\"{err:?}\"").try_into().unwrap()),
+                        state_service
+                            .get_json()
+                            .map(|str| str.to_string())
+                            .unwrap_or_else(|err| format!("\"{err:?}\"").try_into().unwrap()),
+                    );
+
                     StringResponse { str: json }
                 }),
             )
@@ -85,8 +101,22 @@ async fn web_task(id: usize, stack: Stack<'static>, app: &'static AppRouter<AppP
     .await
 }
 
-pub fn start_http(spawner: Spawner, stack: Stack<'static>, publisher: MainPublisher, state_service: PermanentStateService) {
-    let app = make_static!(AppRouter<AppProps>, AppProps { publisher, state_service }.build_app());
+pub fn start_http(
+    spawner: Spawner,
+    stack: Stack<'static>,
+    publisher: MainPublisher,
+    config_service: PermanentStateService<DeviceConfig>,
+    state_service: PermanentStateService<DeviceState>,
+) {
+    let app = make_static!(
+        AppRouter<AppProps>,
+        AppProps {
+            publisher,
+            config_service,
+            state_service,
+        }
+        .build_app()
+    );
 
     let config = make_static!(
         picoserve::Config<Duration>,

@@ -1,80 +1,85 @@
 use crate::utils::local_fs::LocalFs;
-use alloc::{
-    format,
-    string::{String, ToString},
-    sync::Arc,
-};
-use core::cell::RefCell;
+use alloc::{format, string::String, sync::Arc};
+use core::cell::{RefCell, RefMut};
 use esp_storage::FlashStorage;
-use log::info;
-use serde::{Deserialize, Serialize};
+use log::{info, warn};
+use serde::{de::DeserializeOwned, Serialize};
 
-const FILE_NAME: &str = "state.txt";
+const MAX_LENGTH: usize = 128;
 
-#[derive(Serialize, Deserialize, Debug)]
-struct PermanentState {
-    latch: bool,
+pub struct PermanentStateService<State> {
+    file_name: String,
+    state: Arc<RefCell<State>>,
 }
 
-#[derive(Clone)]
-pub struct PermanentStateService {
-    state: Arc<RefCell<PermanentState>>,
+impl<State> Clone for PermanentStateService<State> {
+    fn clone(&self) -> Self {
+        Self {
+            file_name: self.file_name.clone(),
+            state: Arc::clone(&self.state),
+        }
+    }
 }
 
-impl PermanentStateService {
-    pub fn new() -> PermanentStateService {
+impl<State: DeserializeOwned + Serialize> PermanentStateService<State> {
+    pub fn new(file_name: String, initial: State) -> PermanentStateService<State> {
         PermanentStateService {
-            state: Arc::new(RefCell::new(PermanentState { latch: false })),
+            file_name,
+            state: Arc::new(RefCell::new(initial)),
         }
     }
 
-    pub fn read_json(&self) -> String {
+    fn read_json(&self) -> Option<String> {
         let mut flash = FlashStorage::new();
         let local_fs = LocalFs::new(&mut flash);
 
-        local_fs.read_text_file(FILE_NAME).unwrap_or(r#"{"latch":false}"#.to_string())
+        match local_fs.read_text_file(&self.file_name) {
+            Ok(json) => Some(json),
+            Err(_) => {
+                warn!("Unable to read json");
+                None
+            }
+        }
     }
 
     pub fn init(&mut self) -> Result<(), StateError> {
         let json = self.read_json();
 
-        info!("PermanentStateService: init {}", json);
+        match json {
+            Some(json) => {
+                info!("PermanentStateService: init {}", json);
 
-        *self.state.borrow_mut() = serde_json_core::from_str::<PermanentState>(&json)
-            .map_err(|err| StateError::Error(format!("{err:?}")))?
-            .0;
+                *self.state.borrow_mut() = serde_json_core::from_str::<State>(&json)
+                    .map_err(|err| StateError::Error(format!("{err:?}")))?
+                    .0;
 
-        Ok(())
+                Ok(())
+            }
+            None => Ok(()),
+        }
+    }
+
+    pub fn get_json(&self) -> Result<heapless::String<MAX_LENGTH>, StateError> {
+        serde_json_core::to_string::<State, MAX_LENGTH>(&self.state.borrow()).map_err(|err| StateError::Error(format!("{err:?}")))
     }
 
     pub fn save(&self) -> Result<(), StateError> {
         let mut flash = FlashStorage::new();
         let local_fs = LocalFs::new(&mut flash);
 
-        let json =
-            serde_json_core::to_string::<PermanentState, 128>(&self.state.borrow()).map_err(|err| StateError::Error(format!("{err:?}")))?;
+        let json = self.get_json()?;
 
         info!("PermanentStateService: save {}", json);
 
         local_fs
-            .write_text_file(FILE_NAME, &json)
+            .write_text_file(&self.file_name, &json)
             .map_err(|err| StateError::Error(format!("{err:?}")))?;
 
         Ok(())
     }
 
-    pub fn get_latch(&self) -> bool {
-        self.state.borrow_mut().latch
-    }
-
-    pub fn set_latch(&mut self, latch: bool) {
-        self.state.borrow_mut().latch = latch;
-    }
-
-    pub fn toggle_latch(&mut self) -> bool {
-        let latch = self.state.borrow().latch;
-        self.state.borrow_mut().latch = !latch;
-        !latch
+    pub fn get_data(&self) -> RefMut<'_, State> {
+        self.state.borrow_mut()
     }
 }
 

@@ -3,6 +3,7 @@ use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
     pubsub::{PubSubChannel, Publisher, Subscriber},
 };
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SystemMessage {
@@ -27,3 +28,16 @@ pub type MainChannel = PubSubChannel<CriticalSectionRawMutex, SystemMessage, CAP
 pub type MainPublisher = Publisher<'static, CriticalSectionRawMutex, SystemMessage, CAP, SUBS, PUBS>;
 
 pub type MainSubscriber = Subscriber<'static, CriticalSectionRawMutex, SystemMessage, CAP, SUBS, PUBS>;
+
+pub const DEVICE_CONFIG_FILE_NAME: &str = "config.txt";
+pub const DEVICE_STATE_FILE_NAME: &str = "state.txt";
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct DeviceConfig {
+    pub name: heapless::String<16>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct DeviceState {
+    pub latch: bool,
+}

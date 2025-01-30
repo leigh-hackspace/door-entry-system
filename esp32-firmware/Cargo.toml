@@ -49,7 +49,7 @@ esp-hal-embassy = { version = "0.5.0", features = ["esp32"] }
 static_cell = { version = "2.1.0", features = ["nightly"] }
 critical-section = "1.2.0"
 picoserve = { version = "0.13.2", features = ["embassy"] }
-serde = { version = "1.0.216", default-features = false, features = [] }
+serde = { version = "1.0.216", default-features = false, features = ["derive"] }
 embedded-storage = "0.3.1"
 esp-storage = { version = "0.4.0", features = ["esp32"] }
 crc = "3.2.1"

@@ -20,27 +20,26 @@ use embassy_sync::pubsub::WaitResult;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
-use esp_hal::peripherals::Peripherals;
 use esp_hal::prelude::*;
 use esp_hal::timer::timg::MwdtStage;
 use esp_println::print;
 use esp_storage::FlashStorage;
-use esp_wifi::ble::controller::BleConnector;
 use esp_wifi::wifi::{self, WifiDevice, WifiStaDevice};
 use log::{error, info, warn};
 use services::auth::check_code;
-use services::common::{MainChannel, MainPublisher, MainSubscriber, SystemMessage};
+use services::common::{
+    DeviceConfig, DeviceState, MainChannel, MainPublisher, MainSubscriber, SystemMessage, DEVICE_CONFIG_FILE_NAME, DEVICE_STATE_FILE_NAME,
+};
 use services::door::DoorService;
 use services::http::HttpService;
 use services::state::PermanentStateService;
 use static_cell::StaticCell;
 use tasks::audio::{audio_task, AudioSignal};
-use tasks::ble::ble_task;
 use tasks::button::button_task;
 use tasks::http::start_http;
 use tasks::rfid::rfid_task;
 use tasks::wifi::{connection_task, WifiSignal};
-use utils::local_fs::{self, LocalFs};
+use utils::local_fs::LocalFs;
 
 extern crate alloc;
 
@@ -134,17 +133,37 @@ async fn main(spawner: Spawner) {
 
     wifi_signal.signal(WifiSignal::Connect);
 
+    let default_device_config = DeviceConfig {
+        name: "Unnamed ESP32".try_into().unwrap(),
+    };
+    let default_device_state = DeviceState { latch: false };
+
+    let mut config_service = PermanentStateService::new(DEVICE_CONFIG_FILE_NAME.to_string(), default_device_config);
+    let mut state_service = PermanentStateService::new(DEVICE_STATE_FILE_NAME.to_string(), default_device_state);
+
+    if let Err(err) = config_service.init() {
+        error!("Config Service failed to initialised! {err:?}");
+    }
+    if let Err(err) = state_service.init() {
+        error!("State Service failed to initialised! {err:?}");
+    }
+
     let mut door_service = DoorService::new();
-    let mut state_service = PermanentStateService::new();
     let http_service = HttpService::new(stack);
 
     if let Err(err) = state_service.init() {
         error!("State Init Error: {:?}", err);
     }
 
-    start_http(spawner, stack, channel.publisher().unwrap(), state_service.clone());
+    start_http(
+        spawner,
+        stack,
+        channel.publisher().unwrap(),
+        config_service.clone(),
+        state_service.clone(),
+    );
 
-    door_service.set_latch(state_service.get_latch());
+    door_service.set_latch(state_service.get_data().latch);
 
     let main_publisher = channel.publisher().unwrap();
     let mut main_subscriber: MainSubscriber = channel.subscriber().unwrap();
@@ -196,7 +215,7 @@ async fn main(spawner: Spawner) {
                     audio_signal.signal(AudioSignal::Play("success.wav".to_string()));
                     Timer::after(Duration::from_millis(1500)).await;
 
-                    if state_service.get_latch() {
+                    if state_service.get_data().latch {
                         continue;
                     }
 
@@ -214,7 +233,7 @@ async fn main(spawner: Spawner) {
                     audio_signal.signal(AudioSignal::Play("failure.wav".to_string()));
                 }
                 SystemMessage::ButtonPressed => {
-                    if state_service.get_latch() {
+                    if state_service.get_data().latch {
                         continue;
                     }
 
@@ -227,7 +246,9 @@ async fn main(spawner: Spawner) {
                     door_service.set_door_lock();
                 }
                 SystemMessage::ButtonLongPressed => {
-                    let latch = state_service.toggle_latch();
+                    let mut latch = state_service.get_data().latch;
+                    latch = !latch;
+                    state_service.get_data().latch = latch;
 
                     door_service.set_latch(latch);
 
@@ -280,7 +301,7 @@ async fn main(spawner: Spawner) {
                     }
                 }
                 SystemMessage::SetLatch(latch) => {
-                    state_service.set_latch(latch);
+                    state_service.get_data().latch = latch;
 
                     door_service.set_latch(latch);
 

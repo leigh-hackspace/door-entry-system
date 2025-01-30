@@ -10,11 +10,19 @@ interface DeviceEvents {
   check: DeviceState[];
 }
 
+export const DeviceConfig = v.object({
+  name: v.string(),
+});
+
+export type DeviceConfig = v.InferInput<typeof DeviceConfig>;
+
 export const DeviceState = v.object({
   latch: v.boolean(),
 });
 
 export type DeviceState = v.InferInput<typeof DeviceState>;
+
+export const DeviceResponse = v.tuple([DeviceConfig, DeviceState] as const);
 
 export const DeviceEvents = new EventEmitter<DeviceEvents>();
 
@@ -33,7 +41,7 @@ export async function checkDevice() {
     if (res.status === 200) {
       console.log("Device OK");
 
-      DeviceEvents.emit("check", v.parse(DeviceState, await res.json()));
+      DeviceEvents.emit("check", v.parse(DeviceResponse, await res.json())[1]);
     } else {
       console.error("Device NOT OK");
     }
