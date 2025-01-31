@@ -2,6 +2,7 @@ import { assert, type ElementOf } from "ts-essentials";
 
 export * from "./activity-log.ts";
 export * from "./common.ts";
+export * from "./device.ts";
 export * from "./tag.ts";
 export * from "./user.ts";
 

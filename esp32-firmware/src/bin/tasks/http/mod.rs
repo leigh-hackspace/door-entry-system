@@ -62,13 +62,13 @@ impl AppBuilder for AppProps {
             .route(
                 "/latch-on",
                 post(|| async {
-                    publisher.publish(SystemMessage::SetLatch(true)).await;
+                    publisher.publish(SystemMessage::HandleLatchFromServer(true)).await;
                 }),
             )
             .route(
                 "/latch-off",
                 post(|| async {
-                    publisher.publish(SystemMessage::SetLatch(false)).await;
+                    publisher.publish(SystemMessage::HandleLatchFromServer(false)).await;
                 }),
             )
             .route("/file", get_service(HandleFileRead).post_service(HandleFileWrite))

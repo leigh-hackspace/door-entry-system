@@ -5,7 +5,7 @@ import { assert } from "ts-essentials";
 import * as v from "valibot";
 import { db, TagTable } from "../db/index.ts";
 import { UserTable } from "../db/schema.ts";
-import { updateValidCodes } from "../services/index.ts";
+import { GlobalDeviceCollection } from "../services/index.ts";
 import { assertOneRecord, PaginationSchema, toDrizzleOrderBy, UUID, withId } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 
@@ -67,7 +67,7 @@ export const TagRouter = tRPC.router({
 
     await db.insert(TagTable).values({ id, ...input, user_id });
 
-    await updateValidCodes();
+    await GlobalDeviceCollection.pushValidCodes();
 
     return id;
   }),
@@ -77,9 +77,9 @@ export const TagRouter = tRPC.router({
       const { ...rest } = fields;
 
       await db.transaction(async (tx) => {
-        const expense = assertOneRecord(await tx.select().from(TagTable).where(eq(TagTable.id, id)));
+        const tag = assertOneRecord(await tx.select().from(TagTable).where(eq(TagTable.id, id)));
         // Admins can edit all, users can only edit own
-        assert(ctx.session.user.role === "admin" || expense.user_id === ctx.session.user.id, "No permission");
+        assert(ctx.session.user.role === "admin" || tag.user_id === ctx.session.user.id, "No permission");
 
         await tx
           .update(TagTable)
@@ -87,17 +87,17 @@ export const TagRouter = tRPC.router({
           .where(eq(TagTable.id, id));
       });
 
-      await updateValidCodes();
+      await GlobalDeviceCollection.pushValidCodes();
     }
   ),
 
   Delete: tRPC.ProtectedProcedure.input(v.parser(UUID)).mutation(async ({ ctx, input }) => {
-    const expense = assertOneRecord(await db.select().from(TagTable).where(eq(TagTable.id, input)));
+    const tag = assertOneRecord(await db.select().from(TagTable).where(eq(TagTable.id, input)));
     // Admins can delete all, users can only delete own
-    assert(ctx.session.user.role === "admin" || expense.user_id === ctx.session.user.id, "No permission");
+    assert(ctx.session.user.role === "admin" || tag.user_id === ctx.session.user.id, "No permission");
 
     await db.delete(TagTable).where(eq(TagTable.id, input));
 
-    await updateValidCodes();
+    await GlobalDeviceCollection.pushValidCodes();
   }),
 });

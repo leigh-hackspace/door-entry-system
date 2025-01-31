@@ -38,11 +38,8 @@ function AdminControls() {
   let activitySubscription: Unsubscribable | undefined;
 
   onMount(() => {
-    console.log("onMount");
-
     activitySubscription = AppService.get().tRPC.Stats.DeviceState.subscribe(undefined, {
       onData: (data) => {
-        console.log(data);
         setLatch(data.latch);
       },
     });
@@ -55,7 +52,7 @@ function AdminControls() {
   const onClickSetLatch = (latch: boolean) => {
     setLatch(undefined);
 
-    return AppService.get().tRPC.Stats.SetLatch.mutate(latch);
+    return AppService.get().tRPC.Stats.SetLatch.mutate({ latch });
   };
 
   return (

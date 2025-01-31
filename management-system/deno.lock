@@ -17,8 +17,10 @@
     "jsr:@std/streams@^1.0.8": "1.0.8",
     "npm:@solidjs/router@*": "0.15.3_solid-js@1.9.4__seroval@1.2.0",
     "npm:@trpc/client@11.0.0-rc.648": "11.0.0-rc.648_@trpc+server@11.0.0-rc.648__typescript@5.7.3_typescript@5.7.3",
+    "npm:@trpc/client@next": "11.0.0-rc.708_@trpc+server@11.0.0-rc.708__typescript@5.7.3_typescript@5.7.3",
     "npm:@trpc/server@*": "10.45.2",
     "npm:@trpc/server@11.0.0-rc.648": "11.0.0-rc.648_typescript@5.7.3",
+    "npm:@trpc/server@next": "11.0.0-rc.708_typescript@5.7.3",
     "npm:@types/jsonwebtoken@^9.0.7": "9.0.7",
     "npm:@types/node@*": "22.5.4",
     "npm:bootstrap@^5.3.3": "5.3.3_@popperjs+core@2.11.8",
@@ -586,11 +588,24 @@
         "typescript"
       ]
     },
+    "@trpc/client@11.0.0-rc.708_@trpc+server@11.0.0-rc.708__typescript@5.7.3_typescript@5.7.3": {
+      "integrity": "sha512-8bVmfzvr62yIBuxmEJyQyDqEcK3SNfq0WWAwFhOAetdOk8EvmlC2JTbE8t3ug3HQ+xZmu/43tiOOFGa/O3FTrQ==",
+      "dependencies": [
+        "@trpc/server@11.0.0-rc.708_typescript@5.7.3",
+        "typescript"
+      ]
+    },
     "@trpc/server@10.45.2": {
       "integrity": "sha512-wOrSThNNE4HUnuhJG6PfDRp4L2009KDVxsd+2VYH8ro6o/7/jwYZ8Uu5j+VaW+mOmc8EHerHzGcdbGNQSAUPgg=="
     },
     "@trpc/server@11.0.0-rc.648_typescript@5.7.3": {
       "integrity": "sha512-nKW7FNM+QZrY/CVGlX3hFNIdUvbw6pwSJ+HzEF8GIeSJDKLHK7Ke1QJGI2mRW6oF9dCKMBXfuLaYY2dXfjfn7Q==",
+      "dependencies": [
+        "typescript"
+      ]
+    },
+    "@trpc/server@11.0.0-rc.708_typescript@5.7.3": {
+      "integrity": "sha512-LIq0PRf/6ZTz7gQEgiYKGbyf7H9Xz4nWwuT8Lkk1fw94F5GQgiq3SywFBTE45Tpq22FmssQz0fHEdwsG6GJCzQ==",
       "dependencies": [
         "typescript"
       ]

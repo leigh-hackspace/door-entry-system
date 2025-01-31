@@ -3,12 +3,10 @@ import { pgEnum, pgTable, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { ActivityLogAction } from "../../../common/src/activity-log.ts";
 import { UserRole } from "../../../common/src/index.ts"; // Drizzle Kit bodge
 
-export type TableType = typeof UserTable | typeof TagTable | typeof ActivityLogTable;
+export type TableType = typeof UserTable | typeof TagTable | typeof ActivityLogTable | typeof DeviceTable;
 
 export const ScryptKeyLength = 64;
 const ScryptHashLength = 88; // Base64 length of 64 bytes
-
-export const TagCodeLength = 64;
 
 export const UserRoleEnum = pgEnum("user_role", UserRole);
 
@@ -27,6 +25,8 @@ export const UserTable = pgTable("user", {
 export const UsersRelations = relations(UserTable, ({ many }) => ({
   tags: many(TagTable),
 }));
+
+export const TagCodeLength = 64;
 
 export const TagTable = pgTable("tag", {
   id: uuid().primaryKey(),
@@ -60,3 +60,14 @@ export const ActivityLogRelations = relations(ActivityLogTable, ({ one }) => ({
     references: [UserTable.id],
   }),
 }));
+
+export const DeviceNameLength = 16;
+export const IpAddressLength = 15;
+
+export const DeviceTable = pgTable("device", {
+  id: uuid().primaryKey(),
+  name: varchar({ length: DeviceNameLength }).notNull().unique(),
+  ip_address: varchar({ length: IpAddressLength }).notNull().unique(),
+  created: timestamp({ withTimezone: false, mode: "date" }).notNull().defaultNow(),
+  updated: timestamp({ withTimezone: false, mode: "date" }).notNull().defaultNow(),
+});

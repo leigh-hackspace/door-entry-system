@@ -5,7 +5,7 @@ export const TagCreateSchema = v.object({
   user_id: v.optional(
     v.nullable(v.pipe(v.string(), v.uuid(), v.title("User"), v.metadata(FieldMetadata({ icon: "👤", lookup: "User" }))))
   ),
-  code: v.pipe(v.string(), v.minLength(2), v.title("Name"), v.metadata(FieldMetadata({ icon: "Code" }))),
+  code: v.pipe(v.string(), v.minLength(2), v.title("Code"), v.metadata(FieldMetadata({ icon: "Code" }))),
   description: v.pipe(v.string(), v.minLength(2), v.title("Description"), v.metadata(FieldMetadata({ icon: "Desc" }))),
 });
 

@@ -75,7 +75,7 @@ pub async fn play_file(file: String) {
                     }
 
                     if read_bytes == 0 {
-                        info!("Done playing sound");
+                        info!("==== Done playing: {}", file);
 
                         // Flush
                         let filler = [0u8; 1024];

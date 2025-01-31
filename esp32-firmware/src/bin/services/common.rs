@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SystemMessage {
+    ConnectionAvailable,
     CodeDetected(String),
     Authorised,
     Denied,
@@ -16,7 +17,7 @@ pub enum SystemMessage {
     Watchdog,
     Ping,
     OtaStarting,
-    SetLatch(bool),
+    HandleLatchFromServer(bool),
 }
 
 const CAP: usize = 4;

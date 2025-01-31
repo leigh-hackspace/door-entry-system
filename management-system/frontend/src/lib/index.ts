@@ -1,6 +1,6 @@
 import type { AppRouter } from "@door-entry-management-system/backend";
 import { assertUnreachable, type EntityType } from "@door-entry-management-system/common";
-import type { CreateTRPCClient } from "npm:@trpc/client@11.0.0-rc.648";
+import type { CreateTRPCClient } from "npm:@trpc/client@next";
 import type { Unsubscribable } from "npm:@trpc/server/observable";
 import { assert } from "npm:ts-essentials";
 import * as v from "npm:valibot";

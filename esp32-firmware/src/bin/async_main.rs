@@ -3,6 +3,7 @@
 #![feature(impl_trait_in_assoc_type)]
 #![feature(addr_parse_ascii)]
 #![feature(type_alias_impl_trait)]
+#![feature(async_closure)]
 
 mod services;
 mod tasks;
@@ -10,7 +11,7 @@ mod utils;
 
 use alloc::boxed::Box;
 use alloc::format;
-use alloc::string::ToString;
+use alloc::string::{String, ToString};
 use core::str::FromStr;
 use embassy_executor::Spawner;
 use embassy_net::{Config as NetConfig, Runner, Stack};
@@ -26,7 +27,7 @@ use esp_println::print;
 use esp_storage::FlashStorage;
 use esp_wifi::wifi::{self, WifiDevice, WifiStaDevice};
 use log::{error, info, warn};
-use services::auth::check_code;
+use services::auth::{check_code, CheckCodeResult};
 use services::common::{
     DeviceConfig, DeviceState, MainChannel, MainPublisher, MainSubscriber, SystemMessage, DEVICE_CONFIG_FILE_NAME, DEVICE_STATE_FILE_NAME,
 };
@@ -39,6 +40,7 @@ use tasks::button::button_task;
 use tasks::http::start_http;
 use tasks::rfid::rfid_task;
 use tasks::wifi::{connection_task, WifiSignal};
+use utils::get_latch_sound_file_name;
 use utils::local_fs::LocalFs;
 
 extern crate alloc;
@@ -46,16 +48,6 @@ extern crate alloc;
 const NOTIFY_URL: &str = env!("NOTIFY_URL");
 const SEED: u64 = 8472;
 
-/// Replacement for [`static_cell::make_static`](https://docs.rs/static_cell/latest/static_cell/macro.make_static.html) for use cases when the type is known.
-#[macro_export]
-macro_rules! make_static {
-    ($t:ty, $val:expr) => ($crate::make_static!($t, $val,));
-    ($t:ty, $val:expr, $(#[$m:meta])*) => {{
-        $(#[$m])*
-        static STATIC_CELL: static_cell::StaticCell<$t> = static_cell::StaticCell::new();
-        STATIC_CELL.init($val)
-    }};
-}
 #[main]
 async fn main(spawner: Spawner) {
     let peripherals = esp_hal::init({
@@ -151,9 +143,47 @@ async fn main(spawner: Spawner) {
     let mut door_service = DoorService::new();
     let http_service = HttpService::new(stack);
 
-    if let Err(err) = state_service.init() {
-        error!("State Init Error: {:?}", err);
-    }
+    let push_announce = async || {
+        if let Err(err) = http_service
+            .do_http_request(
+                NOTIFY_URL.to_string() + "/announce",
+                format!(r#"{{"name":"{}"}}"#, config_service.get_data().name),
+            )
+            .await
+        {
+            warn!("Could not communicate with server! {:?}", err);
+        }
+    };
+
+    let push_code = async |code: String, allowed: bool| {
+        if let Err(err) = http_service
+            .do_http_request(
+                NOTIFY_URL.to_string() + "/code",
+                format!(r#"{{"code":"{}","allowed":{}}}"#, code, if allowed { "true" } else { "false" }),
+            )
+            .await
+        {
+            warn!("Could not communicate with server! {:?}", err);
+        }
+    };
+
+    let push_state = async || {
+        if let Err(err) = state_service.save() {
+            error!("Error saving state: {:?}", err);
+        }
+
+        if let Err(err) = http_service
+            .do_http_request(
+                NOTIFY_URL.to_string() + "/state",
+                state_service.get_json().map(|s| s.to_string()).unwrap_or("{}".to_string()),
+            )
+            .await
+        {
+            warn!("Could not communicate with server! {:?}", err);
+        }
+    };
+
+    door_service.set_latch(state_service.get_data().latch);
 
     start_http(
         spawner,
@@ -163,10 +193,8 @@ async fn main(spawner: Spawner) {
         state_service.clone(),
     );
 
-    door_service.set_latch(state_service.get_data().latch);
-
     let main_publisher = channel.publisher().unwrap();
-    let mut main_subscriber: MainSubscriber = channel.subscriber().unwrap();
+    let mut main_subscriber = channel.subscriber().unwrap();
 
     audio_signal.signal(AudioSignal::Play("startup.wav".to_string()));
 
@@ -175,21 +203,24 @@ async fn main(spawner: Spawner) {
     loop {
         if let WaitResult::Message(msg) = main_subscriber.next_message().await {
             if msg != SystemMessage::Ping && msg != SystemMessage::Watchdog {
-                info!("==== SystemMessage: {:?}", msg);
+                info!("#### SystemMessage: {:?}", msg);
             }
 
             match msg {
+                SystemMessage::ConnectionAvailable => {
+                    push_announce().await;
+                }
                 SystemMessage::CodeDetected(code) => {
                     let mut allowed = false;
 
                     match check_code(&code).await {
                         Ok(result) => match result {
-                            services::auth::CheckCodeResult::Valid(name) => {
+                            CheckCodeResult::Valid(name) => {
                                 info!("Welcome {}", name);
                                 main_publisher.publish(SystemMessage::Authorised).await;
                                 allowed = true;
                             }
-                            services::auth::CheckCodeResult::Invalid => {
+                            CheckCodeResult::Invalid => {
                                 main_publisher.publish(SystemMessage::Denied).await;
                             }
                         },
@@ -199,28 +230,15 @@ async fn main(spawner: Spawner) {
                         }
                     }
 
-                    if let Err(err) = http_service
-                        .do_http_request(
-                            NOTIFY_URL.to_string(),
-                            format!(r#"{{"code":"{}","allowed":{}}}"#, code, if allowed { "true" } else { "false" }),
-                        )
-                        .await
-                    {
-                        warn!("Could not communicate with server! {:?}", err);
-                    }
+                    push_code(code, allowed).await;
                 }
                 SystemMessage::Authorised => {
-                    info!("Authorised");
-
                     audio_signal.signal(AudioSignal::Play("success.wav".to_string()));
-                    Timer::after(Duration::from_millis(1500)).await;
-
                     if state_service.get_data().latch {
                         continue;
                     }
 
                     door_service.release_door_lock();
-                    audio_signal.signal(AudioSignal::Play("open.wav".to_string()));
 
                     Timer::after(Duration::from_millis(5000)).await;
 
@@ -252,15 +270,9 @@ async fn main(spawner: Spawner) {
 
                     door_service.set_latch(latch);
 
-                    audio_signal.signal(AudioSignal::Play(if latch {
-                        "latchon.wav".to_string()
-                    } else {
-                        "latchoff.wav".to_string()
-                    }));
+                    audio_signal.signal(AudioSignal::Play(get_latch_sound_file_name(latch)));
 
-                    if let Err(err) = state_service.save() {
-                        error!("Error saving state: {:?}", err);
-                    }
+                    push_state().await;
                 }
                 SystemMessage::WifiOff => {
                     wifi_signal.signal(WifiSignal::Disconnect);
@@ -280,6 +292,7 @@ async fn main(spawner: Spawner) {
                     }
                 }
                 SystemMessage::Ping => {
+                    print!(".");
                     last_seen = esp_hal::time::now().ticks();
                 }
                 SystemMessage::OtaStarting => {
@@ -300,20 +313,14 @@ async fn main(spawner: Spawner) {
                         Timer::after(Duration::from_millis(10_000)).await;
                     }
                 }
-                SystemMessage::SetLatch(latch) => {
+                SystemMessage::HandleLatchFromServer(latch) => {
                     state_service.get_data().latch = latch;
 
                     door_service.set_latch(latch);
 
-                    if let Err(err) = state_service.save() {
-                        error!("Error saving state: {:?}", err);
-                    }
+                    push_state().await;
 
-                    audio_signal.signal(AudioSignal::Play(if latch {
-                        "latchon.wav".to_string()
-                    } else {
-                        "latchoff.wav".to_string()
-                    }));
+                    audio_signal.signal(AudioSignal::Play(get_latch_sound_file_name(latch)));
                 }
             }
         };
@@ -335,11 +342,12 @@ async fn watchdog_task(stack: Stack<'static>, publisher: MainPublisher) {
             if let Some(ip_info) = stack.config_v4() {
                 shown_ip = true;
                 info!("IP ADDRESS: {:?}", ip_info.address.address());
+
+                publisher.publish(SystemMessage::ConnectionAvailable).await;
             }
         }
 
         publisher.publish(SystemMessage::Watchdog).await;
-        print!(".");
 
         Timer::after(Duration::from_millis(10_000)).await;
     }

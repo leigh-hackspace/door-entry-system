@@ -6,8 +6,8 @@ import {
   TRPCClientError,
   type TRPCLink,
   unstable_httpSubscriptionLink,
-} from "npm:@trpc/client@11.0.0-rc.648";
-import { observable } from "npm:@trpc/server@11.0.0-rc.648/observable";
+} from "npm:@trpc/client@next";
+import { observable } from "npm:@trpc/server@next/observable";
 import superjson from "npm:superjson";
 
 const ApiBaseUrl = getApiBaseUrl();
