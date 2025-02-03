@@ -1,3 +1,4 @@
+import { FieldMetadata } from "@door-entry-management-system/common";
 import { Card, LinkButton, MagicBrowser, refreshAllBrowsers } from "@frontend/components";
 import { openConfirm } from "@frontend/dialogs";
 import { beginPage } from "@frontend/helper";
@@ -6,11 +7,13 @@ import type { RouteSectionProps } from "npm:@solidjs/router";
 import * as v from "npm:valibot";
 
 const TagTableSchema = v.object({
-  code: v.pipe(v.string(), v.title("Code")),
-  description: v.pipe(v.string(), v.title("Description")),
-  user_name: v.nullable(v.pipe(v.string(), v.title("User Name"))),
-  created: v.pipe(v.date(), v.title("Created")),
-  updated: v.pipe(v.date(), v.title("Updated")),
+  code: v.pipe(v.string(), v.title("Code"), v.metadata(FieldMetadata({ icon: "🔑" }))),
+  description: v.pipe(v.string(), v.title("Description"), v.metadata(FieldMetadata({ icon: "✍" }))),
+  user_name: v.nullable(
+    v.pipe(v.string(), v.title("User Name"), v.metadata(FieldMetadata({ icon: "👤", lookup: "User" })))
+  ),
+  created: v.pipe(v.date(), v.title("Created"), v.metadata(FieldMetadata({ displayMode: "raw" }))),
+  updated: v.pipe(v.date(), v.title("Updated"), v.metadata(FieldMetadata({ displayMode: "raw" }))),
 });
 
 export function Tags(props: RouteSectionProps) {
@@ -32,7 +35,7 @@ export function Tags(props: RouteSectionProps) {
   return (
     <main>
       <Card colour="warning">
-        <Card.Header text="Tags" />
+        <Card.Header text="🪪 Tags" />
         <Card.Body>
           <MagicBrowser
             schema={TagTableSchema}

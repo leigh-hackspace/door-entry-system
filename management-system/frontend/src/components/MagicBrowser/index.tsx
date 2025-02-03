@@ -7,6 +7,7 @@ import { enGB } from "npm:date-fns/locale";
 import { type JSXElement, createEffect, createSignal, onCleanup, onMount } from "npm:solid-js";
 import { assert } from "npm:ts-essentials";
 import type * as v from "npm:valibot";
+import { DataList } from "../DataList/index.tsx";
 import { DataTable, type DataTableColumn } from "../DataTable/index.tsx";
 import { Pagination } from "../Pagination/index.tsx";
 
@@ -36,7 +37,7 @@ type Overrides<TRow> = {
   [TProp in Extract<keyof TRow, string> as `render${Capitalize<TProp>}`]?: (row: TRow) => JSXElement;
 };
 
-const PageSize = 5;
+const PageSize = 10;
 
 interface MagicBrowserInstance {
   refresh(): void;
@@ -53,7 +54,7 @@ export function MagicBrowser<TSchema extends v.ObjectSchema<any, any>, TRow exte
 ) {
   const instance: MagicBrowserInstance = {
     refresh: () => {
-      fetch(page(), search(), sort(), props.refresh);
+      fetch(page(), pageSize(), search(), sort(), props.refresh);
     },
   };
 
@@ -75,13 +76,14 @@ export function MagicBrowser<TSchema extends v.ObjectSchema<any, any>, TRow exte
   });
   const [search, setSearch] = createSignal("");
   const [page, setPage] = createSignal(1);
+  const [pageSize, setPageSize] = createSignal(PageSize);
   const [sort, setSort] = createSignal<QuerySort | undefined>(props.initialSort);
 
-  const fetch = async (page: number, search: string, sort?: QuerySort, refresh?: number) => {
+  const fetch = async (page: number, pageSize: number, search: string, sort?: QuerySort, refresh?: number) => {
     try {
       const rows = await props.onFetch({
-        skip: (page - 1) * PageSize,
-        take: PageSize,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
         search,
         orderBy: sort ? [[sort.sort, sort.dir]] : [],
       });
@@ -99,7 +101,7 @@ export function MagicBrowser<TSchema extends v.ObjectSchema<any, any>, TRow exte
   };
 
   createEffect(() => {
-    fetch(page(), search(), sort(), props.refresh);
+    fetch(page(), pageSize(), search(), sort(), props.refresh);
   });
 
   const onSearch = (search: string) => {
@@ -121,11 +123,13 @@ export function MagicBrowser<TSchema extends v.ObjectSchema<any, any>, TRow exte
 
   const getColumns = (): readonly DataTableColumn<TRow>[] => {
     return propSchemas.map(([propName]) => {
-      const { title } = getFieldInfo(props.schema, propName);
+      const { title, metadata } = getFieldInfo(props.schema, propName);
 
       return {
         name: propName,
         label: title ?? "???",
+        icon: metadata?.icon,
+        displayMode: metadata?.displayMode,
         render: (row): JSXElement => {
           const overrideName = `render${camelToPascal(propName)}`;
 
@@ -155,44 +159,67 @@ export function MagicBrowser<TSchema extends v.ObjectSchema<any, any>, TRow exte
     );
   };
 
-  const TableHeader = () => (
-    <>
-      {props.title && <div>{props.title}</div>}
-      <TableActions />
-    </>
-  );
+  const desktop = document.body.clientWidth > 576;
 
-  const TableSubHeader = () => (
-    <>
-      <div class="input-group">
-        <span class="input-group-text">🔍</span>
-        <input
-          type="text"
-          class="form-control"
-          value={search()}
-          placeholder="Quick Search..."
-          on:keyup={(e) => onSearch(e.currentTarget.value)}
+  if (desktop) {
+    const TableHeader = () => (
+      <>
+        {props.title && <div>{props.title}</div>}
+        <TableActions />
+      </>
+    );
+
+    const TableSubHeader = () => (
+      <>
+        <div class="input-group">
+          <span class="input-group-text">🔍</span>
+          <input
+            type="text"
+            class="form-control"
+            value={search()}
+            placeholder="Quick Search..."
+            on:keyup={(e) => onSearch(e.currentTarget.value)}
+          />
+        </div>
+      </>
+    );
+
+    const TableFooter = () => <Pagination page={page()} pageSize={PageSize} count={rows().total} onPage={setPage} />;
+
+    return (
+      <div class="d-flex flex-column gap-3">
+        <TableHeader />
+        <TableSubHeader />
+        <DataTable
+          columns={getColumns()}
+          rows={rows().rows}
+          rowActions={props.rowActions}
+          sort={sort()}
+          onSort={onSort}
+        />
+        <TableFooter />
+      </div>
+    );
+  } else {
+    const onLoadMore = () => {
+      if (pageSize() < rows().total) {
+        setPageSize(pageSize() + PageSize);
+      }
+    };
+
+    return (
+      <div class="d-flex flex-column gap-3">
+        <DataList
+          columns={getColumns()}
+          rows={rows().rows}
+          rowActions={props.rowActions}
+          sort={sort()}
+          onSort={onSort}
+          onLoadMore={onLoadMore}
         />
       </div>
-    </>
-  );
-
-  const TableFooter = () => <Pagination page={page()} pageSize={PageSize} count={rows().total} onPage={setPage} />;
-
-  return (
-    <div class="d-flex flex-column gap-3">
-      <TableHeader />
-      <TableSubHeader />
-      <DataTable
-        columns={getColumns()}
-        rows={rows().rows}
-        rowActions={props.rowActions}
-        sort={sort()}
-        onSort={onSort}
-      />
-      <TableFooter />
-    </div>
-  );
+    );
+  }
 }
 
 function renderValue(value: unknown, propName: string): JSXElement {

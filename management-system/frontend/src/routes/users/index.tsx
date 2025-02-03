@@ -1,4 +1,4 @@
-import { humanise } from "@door-entry-management-system/common";
+import { FieldMetadata, humanise } from "@door-entry-management-system/common";
 import { Card, LinkButton, MagicBrowser, refreshAllBrowsers } from "@frontend/components";
 import { openConfirm } from "@frontend/dialogs";
 import { beginPage } from "@frontend/helper";
@@ -7,11 +7,11 @@ import type { RouteSectionProps } from "npm:@solidjs/router";
 import * as v from "npm:valibot";
 
 const UserTableSchema = v.object({
-  role: v.pipe(v.string(), v.title("Role")),
-  email: v.pipe(v.string(), v.title("Email Address")),
-  name: v.pipe(v.string(), v.title("Name")),
-  created: v.pipe(v.date(), v.title("Created")),
-  updated: v.pipe(v.date(), v.title("Updated")),
+  role: v.pipe(v.string(), v.title("Role"), v.metadata(FieldMetadata({ icon: "🏅" }))),
+  email: v.pipe(v.string(), v.title("Email"), v.metadata(FieldMetadata({ icon: "📧" }))),
+  name: v.pipe(v.string(), v.title("Name"), v.metadata(FieldMetadata({ icon: "👤" }))),
+  created: v.pipe(v.date(), v.title("Created"), v.metadata(FieldMetadata({ displayMode: "raw" }))),
+  updated: v.pipe(v.date(), v.title("Updated"), v.metadata(FieldMetadata({ displayMode: "raw" }))),
 });
 
 export function Users(props: RouteSectionProps) {
@@ -33,7 +33,7 @@ export function Users(props: RouteSectionProps) {
   return (
     <main>
       <Card colour="success">
-        <Card.Header text="Users" />
+        <Card.Header text="👤 Users" />
         <Card.Body>
           <MagicBrowser
             schema={UserTableSchema}

@@ -1,6 +1,7 @@
 import { AppService } from "@frontend/lib";
 import { useNavigate } from "npm:@solidjs/router";
 import { createSignal, Show } from "npm:solid-js";
+import { onCleanup, onMount } from "solid-js";
 import { Button } from "../Button/index.tsx";
 
 export function NavBar() {
@@ -9,6 +10,19 @@ export function NavBar() {
   const navigate = useNavigate();
 
   const [expanded, setExpanded] = createSignal(false);
+
+  const linkClick = (e: MouseEvent) => {
+    if (e.target instanceof HTMLElement && e.target.tagName === "A") {
+      setExpanded(false);
+    }
+  };
+
+  onMount(() => {
+    document.querySelector("nav")?.addEventListener("click", linkClick);
+  });
+  onCleanup(() => {
+    document.querySelector("nav")?.removeEventListener("click", linkClick);
+  });
 
   const onToggle = () => {
     setExpanded(!expanded());
@@ -34,27 +48,27 @@ export function NavBar() {
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             <li class="nav-item">
               <a class="nav-link active" href="/">
-                Dashboard
+                🖥 Dashboard
               </a>
             </li>
 
             <Show when={user()?.role === "admin"}>
               <li class="nav-item">
                 <a class="nav-link active" href="/users">
-                  Users
+                  👤 Users
                 </a>
               </li>
             </Show>
 
             <li class="nav-item">
               <a class="nav-link active" href="/tags">
-                Tags
+                🪪 Tags
               </a>
             </li>
 
             <li class="nav-item">
               <a class="nav-link active" href="/activity-log">
-                Logs
+                🪵 Logs
               </a>
             </li>
           </ul>

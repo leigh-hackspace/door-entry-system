@@ -19,14 +19,12 @@ export function MagicFields<
   TSchema extends v.ObjectSchema<any, any>,
   TData extends v.InferInput<v.SchemaWithPartial<TSchema, undefined>>
 >(props: Props<TSchema, TData>) {
-  const _schema = props.schema;
-
-  const fieldsNames = Object.keys(_schema.entries) as unknown as readonly Extract<keyof TData, string>[];
+  const fieldsNames = Object.keys(props.schema.entries) as unknown as readonly Extract<keyof TData, string>[];
 
   const getValidationMessages = (fieldName: keyof TData) => {
     if (!props.validation) return [];
 
-    const validation = v.safeParse(_schema, props.data);
+    const validation = v.safeParse(props.schema, props.data);
     const issues = validation.issues?.filter((i): i is v.BaseIssue<any> => "path" in i && "message" in i);
 
     return issues?.filter((i) => i.path?.length === 1 && i.path[0].key === fieldName).map((i) => i.message) ?? [];
@@ -43,7 +41,10 @@ export function MagicFields<
     <FormFields>
       <For each={fieldsNames}>
         {(fieldName) => {
-          const { metadata, title, inputType, options, description, entityType } = getFieldInfo(_schema, fieldName);
+          const { metadata, title, inputType, options, description, entityType } = getFieldInfo(
+            props.schema,
+            fieldName
+          );
 
           const value = () => props.data[fieldName];
 

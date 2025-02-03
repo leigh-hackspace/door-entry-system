@@ -1,5 +1,6 @@
 export * from "./Button/index.tsx";
 export * from "./Card/index.tsx";
+export * from "./DataList/index.tsx";
 export * from "./DataTable/index.tsx";
 export * from "./DateInfo/index.tsx";
 export * from "./FormFields/index.tsx";

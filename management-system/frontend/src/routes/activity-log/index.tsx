@@ -3,12 +3,13 @@ import { beginPage } from "@frontend/helper";
 import type { FetchParameters } from "@frontend/lib";
 import type { RouteSectionProps } from "npm:@solidjs/router";
 import * as v from "npm:valibot";
+import { FieldMetadata } from "../../../../common/src/common.ts";
 
 const ActivityLogTableSchema = v.object({
-  code: v.pipe(v.string(), v.title("Code")),
-  action: v.pipe(v.string(), v.title("Action")),
-  user_name: v.nullable(v.pipe(v.string(), v.title("User Name"))),
-  created: v.pipe(v.date(), v.title("Created")),
+  code: v.pipe(v.string(), v.title("Code"), v.metadata(FieldMetadata({ icon: "🔑" }))),
+  action: v.pipe(v.string(), v.title("Action"), v.metadata(FieldMetadata({ icon: "🔘" }))),
+  user_name: v.nullable(v.pipe(v.string(), v.title("User Name"), v.metadata(FieldMetadata({ icon: "👤" })))),
+  created: v.pipe(v.date(), v.title("Created"), v.metadata(FieldMetadata({ displayMode: "raw" }))),
 });
 
 export function ActivityLogs(props: RouteSectionProps) {
@@ -21,7 +22,7 @@ export function ActivityLogs(props: RouteSectionProps) {
   return (
     <main>
       <Card colour="primary">
-        <Card.Header text="Activity Logs" />
+        <Card.Header text="🪵 Activity Logs" />
         <Card.Body>
           <MagicBrowser
             schema={ActivityLogTableSchema}
@@ -29,7 +30,6 @@ export function ActivityLogs(props: RouteSectionProps) {
             onFetch={onFetch}
           />
         </Card.Body>
-        <Card.Footer>&nbsp;</Card.Footer>
       </Card>
     </main>
   );

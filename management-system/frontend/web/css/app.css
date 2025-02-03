@@ -51,6 +51,11 @@ header {
   box-shadow: 0 0 10px var(--bs-gray-700);
 }
 
+.badge {
+  display: block;
+  width: min-content;
+}
+
 .value-undefined {
   background: repeating-linear-gradient(45deg, #f7f7f7, #f7f7f7 10px, #fbfbfb 10px, #fbfbfb 20px);
 }
@@ -76,4 +81,119 @@ header {
 }
 .tile-number {
   font-size: 4em;
+}
+
+.data-list {
+  margin-bottom: 0;
+}
+
+.data-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.data-item:nth-child(2n) {
+  background: var(--bs-gray-100);
+}
+
+.data-item-values {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.data-item-meta {
+  display: flex;
+  align-items: center;
+}
+.data-item-meta-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.data-item-meta-actions {
+  margin-left: auto;
+}
+
+.data-item-value {
+  width: min-content;
+  overflow: hidden;
+  white-space: nowrap; /* Prevent text wrapping */
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.data-item-value div {
+  /* display: inline; */
+  min-width: 0;
+}
+.data-item-value-label {
+  font-weight: bold;
+  background: rgba(var(--bs-primary-rgb), 0.5);
+  color: #fff;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Display Mode = Default */
+.default-mode.data-item-value {
+  border: solid 1px var(--bs-primary);
+  border-radius: 0.5rem;
+  /* box-shadow: 0 0 3px var(--bs-gray-500); */
+  background: #fff;
+}
+.default-mode.data-item-value .data-item-value-value {
+  padding: 0 0.5rem;
+}
+
+/* Display Mode = Raw */
+.raw.data-item-value {
+}
+.raw.data-item-value .data-item-value-label {
+  display: none;
+}
+
+@media (max-width: 576px) {
+  #app {
+    height: 100vh;
+  }
+
+  .container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  main {
+    flex: 1;
+    min-height: 0;
+
+    display: flex;
+    flex-direction: column;
+  }
+
+  .navbar {
+    position: relative;
+  }
+
+  .navbar-collapse {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 1rem);
+    z-index: 1;
+    background: white;
+    box-shadow: 0 0 200px var(--bs-gray-500);
+    padding: 1rem;
+    border-radius: 0.25rem;
+  }
+
+  .card {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .card-body {
+    overflow-y: auto;
+  }
 }

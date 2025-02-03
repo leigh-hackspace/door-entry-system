@@ -6,8 +6,9 @@ export type EntityType = "User" | "Tag";
 
 export interface FieldMetadata {
   [key: string]: unknown;
-  icon: string;
+  icon?: string;
   lookup?: EntityType;
+  displayMode?: string;
 }
 
 export const FieldMetadata = (m: FieldMetadata) => m;

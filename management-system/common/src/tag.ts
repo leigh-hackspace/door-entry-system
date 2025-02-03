@@ -5,8 +5,8 @@ export const TagCreateSchema = v.object({
   user_id: v.optional(
     v.nullable(v.pipe(v.string(), v.uuid(), v.title("User"), v.metadata(FieldMetadata({ icon: "👤", lookup: "User" }))))
   ),
-  code: v.pipe(v.string(), v.minLength(2), v.title("Code"), v.metadata(FieldMetadata({ icon: "Code" }))),
-  description: v.pipe(v.string(), v.minLength(2), v.title("Description"), v.metadata(FieldMetadata({ icon: "Desc" }))),
+  code: v.pipe(v.string(), v.minLength(2), v.title("Code"), v.metadata(FieldMetadata({ icon: "🔑" }))),
+  description: v.pipe(v.string(), v.minLength(2), v.title("Description"), v.metadata(FieldMetadata({ icon: "✍" }))),
 });
 
 export type TagCreate = v.InferInput<typeof TagCreateSchema>;

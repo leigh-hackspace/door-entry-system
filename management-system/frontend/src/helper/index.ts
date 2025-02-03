@@ -46,3 +46,42 @@ export function getLogoutReason() {
   assert(includes(reason, ["expired", "permissions", undefined] as const), `Invalid reason "${reason}"`);
   return reason;
 }
+
+/** Get the closest ancestor that is scrolling this element (overflow/overflow-y) */
+export function getScrollingAncestor(el: HTMLElement): HTMLElement | undefined {
+  while (el && el.parentElement) {
+    const style = getComputedStyle(el);
+    if (/(auto|scroll)/.test(style.overflowY || style.overflow)) {
+      return el;
+    }
+    el = el.parentElement;
+  }
+  return undefined;
+}
+
+export function debounce<TFunc extends (...args: TArgs) => void, TArgs extends unknown[]>(
+  callback: TFunc,
+  wait: number
+) {
+  let lastCallTime = 0;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+
+  return (...args: TArgs) => {
+    const now = Date.now();
+
+    if (now - lastCallTime > wait) {
+      // If enough time has passed, call immediately
+      lastCallTime = now;
+      callback(...args);
+    } else {
+      // Otherwise, clear existing timeout and set a new one
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      timeout = setTimeout(() => {
+        lastCallTime = Date.now();
+        callback(...args);
+      }, wait);
+    }
+  };
+}

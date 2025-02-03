@@ -7,7 +7,7 @@ interface Props {
 
 export function DateInfo(props: Props) {
   return (
-    <div>
+    <div class="date-info">
       <div class="grid">
         <div class="g-col-12 g-col-md-6">
           <div>Created: {format(props.record.created, "PPp", { locale: enGB })}</div>

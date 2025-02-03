@@ -84,7 +84,7 @@ function AdminDashboard() {
 
   return (
     <Card colour="warning">
-      <Card.Header text="Admin Dashboard" />
+      <Card.Header text="🖥 Admin Dashboard" />
       <Card.Body>
         <div class="d-flex gap-3 flex-column">
           <Show when={stats()}>

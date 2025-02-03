@@ -1,5 +1,5 @@
-import { Colour, QuerySort } from "@frontend/lib";
-import { For, JSXElement } from "npm:solid-js";
+import type { Colour, QuerySort } from "@frontend/lib";
+import { For, type JSXElement } from "npm:solid-js";
 import { Button } from "../Button/index.tsx";
 
 interface Props<TRow> {
@@ -13,6 +13,8 @@ interface Props<TRow> {
 export interface DataTableColumn<TRow> {
   name: string;
   label?: string;
+  icon?: string;
+  displayMode?: string;
   render: (row: TRow) => JSXElement;
 }
 
