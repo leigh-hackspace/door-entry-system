@@ -98,11 +98,11 @@ async fn main(spawner: Spawner) {
     wdt.enable();
 
     // List files for debug
-    let mut flash = FlashStorage::new();
-    let local_fs = LocalFs::new(&mut flash);
-    local_fs.dir();
-    drop(local_fs);
-    drop(flash);
+    // let mut flash = FlashStorage::new();
+    // let local_fs = LocalFs::new(&mut flash);
+    // local_fs.dir();
+    // drop(local_fs);
+    // drop(flash);
 
     let channel = make_static!(MainChannel, MainChannel::new());
 
@@ -139,6 +139,8 @@ async fn main(spawner: Spawner) {
     if let Err(err) = state_service.init() {
         error!("State Service failed to initialised! {err:?}");
     }
+
+    info!("Hello Number: {}", unsafe { utils::ffi::hello_number() });
 
     let mut door_service = DoorService::new();
     let http_service = HttpService::new(stack);
@@ -196,7 +198,12 @@ async fn main(spawner: Spawner) {
     let main_publisher = channel.publisher().unwrap();
     let mut main_subscriber = channel.subscriber().unwrap();
 
-    audio_signal.signal(AudioSignal::Play("startup.wav".to_string()));
+    // audio_signal.signal(AudioSignal::Play("startup.wav".to_string(), 16000));
+    // Timer::after(Duration::from_millis(5000)).await;
+    audio_signal.signal(AudioSignal::Play("startup.mp3".to_string(), 16000));
+    // Timer::after(Duration::from_millis(5000)).await;
+    // audio_signal.signal(AudioSignal::Play("samp.mp3".to_string(), 44100));
+    // Timer::after(Duration::from_millis(5000)).await;
 
     let mut last_seen = esp_hal::time::now().ticks();
 
@@ -233,7 +240,7 @@ async fn main(spawner: Spawner) {
                     push_code(code, allowed).await;
                 }
                 SystemMessage::Authorised => {
-                    audio_signal.signal(AudioSignal::Play("success.wav".to_string()));
+                    audio_signal.signal(AudioSignal::Play("success.wav".to_string(), 16000));
                     if state_service.get_data().latch {
                         continue;
                     }
@@ -242,13 +249,13 @@ async fn main(spawner: Spawner) {
 
                     Timer::after(Duration::from_millis(5000)).await;
 
-                    audio_signal.signal(AudioSignal::Play("close.wav".to_string()));
+                    audio_signal.signal(AudioSignal::Play("close.wav".to_string(), 16000));
                     door_service.set_door_lock();
                 }
                 SystemMessage::Denied => {
                     info!("Denied");
 
-                    audio_signal.signal(AudioSignal::Play("failure.wav".to_string()));
+                    audio_signal.signal(AudioSignal::Play("failure.wav".to_string(), 16000));
                 }
                 SystemMessage::ButtonPressed => {
                     if state_service.get_data().latch {
@@ -256,11 +263,12 @@ async fn main(spawner: Spawner) {
                     }
 
                     door_service.release_door_lock();
-                    audio_signal.signal(AudioSignal::Play("open.wav".to_string()));
+                    audio_signal.signal(AudioSignal::Play("open.wav".to_string(), 16000));
 
                     Timer::after(Duration::from_millis(5000)).await;
 
-                    audio_signal.signal(AudioSignal::Play("close.wav".to_string()));
+                    audio_signal.signal(AudioSignal::Play("close.wav".to_string(), 16000));
+                    // audio_signal.signal(AudioSignal::Play("samp.mp3".to_string(), 44100));
                     door_service.set_door_lock();
                 }
                 SystemMessage::ButtonLongPressed => {
@@ -270,7 +278,7 @@ async fn main(spawner: Spawner) {
 
                     door_service.set_latch(latch);
 
-                    audio_signal.signal(AudioSignal::Play(get_latch_sound_file_name(latch)));
+                    audio_signal.signal(AudioSignal::Play(get_latch_sound_file_name(latch), 16000));
 
                     push_state().await;
                 }
@@ -320,7 +328,7 @@ async fn main(spawner: Spawner) {
 
                     push_state().await;
 
-                    audio_signal.signal(AudioSignal::Play(get_latch_sound_file_name(latch)));
+                    audio_signal.signal(AudioSignal::Play(get_latch_sound_file_name(latch), 16000));
                 }
             }
         };

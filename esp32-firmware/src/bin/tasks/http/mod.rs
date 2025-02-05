@@ -79,14 +79,14 @@ impl AppBuilder for AppProps {
     }
 }
 
-const WEB_TASK_POOL_SIZE: usize = 2;
+const WEB_TASK_POOL_SIZE: usize = 1;
 
 #[embassy_executor::task(pool_size = WEB_TASK_POOL_SIZE)]
 async fn web_task(id: usize, stack: Stack<'static>, app: &'static AppRouter<AppProps>, config: &'static picoserve::Config<Duration>) -> ! {
     let port = 80;
-    let mut tcp_rx_buffer = [0; 1024];
-    let mut tcp_tx_buffer = [0; 1024];
-    let mut http_buffer = [0; 2048];
+    let mut tcp_rx_buffer = [0; 512];
+    let mut tcp_tx_buffer = [0; 512];
+    let mut http_buffer = [0; 1024];
 
     picoserve::listen_and_serve(
         id,

@@ -87,3 +87,6 @@ opt-level = 3
 
 [profile.release.package.esp-storage]
 opt-level = 3
+
+[build-dependencies.cc]
+version = "1.0"

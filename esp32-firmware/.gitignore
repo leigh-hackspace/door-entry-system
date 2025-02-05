@@ -17,5 +17,7 @@ target/
 #.idea/
 
 *.img
+*.o
+*.a
 
 junk/

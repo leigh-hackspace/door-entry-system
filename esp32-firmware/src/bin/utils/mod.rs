@@ -1,4 +1,6 @@
 use alloc::string::{String, ToString};
+pub mod decoder;
+pub mod ffi;
 pub mod flash_stream;
 pub mod local_fs;
 
