@@ -2,7 +2,10 @@ use crate::utils::{
     decoder::{Frame, RawDecoder, MAX_SAMPLES_PER_FRAME},
     local_fs::LocalFs,
 };
-use alloc::string::String;
+use alloc::{
+    format,
+    string::{String, ToString},
+};
 use embassy_time::{Duration, Timer};
 use esp_hal::prelude::*;
 use esp_hal::{
@@ -15,7 +18,15 @@ use esp_println::println;
 use esp_storage::FlashStorage;
 use fatfs::{Read, Seek};
 use log::{error, info};
-pub async fn play_mp3(file: String, sample_rate: u32) {
+
+#[derive(Debug)]
+pub enum AudioError {
+    OpenError(String),
+    ReadError(String),
+    PlayError(String),
+}
+
+pub async fn play_mp3(file: String, sample_rate: u32) -> Result<(), AudioError> {
     info!("==== play_mp3: {}", file);
 
     let mut decoder = RawDecoder::new();
@@ -36,6 +47,41 @@ pub async fn play_mp3(file: String, sample_rate: u32) {
     let (_, rx_descriptors, tx_buffer, tx_descriptors) = dma_buffers!(0, 14000);
     info!("dma init");
 
+    info!("==== Play: {}", file);
+
+    let mut pos = 0usize;
+    let mut total_samples = 0u32;
+
+    let mut mp3_file = local_fs
+        .open_file(&file)
+        .map_err(|err| AudioError::OpenError(format!("{:?}", err)))?;
+
+    let first_read_bytes = mp3_file
+        .read(&mut file_buf)
+        .map_err(|err| AudioError::ReadError(format!("{:?}", err)))?;
+
+    println!("Read Header: {}", first_read_bytes);
+
+    let (first_frame, _skip) = match decoder.peek(&file_buf) {
+        Some(frame) => frame,
+        None => {
+            return Err(AudioError::ReadError("Could not decode first frame".to_string()));
+        }
+    };
+
+    let sample_rate = match first_frame {
+        Frame::Audio(audio) => audio.sample_rate(),
+        Frame::Other(items) => {
+            return Err(AudioError::ReadError("Could not first first frame".to_string()));
+        }
+    };
+
+    println!("Sample Rate: {}", sample_rate);
+
+    mp3_file
+        .seek(fatfs::SeekFrom::Start(0))
+        .map_err(|err| AudioError::ReadError(format!("{:?}", err)))?;
+
     let i2s = I2s::new(
         peripherals.I2S0,
         Standard::Philips,
@@ -55,104 +101,89 @@ pub async fn play_mp3(file: String, sample_rate: u32) {
         .with_dout(peripherals.GPIO17)
         .build();
 
-    // let mut transaction = i2s_tx.write_dma_circular_async(tx_buffer).unwrap();
+    // The async version produces more glitchy audio so staying sync for now....
     let mut transaction = i2s_tx.write_dma_circular(tx_buffer).unwrap();
 
-    info!("==== Play: {}", file);
+    loop {
+        let mut read_bytes = 0usize;
 
-    let mut pos = 0usize;
-    let mut total_samples = 0u32;
+        loop {
+            let chunk_read_bytes = mp3_file
+                .read(&mut file_buf[read_bytes..])
+                .map_err(|err| AudioError::ReadError(format!("{:?}", err)))?;
 
-    match local_fs.open_file(&file) {
-        Err(err) => {
-            println!("Open Error:{:?}", err);
-        }
-        Ok(mut mp3) => {
-            loop {
-                let mut read_bytes = 0usize;
+            read_bytes += chunk_read_bytes;
 
-                loop {
-                    let chunk_read_bytes = match mp3.read(&mut file_buf[read_bytes..]) {
-                        Ok(read_bytes) => read_bytes,
-                        Err(err) => {
-                            error!("Error reading: {}", err);
-                            return;
-                        }
-                    };
-
-                    read_bytes += chunk_read_bytes;
-
-                    if chunk_read_bytes == 0 {
-                        break;
-                    }
-                }
-
-                // info!("read_bytes: Pos={} Len={}", pos, read_bytes);
-
-                if read_bytes == 0 {
-                    info!("==== Done playing MP3: {} {}", file, total_samples);
-
-                    return;
-                }
-
-                if let Some((frame, skip)) = decoder.next(&file_buf[0..read_bytes], &mut frame_buf) {
-                    pos += skip;
-
-                    mp3.seek(fatfs::SeekFrom::Start(pos as u64)).unwrap();
-
-                    match frame {
-                        Frame::Audio(audio_data) => {
-                            let frame_size = audio_data.sample_count();
-
-                            // info!(
-                            //     "Frame::Audio: {} {} {}",
-                            //     audio_data.sample_rate(),
-                            //     audio_data.bitrate(),
-                            //     audio_data.channels()
-                            // );
-
-                            total_samples += frame_size as u32;
-
-                            let samples = audio_data.samples();
-
-                            let mut samples_written = 0usize;
-
-                            while samples_written < frame_size {
-                                samples_written += match transaction.push_with(|data| {
-                                    let samples_room = data.len() / 4;
-
-                                    let start = samples_written;
-                                    let end = (samples_written + samples_room).min(frame_size);
-
-                                    // We need to write each sample twice (presumably because the DAC expects a stereo signal)
-                                    for (i, &sample) in samples[start..end].iter().enumerate() {
-                                        let bytes = sample.to_le_bytes();
-                                        let pos = i * 4;
-
-                                        data[pos + 0..pos + 2].copy_from_slice(&bytes);
-                                        data[pos + 2..pos + 4].copy_from_slice(&bytes);
-                                    }
-
-                                    (end - start) * 4
-                                }) {
-                                    Ok(size) => size / 4,
-                                    Err(err) => {
-                                        println!("Write Error:{:?}", err);
-                                        0
-                                    }
-                                };
-
-                                Timer::after(Duration::from_millis(1)).await;
-                            }
-                        }
-                        Frame::Other(items) => {
-                            info!("O:{:?}", items.len());
-                        }
-                    };
-                }
+            if chunk_read_bytes == 0 {
+                break;
             }
         }
-    };
+
+        // info!("read_bytes: Pos={} Len={}", pos, read_bytes);
+
+        if read_bytes == 0 {
+            info!("==== Done playing MP3: {} {}", file, total_samples);
+
+            let zeros = [0u8, 128];
+
+            for _i in 0..128 {
+                // Write zeros to the ring buffer to clear it out
+                transaction.push(&zeros).unwrap_or_default();
+            }
+
+            return Ok(());
+        }
+
+        if let Some((frame, skip)) = decoder.next(&file_buf[0..read_bytes], &mut frame_buf) {
+            pos += skip;
+
+            mp3_file.seek(fatfs::SeekFrom::Start(pos as u64)).unwrap();
+
+            match frame {
+                Frame::Audio(audio_data) => {
+                    let frame_size = audio_data.sample_count();
+
+                    total_samples += frame_size as u32;
+
+                    let samples = audio_data.samples();
+
+                    let mut samples_written = 0usize;
+
+                    while samples_written < frame_size {
+                        samples_written += match transaction.push_with(|data| {
+                            let samples_room = data.len() / 4;
+
+                            let start = samples_written;
+                            let end = (samples_written + samples_room).min(frame_size);
+
+                            // We need to write each sample twice (presumably because the DAC expects a stereo signal)
+                            for (i, &sample) in samples[start..end].iter().enumerate() {
+                                let bytes = sample.to_le_bytes();
+                                let pos = i * 4;
+
+                                data[pos + 0..pos + 2].copy_from_slice(&bytes);
+                                data[pos + 2..pos + 4].copy_from_slice(&bytes);
+                            }
+
+                            (end - start) * 4
+                        }) {
+                            Ok(size) => size / 4,
+                            Err(err) => {
+                                println!("Write Error:{:?}", err);
+                                0
+                            }
+                        };
+
+                        // Allow tasks to run...
+                        Timer::after(Duration::from_millis(1)).await;
+                    }
+                }
+                Frame::Other(items) => {
+                    info!("O:{:?}", items.len());
+                }
+            };
+        }
+    }
 }
 
 pub async fn play_wav(file: String, sample_rate: u32) {
@@ -193,7 +224,7 @@ pub async fn play_wav(file: String, sample_rate: u32) {
 
     info!("==== Play: {}", file);
 
-    let mut wav = match local_fs.open_file(&file) {
+    let mut wav_file = match local_fs.open_file(&file) {
         Err(err) => {
             println!("Open Error:{:?}", err);
             return;
@@ -204,12 +235,12 @@ pub async fn play_wav(file: String, sample_rate: u32) {
     let mut header = [0u8; 128];
 
     // Discard the header
-    wav.read(&mut header).unwrap();
+    wav_file.read(&mut header).unwrap();
 
     let mut total_samples = 0u32;
 
     loop {
-        if let Ok(read_bytes) = wav.read(&mut file_buf) {
+        if let Ok(read_bytes) = wav_file.read(&mut file_buf) {
             // println!("Read:{}", read_bytes);
 
             if read_bytes > 0 {
@@ -227,35 +258,29 @@ pub async fn play_wav(file: String, sample_rate: u32) {
             } else {
                 info!("==== Done playing WAV: {} {}", file, total_samples);
 
-                // Flush
-                let filler = [0u8; 1024];
+                let zeros = [0u8, 128];
 
-                for i in 0..32 {
-                    match transaction.push(&filler).await {
-                        Ok(_) => {}
-                        Err(_) => {}
-                    }
+                for _i in 0..128 {
+                    // Write zeros to the ring buffer to clear it out
+                    transaction.push(&zeros).await.unwrap_or_default();
                 }
 
-                break;
+                return;
             }
 
-            match transaction.push(&output_buf).await {
-                Err(err) => {
-                    println!("Write Error:{:?}", err);
-                }
-                Ok(written) => {
-                    // println!("Written:{}", written);
-                }
+            if let Err(err) = transaction.push(&output_buf).await {
+                println!("Write Error:{:?}", err);
             }
         }
     }
 }
 
-pub async fn play_file(file: String, sample_rate: u32) {
+pub async fn play_file(file: String, sample_rate: u32) -> Result<(), AudioError> {
     if file.ends_with(".mp3") {
-        play_mp3(file, sample_rate).await;
+        play_mp3(file, sample_rate).await?
     } else if file.ends_with(".wav") {
         play_wav(file, sample_rate).await;
     }
+
+    Ok(())
 }

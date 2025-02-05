@@ -5,9 +5,11 @@ use alloc::string::ToString;
 use alloc::sync::Arc;
 use common::StringResponse;
 use core::marker::Sized;
+use delete_file::HandleFileDelete;
 use embassy_executor::Spawner;
 use embassy_net::Stack;
 use embassy_time::Duration;
+use list_files::HandleFileList;
 use ota::HandleOtaUpdate;
 use partitions_macro::partition_offset;
 use picoserve::routing::{get_service, post};
@@ -17,6 +19,8 @@ use read_file::HandleFileRead;
 use write_file::HandleFileWrite;
 
 mod common;
+mod delete_file;
+mod list_files;
 mod ota;
 mod play_file;
 mod read_file;
@@ -73,7 +77,13 @@ impl AppBuilder for AppProps {
                     publisher.publish(SystemMessage::HandleLatchFromServer(false)).await;
                 }),
             )
-            .route("/file", get_service(HandleFileRead).post_service(HandleFileWrite))
+            .route("/files", get_service(HandleFileList))
+            .route(
+                "/file",
+                get_service(HandleFileRead)
+                    .post_service(HandleFileWrite { publisher })
+                    .delete_service(HandleFileDelete {}),
+            )
             .route("/play", get_service(HandleFilePlay { publisher }))
             .route(
                 "/update",

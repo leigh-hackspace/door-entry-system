@@ -1,12 +1,17 @@
-use crate::utils::local_fs::LocalFs;
-use alloc::format;
+use crate::{
+    services::common::{MainPublisher, SystemMessage},
+    utils::local_fs::LocalFs,
+};
+use alloc::{format, sync::Arc};
 use esp_println::print;
 use esp_storage::FlashStorage;
 use fatfs::Write as _;
 use log::info;
 use picoserve::{io::Read, response::IntoResponse};
 
-pub struct HandleFileWrite;
+pub struct HandleFileWrite {
+    pub publisher: &'static Arc<MainPublisher>,
+}
 
 impl picoserve::routing::RequestHandlerService<()> for HandleFileWrite {
     async fn call_request_handler_service<R: Read, W: picoserve::response::ResponseWriter<Error = R::Error>>(
@@ -37,7 +42,7 @@ impl picoserve::routing::RequestHandlerService<()> for HandleFileWrite {
         };
 
         let mut reader = request.body_connection.body().reader();
-        let mut buffer = [0; 128];
+        let mut buffer = [0; esp_storage::FlashStorage::SECTOR_SIZE as usize];
         let mut total_size = 0;
 
         loop {
@@ -53,6 +58,8 @@ impl picoserve::routing::RequestHandlerService<()> for HandleFileWrite {
             }
 
             print!(".");
+
+            self.publisher.publish_immediate(SystemMessage::Ping);
 
             total_size += read_size;
         }

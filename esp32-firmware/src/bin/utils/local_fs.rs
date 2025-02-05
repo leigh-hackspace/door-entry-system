@@ -2,41 +2,78 @@ use super::flash_stream::FlashStream;
 use alloc::{
     format,
     string::{String, ToString},
+    vec::Vec,
 };
-use core::str::from_utf8;
+use core::str::{self, from_utf8};
 use esp_storage::FlashStorage;
-use fatfs::{FileSystem, FsOptions, LossyOemCpConverter, NullTimeProvider, Read, Write};
-use log::info;
+use fatfs::{format_volume, FileSystem, FormatVolumeOptions, FsOptions, LossyOemCpConverter, NullTimeProvider, Read, Write};
+use log::error;
+use partitions_macro::{partition_offset, partition_size};
+use serde::Serialize;
+
+const FS_OFFSET: u64 = partition_offset!("storage") as u64;
+const FS_LENGTH: u64 = partition_size!("storage") as u64;
 
 pub struct LocalFs<'a> {
     fs: FileSystem<FlashStream<'a>>, // FileSystem using FlashStream
 }
 
+#[derive(Serialize, Debug)]
+pub struct FileEntry {
+    name: heapless::String<11>,
+    size: u64,
+}
+
 impl<'a> LocalFs<'a> {
+    pub fn make_new_filesystem() {
+        let mut flash = FlashStorage::new();
+        let mut flash_stream = FlashStream::new(&mut flash, FS_OFFSET, FS_LENGTH);
+        format_volume(&mut flash_stream, FormatVolumeOptions::new()).unwrap();
+    }
+
     pub fn new(flash: &'a mut FlashStorage) -> Self {
-        let flash_stream = FlashStream::new(flash, 0x310000, 0xF0000);
+        let flash_stream = FlashStream::new(flash, FS_OFFSET, FS_LENGTH);
 
-        let fs = FileSystem::new(flash_stream, FsOptions::new()).expect("Failed to create FileSystem");
+        let fs = match FileSystem::new(flash_stream, FsOptions::new()) {
+            Ok(fs) => fs,
+            Err(err) => {
+                error!("LocalFs.new: {:?}", err);
 
-        // info!("FS Type: {:?}", fs.fat_type());
+                match err {
+                    fatfs::Error::CorruptedFileSystem => {
+                        LocalFs::make_new_filesystem();
+                        panic!("New File System Created! Rebooting...");
+                    }
+                    _ => todo!(),
+                }
+            }
+        };
 
         LocalFs { fs }
     }
 
-    pub fn dir(&self) {
+    pub fn dir(&self) -> Result<Vec<FileEntry>, FsError> {
         let root_dir = self.fs.root_dir();
 
-        // let mut buf = [0u8; 128];
+        let mut entries = Vec::<FileEntry>::new();
 
         for file in root_dir.iter() {
-            let file_name = file.unwrap().file_name();
-            info!("File: {}", file_name);
+            let file = file.map_err(|err| FsError::OpenError(format!("{:?}", err)))?;
 
-            // let mut contents = root_dir.open_file(file_name.as_str()).unwrap();
-            // let read_bytes = contents.read(&mut buf).unwrap();
+            let name: heapless::String<11> = file
+                .file_name()
+                .as_str()
+                .try_into()
+                .map_err(|err| FsError::OpenError(format!("{:?}", err)))?;
 
-            // info!("Contents: ({}) {}", read_bytes, from_utf8(&buf).unwrap());
+            let size = file.len();
+
+            let entry = FileEntry { name, size };
+
+            entries.push(entry);
         }
+
+        Ok(entries)
     }
 
     pub fn get_file_size(&self, file_name: &str) -> Result<u64, FsError> {

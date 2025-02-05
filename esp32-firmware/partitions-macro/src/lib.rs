@@ -28,3 +28,28 @@ pub fn partition_offset(input: TokenStream) -> TokenStream {
     }
     .into()
 }
+
+#[proc_macro_error]
+#[proc_macro]
+pub fn partition_size(input: TokenStream) -> TokenStream {
+    let first_token = input
+        .into_iter()
+        .next()
+        .unwrap_or_else(|| abort_call_site!("Expected a partition name"));
+
+    let partname = match Literal::try_from(first_token) {
+        Ok(Literal::String(name)) => name.value().to_owned(),
+        _ => abort_call_site!("Expected a partition name as string"),
+    };
+
+    let csv = std::fs::read_to_string("partitions.csv").unwrap();
+    let table = PartitionTable::try_from_str(csv).unwrap();
+
+    let part = table.find(&partname).expect("No partition found");
+    let size = part.size();
+
+    quote! {
+        #size
+    }
+    .into()
+}
