@@ -20,7 +20,7 @@ pub struct LocalFs<'a> {
 
 #[derive(Serialize, Debug)]
 pub struct FileEntry {
-    name: heapless::String<11>,
+    name: heapless::String<12>,
     size: u64,
 }
 
@@ -52,15 +52,15 @@ impl<'a> LocalFs<'a> {
         LocalFs { fs }
     }
 
-    pub fn dir(&self) -> Result<Vec<FileEntry>, FsError> {
+    pub fn dir(&self) -> Result<heapless::Vec<FileEntry, 100>, FsError> {
         let root_dir = self.fs.root_dir();
 
-        let mut entries = Vec::<FileEntry>::new();
+        let mut entries = heapless::Vec::<FileEntry, 100>::new();
 
         for file in root_dir.iter() {
             let file = file.map_err(|err| FsError::OpenError(format!("{:?}", err)))?;
 
-            let name: heapless::String<11> = file
+            let name: heapless::String<12> = file
                 .file_name()
                 .as_str()
                 .try_into()

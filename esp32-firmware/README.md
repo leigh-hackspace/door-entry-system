@@ -21,3 +21,13 @@
               | -              - |
               | 5V             - |
               ====================
+
+### Sounds
+
+- startup.mp3
+- open.mp3
+- close.mp3
+- latchon.mp3
+- latchoff.mp3
+- success.mp3
+- failure.mp3

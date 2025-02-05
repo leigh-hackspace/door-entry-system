@@ -17,8 +17,8 @@ macro_rules! make_static {
 
 pub fn get_latch_sound_file_name(latch: bool) -> String {
     if latch {
-        "latchon.wav".to_string()
+        "latchon.mp3".to_string()
     } else {
-        "latchoff.wav".to_string()
+        "latchoff.mp3".to_string()
     }
 }

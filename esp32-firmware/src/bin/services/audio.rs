@@ -17,7 +17,7 @@ use esp_hal::{
 use esp_println::println;
 use esp_storage::FlashStorage;
 use fatfs::{Read, Seek};
-use log::{error, info};
+use log::info;
 
 #[derive(Debug)]
 pub enum AudioError {
@@ -26,13 +26,13 @@ pub enum AudioError {
     PlayError(String),
 }
 
-pub async fn play_mp3(file: String, sample_rate: u32) -> Result<(), AudioError> {
+pub async fn play_mp3(file: String) -> Result<(), AudioError> {
     info!("==== play_mp3: {}", file);
 
     let mut decoder = RawDecoder::new();
     info!("decoder created");
 
-    let mut file_buf = [0u8; 512];
+    let mut file_buf = [0u8; 256];
     let mut frame_buf = [0i16; MAX_SAMPLES_PER_FRAME];
 
     let mut flash = FlashStorage::new();
@@ -186,100 +186,100 @@ pub async fn play_mp3(file: String, sample_rate: u32) -> Result<(), AudioError> 
     }
 }
 
-pub async fn play_wav(file: String, sample_rate: u32) {
-    info!("==== play_wav: {}", file);
+// pub async fn play_wav(file: String, sample_rate: u32) {
+//     info!("==== play_wav: {}", file);
 
-    let mut file_buf = [0u8; 1024];
-    let mut output_buf = [0u8; 2048];
+//     let mut file_buf = [0u8; 1024];
+//     let mut output_buf = [0u8; 2048];
 
-    let mut flash = FlashStorage::new();
-    let local_fs = LocalFs::new(&mut flash);
+//     let mut flash = FlashStorage::new();
+//     let local_fs = LocalFs::new(&mut flash);
 
-    let peripherals = unsafe { Peripherals::steal() };
+//     let peripherals = unsafe { Peripherals::steal() };
 
-    let dma = Dma::new(peripherals.DMA);
-    let dma_channel = dma.i2s0channel.configure(false, DmaPriority::Priority0);
+//     let dma = Dma::new(peripherals.DMA);
+//     let dma_channel = dma.i2s0channel.configure(false, DmaPriority::Priority0);
 
-    let (_, rx_descriptors, tx_buffer, tx_descriptors) = dma_buffers!(0, 14000);
+//     let (_, rx_descriptors, tx_buffer, tx_descriptors) = dma_buffers!(0, 14000);
 
-    let i2s = I2s::new(
-        peripherals.I2S0,
-        Standard::Philips,
-        DataFormat::Data16Channel16,
-        sample_rate.Hz(),
-        dma_channel,
-        rx_descriptors,
-        tx_descriptors,
-    )
-    .into_async();
+//     let i2s = I2s::new(
+//         peripherals.I2S0,
+//         Standard::Philips,
+//         DataFormat::Data16Channel16,
+//         sample_rate.Hz(),
+//         dma_channel,
+//         rx_descriptors,
+//         tx_descriptors,
+//     )
+//     .into_async();
 
-    let i2s_tx = i2s
-        .i2s_tx
-        .with_bclk(peripherals.GPIO16)
-        .with_ws(peripherals.GPIO4)
-        .with_dout(peripherals.GPIO17)
-        .build();
+//     let i2s_tx = i2s
+//         .i2s_tx
+//         .with_bclk(peripherals.GPIO16)
+//         .with_ws(peripherals.GPIO4)
+//         .with_dout(peripherals.GPIO17)
+//         .build();
 
-    let mut transaction = i2s_tx.write_dma_circular_async(tx_buffer).unwrap();
+//     let mut transaction = i2s_tx.write_dma_circular_async(tx_buffer).unwrap();
 
-    info!("==== Play: {}", file);
+//     info!("==== Play: {}", file);
 
-    let mut wav_file = match local_fs.open_file(&file) {
-        Err(err) => {
-            println!("Open Error:{:?}", err);
-            return;
-        }
-        Ok(wav) => wav,
-    };
+//     let mut wav_file = match local_fs.open_file(&file) {
+//         Err(err) => {
+//             println!("Open Error:{:?}", err);
+//             return;
+//         }
+//         Ok(wav) => wav,
+//     };
 
-    let mut header = [0u8; 128];
+//     let mut header = [0u8; 128];
 
-    // Discard the header
-    wav_file.read(&mut header).unwrap();
+//     // Discard the header
+//     wav_file.read(&mut header).unwrap();
 
-    let mut total_samples = 0u32;
+//     let mut total_samples = 0u32;
 
-    loop {
-        if let Ok(read_bytes) = wav_file.read(&mut file_buf) {
-            // println!("Read:{}", read_bytes);
+//     loop {
+//         if let Ok(read_bytes) = wav_file.read(&mut file_buf) {
+//             // println!("Read:{}", read_bytes);
 
-            if read_bytes > 0 {
-                total_samples += read_bytes as u32 / 2;
+//             if read_bytes > 0 {
+//                 total_samples += read_bytes as u32 / 2;
 
-                for b in 0..(read_bytes - 1) {
-                    if b % 2 != 0 {
-                        continue;
-                    }
-                    output_buf[b * 2 + 0] = file_buf[b + 0];
-                    output_buf[b * 2 + 1] = file_buf[b + 1];
-                    output_buf[b * 2 + 2] = file_buf[b + 0];
-                    output_buf[b * 2 + 3] = file_buf[b + 1];
-                }
-            } else {
-                info!("==== Done playing WAV: {} {}", file, total_samples);
+//                 for b in 0..(read_bytes - 1) {
+//                     if b % 2 != 0 {
+//                         continue;
+//                     }
+//                     output_buf[b * 2 + 0] = file_buf[b + 0];
+//                     output_buf[b * 2 + 1] = file_buf[b + 1];
+//                     output_buf[b * 2 + 2] = file_buf[b + 0];
+//                     output_buf[b * 2 + 3] = file_buf[b + 1];
+//                 }
+//             } else {
+//                 info!("==== Done playing WAV: {} {}", file, total_samples);
 
-                let zeros = [0u8, 128];
+//                 let zeros = [0u8, 128];
 
-                for _i in 0..128 {
-                    // Write zeros to the ring buffer to clear it out
-                    transaction.push(&zeros).await.unwrap_or_default();
-                }
+//                 for _i in 0..128 {
+//                     // Write zeros to the ring buffer to clear it out
+//                     transaction.push(&zeros).await.unwrap_or_default();
+//                 }
 
-                return;
-            }
+//                 return;
+//             }
 
-            if let Err(err) = transaction.push(&output_buf).await {
-                println!("Write Error:{:?}", err);
-            }
-        }
-    }
-}
+//             if let Err(err) = transaction.push(&output_buf).await {
+//                 println!("Write Error:{:?}", err);
+//             }
+//         }
+//     }
+// }
 
-pub async fn play_file(file: String, sample_rate: u32) -> Result<(), AudioError> {
+pub async fn play_file(file: String) -> Result<(), AudioError> {
     if file.ends_with(".mp3") {
-        play_mp3(file, sample_rate).await?
+        play_mp3(file).await?
     } else if file.ends_with(".wav") {
-        play_wav(file, sample_rate).await;
+        // play_wav(file, 16000).await;
     }
 
     Ok(())

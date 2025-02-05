@@ -1094,88 +1094,6 @@ static void mp3d_synth(float *xl, mp3d_sample_t *dstl, int nch, float *lins)
     mp3d_synth_pair(dstr + 32*nch, nch, lins + 4*15 + 64 + 1);
     mp3d_synth_pair(dstl, nch, lins + 4*15);
     mp3d_synth_pair(dstl + 32*nch, nch, lins + 4*15 + 64);
-
-#if HAVE_SIMD
-    if (have_simd()) for (i = 14; i >= 0; i--)
-    {
-#define VLOAD(k) f4 w0 = VSET(*w++); f4 w1 = VSET(*w++); f4 vz = VLD(&zlin[4*i - 64*k]); f4 vy = VLD(&zlin[4*i - 64*(15 - k)]);
-#define V0(k) { VLOAD(k) b =         VADD(VMUL(vz, w1), VMUL(vy, w0)) ; a =         VSUB(VMUL(vz, w0), VMUL(vy, w1));  }
-#define V1(k) { VLOAD(k) b = VADD(b, VADD(VMUL(vz, w1), VMUL(vy, w0))); a = VADD(a, VSUB(VMUL(vz, w0), VMUL(vy, w1))); }
-#define V2(k) { VLOAD(k) b = VADD(b, VADD(VMUL(vz, w1), VMUL(vy, w0))); a = VADD(a, VSUB(VMUL(vy, w1), VMUL(vz, w0))); }
-        f4 a, b;
-        zlin[4*i]     = xl[18*(31 - i)];
-        zlin[4*i + 1] = xr[18*(31 - i)];
-        zlin[4*i + 2] = xl[1 + 18*(31 - i)];
-        zlin[4*i + 3] = xr[1 + 18*(31 - i)];
-        zlin[4*i + 64] = xl[1 + 18*(1 + i)];
-        zlin[4*i + 64 + 1] = xr[1 + 18*(1 + i)];
-        zlin[4*i - 64 + 2] = xl[18*(1 + i)];
-        zlin[4*i - 64 + 3] = xr[18*(1 + i)];
-
-        V0(0) V2(1) V1(2) V2(3) V1(4) V2(5) V1(6) V2(7)
-
-        {
-#ifndef MINIMP3_FLOAT_OUTPUT
-#if HAVE_SSE
-            static const f4 g_max = { 32767.0f, 32767.0f, 32767.0f, 32767.0f };
-            static const f4 g_min = { -32768.0f, -32768.0f, -32768.0f, -32768.0f };
-            __m128i pcm8 = _mm_packs_epi32(_mm_cvtps_epi32(_mm_max_ps(_mm_min_ps(a, g_max), g_min)),
-                                           _mm_cvtps_epi32(_mm_max_ps(_mm_min_ps(b, g_max), g_min)));
-            dstr[(15 - i)*nch] = _mm_extract_epi16(pcm8, 1);
-            dstr[(17 + i)*nch] = _mm_extract_epi16(pcm8, 5);
-            dstl[(15 - i)*nch] = _mm_extract_epi16(pcm8, 0);
-            dstl[(17 + i)*nch] = _mm_extract_epi16(pcm8, 4);
-            dstr[(47 - i)*nch] = _mm_extract_epi16(pcm8, 3);
-            dstr[(49 + i)*nch] = _mm_extract_epi16(pcm8, 7);
-            dstl[(47 - i)*nch] = _mm_extract_epi16(pcm8, 2);
-            dstl[(49 + i)*nch] = _mm_extract_epi16(pcm8, 6);
-#else /* HAVE_SSE */
-            int16x4_t pcma, pcmb;
-            a = VADD(a, VSET(0.5f));
-            b = VADD(b, VSET(0.5f));
-            pcma = vqmovn_s32(vqaddq_s32(vcvtq_s32_f32(a), vreinterpretq_s32_u32(vcltq_f32(a, VSET(0)))));
-            pcmb = vqmovn_s32(vqaddq_s32(vcvtq_s32_f32(b), vreinterpretq_s32_u32(vcltq_f32(b, VSET(0)))));
-            vst1_lane_s16(dstr + (15 - i)*nch, pcma, 1);
-            vst1_lane_s16(dstr + (17 + i)*nch, pcmb, 1);
-            vst1_lane_s16(dstl + (15 - i)*nch, pcma, 0);
-            vst1_lane_s16(dstl + (17 + i)*nch, pcmb, 0);
-            vst1_lane_s16(dstr + (47 - i)*nch, pcma, 3);
-            vst1_lane_s16(dstr + (49 + i)*nch, pcmb, 3);
-            vst1_lane_s16(dstl + (47 - i)*nch, pcma, 2);
-            vst1_lane_s16(dstl + (49 + i)*nch, pcmb, 2);
-#endif /* HAVE_SSE */
-
-#else /* MINIMP3_FLOAT_OUTPUT */
-
-            static const f4 g_scale = { 1.0f/32768.0f, 1.0f/32768.0f, 1.0f/32768.0f, 1.0f/32768.0f };
-            a = VMUL(a, g_scale);
-            b = VMUL(b, g_scale);
-#if HAVE_SSE
-            _mm_store_ss(dstr + (15 - i)*nch, _mm_shuffle_ps(a, a, _MM_SHUFFLE(1, 1, 1, 1)));
-            _mm_store_ss(dstr + (17 + i)*nch, _mm_shuffle_ps(b, b, _MM_SHUFFLE(1, 1, 1, 1)));
-            _mm_store_ss(dstl + (15 - i)*nch, _mm_shuffle_ps(a, a, _MM_SHUFFLE(0, 0, 0, 0)));
-            _mm_store_ss(dstl + (17 + i)*nch, _mm_shuffle_ps(b, b, _MM_SHUFFLE(0, 0, 0, 0)));
-            _mm_store_ss(dstr + (47 - i)*nch, _mm_shuffle_ps(a, a, _MM_SHUFFLE(3, 3, 3, 3)));
-            _mm_store_ss(dstr + (49 + i)*nch, _mm_shuffle_ps(b, b, _MM_SHUFFLE(3, 3, 3, 3)));
-            _mm_store_ss(dstl + (47 - i)*nch, _mm_shuffle_ps(a, a, _MM_SHUFFLE(2, 2, 2, 2)));
-            _mm_store_ss(dstl + (49 + i)*nch, _mm_shuffle_ps(b, b, _MM_SHUFFLE(2, 2, 2, 2)));
-#else /* HAVE_SSE */
-            vst1q_lane_f32(dstr + (15 - i)*nch, a, 1);
-            vst1q_lane_f32(dstr + (17 + i)*nch, b, 1);
-            vst1q_lane_f32(dstl + (15 - i)*nch, a, 0);
-            vst1q_lane_f32(dstl + (17 + i)*nch, b, 0);
-            vst1q_lane_f32(dstr + (47 - i)*nch, a, 3);
-            vst1q_lane_f32(dstr + (49 + i)*nch, b, 3);
-            vst1q_lane_f32(dstl + (47 - i)*nch, a, 2);
-            vst1q_lane_f32(dstl + (49 + i)*nch, b, 2);
-#endif /* HAVE_SSE */
-#endif /* MINIMP3_FLOAT_OUTPUT */
-        }
-    } else
-#endif /* HAVE_SIMD */
-#ifdef MINIMP3_ONLY_SIMD
-    {} /* for HAVE_SIMD=1, MINIMP3_ONLY_SIMD=1 case we do not need non-intrinsic "else" branch */
-#else /* MINIMP3_ONLY_SIMD */
     for (i = 14; i >= 0; i--)
     {
 #define LOAD(k) float w0 = *w++; float w1 = *w++; float *vz = &zlin[4*i - k*64]; float *vy = &zlin[4*i - (15 - k)*64];
@@ -1204,7 +1122,6 @@ static void mp3d_synth(float *xl, mp3d_sample_t *dstl, int nch, float *lins)
         dstl[(47 - i)*nch] = mp3d_scale_pcm(a[2]);
         dstl[(49 + i)*nch] = mp3d_scale_pcm(b[2]);
     }
-#endif /* MINIMP3_ONLY_SIMD */
 }
 
 static void mp3d_synth_granule(float *qmf_state, float *grbuf, int nbands, int nch, mp3d_sample_t *pcm, float *lins)

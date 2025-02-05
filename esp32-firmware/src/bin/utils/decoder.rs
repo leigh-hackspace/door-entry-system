@@ -36,7 +36,7 @@ unsafe fn source_slice<'src, 'frame>(data: &'src [u8], frame_recv: &'frame mp3de
 //
 // There's a cargo test in case this is adjusted in the in the future.
 /// Maximum amount of samples that can be yielded per frame.
-pub const MAX_SAMPLES_PER_FRAME: usize = 2304; // 0x900;
+pub const MAX_SAMPLES_PER_FRAME: usize = 0x900;
 
 /// Describes audio samples in a frame.
 pub struct Audio<'src, 'pcm> {

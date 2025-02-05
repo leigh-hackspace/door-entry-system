@@ -1,4 +1,5 @@
 use crate::utils::local_fs::{FileEntry, LocalFs};
+use alloc::format;
 use embedded_io_async::Read;
 use esp_storage::FlashStorage;
 use picoserve::response::{
@@ -27,11 +28,11 @@ impl picoserve::routing::RequestHandlerService<()> for HandleFileList {
 
 const MAX_LENGTH: usize = 128;
 
-pub struct FileListChunks {}
+struct FileListChunks;
 
 impl Chunks for FileListChunks {
     fn content_type(&self) -> &'static str {
-        "text/plain"
+        "application/json"
     }
 
     async fn write_chunks<W: picoserve::io::Write>(self, mut chunk_writer: ChunkWriter<W>) -> Result<ChunksWritten, W::Error> {
@@ -41,7 +42,10 @@ impl Chunks for FileListChunks {
         let entries = match local_fs.dir() {
             Ok(entries) => entries,
             Err(err) => {
-                panic!("Dir Error: {err:?}");
+                // panic!("Dir Error: {err:?}");
+                chunk_writer.write_chunk(format!("Dir Error: {err:?}").as_bytes()).await?;
+
+                return chunk_writer.finalize().await;
             }
         };
 

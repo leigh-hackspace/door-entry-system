@@ -24,12 +24,11 @@ use esp_backtrace as _;
 use esp_hal::prelude::*;
 use esp_hal::timer::timg::MwdtStage;
 use esp_println::print;
-use esp_storage::FlashStorage;
 use esp_wifi::wifi::{self, WifiDevice, WifiStaDevice};
 use log::{error, info, warn};
 use services::auth::{check_code, CheckCodeResult};
 use services::common::{
-    DeviceConfig, DeviceState, MainChannel, MainPublisher, MainSubscriber, SystemMessage, DEVICE_CONFIG_FILE_NAME, DEVICE_STATE_FILE_NAME,
+    DeviceConfig, DeviceState, MainChannel, MainPublisher, SystemMessage, DEVICE_CONFIG_FILE_NAME, DEVICE_STATE_FILE_NAME,
 };
 use services::door::DoorService;
 use services::http::HttpService;
@@ -41,7 +40,6 @@ use tasks::http::start_http;
 use tasks::rfid::rfid_task;
 use tasks::wifi::{connection_task, WifiSignal};
 use utils::get_latch_sound_file_name;
-use utils::local_fs::LocalFs;
 
 extern crate alloc;
 
@@ -59,7 +57,7 @@ async fn main(spawner: Spawner) {
     // esp_alloc::heap_allocator!(72 * 1024);
 
     #[link_section = ".dram2_uninit"]
-    static mut HEAP2: core::mem::MaybeUninit<[u8; 72 * 1024]> = core::mem::MaybeUninit::uninit();
+    static mut HEAP2: core::mem::MaybeUninit<[u8; 96 * 1024]> = core::mem::MaybeUninit::uninit();
 
     unsafe {
         esp_alloc::HEAP.add_region(esp_alloc::HeapRegion::new(
@@ -97,13 +95,6 @@ async fn main(spawner: Spawner) {
     wdt.set_timeout(MwdtStage::Stage0, 30_000.millis());
     wdt.enable();
 
-    // List files for debug
-    // let mut flash = FlashStorage::new();
-    // let local_fs = LocalFs::new(&mut flash);
-    // local_fs.dir();
-    // drop(local_fs);
-    // drop(flash);
-
     let channel = make_static!(MainChannel, MainChannel::new());
 
     let wifi_signal = make_static!(Signal::<CriticalSectionRawMutex, WifiSignal>, Signal::new());
@@ -111,12 +102,7 @@ async fn main(spawner: Spawner) {
 
     let _ = spawner;
 
-    // let bluetooth = unsafe { Peripherals::steal() }.BT;
-
-    // spawner
-    //     .spawn(ble_task(BleConnector::new(wifi_init, bluetooth), channel.publisher().unwrap()))
-    //     .ok();
-    spawner.spawn(rfid_task(channel.publisher().unwrap())).ok();
+    // spawner.spawn(rfid_task(channel.publisher().unwrap())).ok();
     spawner.spawn(net_task(runner)).ok();
     spawner.spawn(connection_task(wifi_controller, wifi_signal)).ok();
     spawner.spawn(button_task(channel.publisher().unwrap())).ok();
@@ -198,13 +184,6 @@ async fn main(spawner: Spawner) {
     let main_publisher = channel.publisher().unwrap();
     let mut main_subscriber = channel.subscriber().unwrap();
 
-    // audio_signal.signal(AudioSignal::Play("startup.wav".to_string(), 16000));
-    // Timer::after(Duration::from_millis(5000)).await;
-    audio_signal.signal(AudioSignal::Play("startup.mp3".to_string(), 16000));
-    // Timer::after(Duration::from_millis(5000)).await;
-    // audio_signal.signal(AudioSignal::Play("samp.mp3".to_string(), 44100));
-    // Timer::after(Duration::from_millis(5000)).await;
-
     let mut last_seen = esp_hal::time::now().ticks();
 
     loop {
@@ -215,6 +194,8 @@ async fn main(spawner: Spawner) {
 
             match msg {
                 SystemMessage::ConnectionAvailable => {
+                    // audio_signal.signal(AudioSignal::Play("startup.mp3".to_string()));
+
                     push_announce().await;
                 }
                 SystemMessage::CodeDetected(code) => {
@@ -240,7 +221,7 @@ async fn main(spawner: Spawner) {
                     push_code(code, allowed).await;
                 }
                 SystemMessage::Authorised => {
-                    audio_signal.signal(AudioSignal::Play("success.wav".to_string(), 16000));
+                    audio_signal.signal(AudioSignal::Play("success.mp3".to_string()));
                     if state_service.get_data().latch {
                         continue;
                     }
@@ -249,13 +230,13 @@ async fn main(spawner: Spawner) {
 
                     Timer::after(Duration::from_millis(5000)).await;
 
-                    audio_signal.signal(AudioSignal::Play("close.wav".to_string(), 16000));
+                    audio_signal.signal(AudioSignal::Play("close.mp3".to_string()));
                     door_service.set_door_lock();
                 }
                 SystemMessage::Denied => {
                     info!("Denied");
 
-                    audio_signal.signal(AudioSignal::Play("failure.wav".to_string(), 16000));
+                    audio_signal.signal(AudioSignal::Play("failure.mp3".to_string()));
                 }
                 SystemMessage::ButtonPressed => {
                     if state_service.get_data().latch {
@@ -263,12 +244,11 @@ async fn main(spawner: Spawner) {
                     }
 
                     door_service.release_door_lock();
-                    audio_signal.signal(AudioSignal::Play("open.wav".to_string(), 16000));
+                    audio_signal.signal(AudioSignal::Play("open.mp3".to_string()));
 
                     Timer::after(Duration::from_millis(5000)).await;
 
-                    audio_signal.signal(AudioSignal::Play("close.wav".to_string(), 16000));
-                    // audio_signal.signal(AudioSignal::Play("samp.mp3".to_string(), 44100));
+                    audio_signal.signal(AudioSignal::Play("close.mp3".to_string()));
                     door_service.set_door_lock();
                 }
                 SystemMessage::ButtonLongPressed => {
@@ -278,7 +258,7 @@ async fn main(spawner: Spawner) {
 
                     door_service.set_latch(latch);
 
-                    audio_signal.signal(AudioSignal::Play(get_latch_sound_file_name(latch), 16000));
+                    audio_signal.signal(AudioSignal::Play(get_latch_sound_file_name(latch)));
 
                     push_state().await;
                 }
@@ -328,10 +308,10 @@ async fn main(spawner: Spawner) {
 
                     push_state().await;
 
-                    audio_signal.signal(AudioSignal::Play(get_latch_sound_file_name(latch), 16000));
+                    audio_signal.signal(AudioSignal::Play(get_latch_sound_file_name(latch)));
                 }
                 SystemMessage::PlayFile(file) => {
-                    audio_signal.signal(AudioSignal::Play(file, 44100));
+                    audio_signal.signal(AudioSignal::Play(file));
                 }
             }
         };
