@@ -12,11 +12,13 @@ use ota::HandleOtaUpdate;
 use partitions_macro::partition_offset;
 use picoserve::routing::{get_service, post};
 use picoserve::{make_static, routing::get, AppBuilder, AppRouter};
+use play_file::HandleFilePlay;
 use read_file::HandleFileRead;
 use write_file::HandleFileWrite;
 
 mod common;
 mod ota;
+mod play_file;
 mod read_file;
 mod write_file;
 
@@ -72,6 +74,7 @@ impl AppBuilder for AppProps {
                 }),
             )
             .route("/file", get_service(HandleFileRead).post_service(HandleFileWrite))
+            .route("/play", get_service(HandleFilePlay { publisher }))
             .route(
                 "/update",
                 get_service(picoserve::response::File::html("<h1>Update</h1>")).post_service(HandleOtaUpdate { publisher }),

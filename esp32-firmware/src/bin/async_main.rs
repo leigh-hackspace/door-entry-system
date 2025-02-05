@@ -330,6 +330,9 @@ async fn main(spawner: Spawner) {
 
                     audio_signal.signal(AudioSignal::Play(get_latch_sound_file_name(latch), 16000));
                 }
+                SystemMessage::PlayFile(file) => {
+                    audio_signal.signal(AudioSignal::Play(file, 44100));
+                }
             }
         };
     }

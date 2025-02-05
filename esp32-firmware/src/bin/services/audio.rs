@@ -4,6 +4,7 @@ use crate::utils::{
 };
 use alloc::string::String;
 use embassy_time::{Duration, Timer};
+use esp_hal::prelude::*;
 use esp_hal::{
     dma::{Dma, DmaPriority},
     dma_buffers,
@@ -14,7 +15,6 @@ use esp_println::println;
 use esp_storage::FlashStorage;
 use fatfs::{Read, Seek};
 use log::{error, info};
-
 pub async fn play_mp3(file: String, sample_rate: u32) {
     info!("==== play_mp3: {}", file);
 
@@ -115,13 +115,6 @@ pub async fn play_mp3(file: String, sample_rate: u32) {
 
                             let samples = audio_data.samples();
 
-                            let mut attempts = 0;
-
-                            while transaction.available().unwrap_or_default() < frame_size * 4 && attempts < 16 {
-                                Timer::after(Duration::from_millis(1)).await;
-                                attempts += 1;
-                            }
-
                             let mut samples_written = 0usize;
 
                             while samples_written < frame_size {
@@ -131,16 +124,13 @@ pub async fn play_mp3(file: String, sample_rate: u32) {
                                     let start = samples_written;
                                     let end = (samples_written + samples_room).min(frame_size);
 
-                                    for sample_index in start..end {
-                                        let l = (samples[sample_index] >> 8) as u8;
-                                        let h = (samples[sample_index] & 0xFF) as u8;
+                                    // We need to write each sample twice (presumably because the DAC expects a stereo signal)
+                                    for (i, &sample) in samples[start..end].iter().enumerate() {
+                                        let bytes = sample.to_le_bytes();
+                                        let pos = i * 4;
 
-                                        let buffer_pos = sample_index - start;
-
-                                        data[buffer_pos * 4 + 0] = h;
-                                        data[buffer_pos * 4 + 1] = l;
-                                        data[buffer_pos * 4 + 2] = h;
-                                        data[buffer_pos * 4 + 3] = l;
+                                        data[pos + 0..pos + 2].copy_from_slice(&bytes);
+                                        data[pos + 2..pos + 4].copy_from_slice(&bytes);
                                     }
 
                                     (end - start) * 4
@@ -151,6 +141,8 @@ pub async fn play_mp3(file: String, sample_rate: u32) {
                                         0
                                     }
                                 };
+
+                                Timer::after(Duration::from_millis(1)).await;
                             }
                         }
                         Frame::Other(items) => {

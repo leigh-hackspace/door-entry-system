@@ -18,6 +18,7 @@ pub enum SystemMessage {
     Ping,
     OtaStarting,
     HandleLatchFromServer(bool),
+    PlayFile(String),
 }
 
 const CAP: usize = 4;
