@@ -33,7 +33,7 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
     info!("decoder created {}", mem::size_of_val(&decoder));
 
     let mut file_buf = [0u8; 512];
-    let mut frame_buf = [0i16; MAX_SAMPLES_PER_FRAME];
+    let mut frame_buf = Box::new([0i16; MAX_SAMPLES_PER_FRAME]);
 
     let mut flash = FlashStorage::new();
     let local_fs = LocalFs::new(&mut flash);
@@ -43,7 +43,7 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
 
     let dma_channel = peripherals.DMA_I2S0;
 
-    let (_, rx_descriptors, tx_buffer, tx_descriptors) = dma_buffers!(0, 16000);
+    let (_, rx_descriptors, tx_buffer, tx_descriptors) = dma_buffers!(0, 32000);
     info!("dma init");
 
     info!("==== Play: {}", file);
