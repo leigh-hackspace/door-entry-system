@@ -83,8 +83,11 @@ impl AppBuilder for AppProps {
                     let heap_used = esp_alloc::HEAP.used() as u32;
                     let heap_free = esp_alloc::HEAP.free() as u32;
 
+                    let uptime = (esp_hal::time::now().ticks() / 1_000_000) as u32;
+
                     #[derive(Serialize)]
                     struct Stats {
+                        uptime: u32,
                         clusters_used: u32,
                         clusters_free: u32,
                         heap_used: u32,
@@ -92,6 +95,7 @@ impl AppBuilder for AppProps {
                     }
 
                     let stats = Stats {
+                        uptime,
                         clusters_used: clusters_total - clusters_free,
                         clusters_free,
                         heap_used,
