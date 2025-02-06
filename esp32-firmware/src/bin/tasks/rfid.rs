@@ -1,11 +1,14 @@
 use crate::services::common::{MainPublisher, SystemMessage};
 use alloc::string::ToString;
 use embassy_time::{Duration, Timer};
-use esp_hal::prelude::*;
 use esp_hal::{
     gpio,
     peripherals::Peripherals,
-    spi::{master::Spi, SpiMode},
+    spi::{
+        master::{Config, Spi},
+        Mode,
+    },
+    time::RateExtU32,
 };
 use esp_println::println;
 use mfrc522::Mfrc522;
@@ -25,19 +28,11 @@ pub async fn rfid_task(publisher: MainPublisher) {
     let miso = peripherals.GPIO14;
     let mosi = peripherals.GPIO27;
 
-    let spi = Spi::new_with_config(
-        peripherals.SPI3,
-        esp_hal::spi::master::Config {
-            frequency: 100.kHz(),
-            mode: SpiMode::Mode0,
-            ..Default::default()
-        },
-    )
-    .with_sck(sclk)
-    .with_mosi(mosi)
-    .with_miso(miso);
-
-    Timer::after(Duration::from_millis(5_000)).await;
+    let spi = Spi::new(peripherals.SPI3, Config::default().with_frequency(100.kHz()).with_mode(Mode::_0))
+        .unwrap()
+        .with_sck(sclk)
+        .with_mosi(mosi)
+        .with_miso(miso);
 
     let spi_device_driver = embedded_hal_bus::spi::ExclusiveDevice::new_no_delay(spi, cs).unwrap();
 

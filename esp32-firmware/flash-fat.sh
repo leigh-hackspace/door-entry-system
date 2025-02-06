@@ -1,7 +1,7 @@
 #!/bin/sh
 set -Eeuo pipefail
 
-dd if=/dev/zero of=fat.img bs=1K count=960
+dd if=/dev/zero of=fat.img bs=1K count=1984
 
 mformat -i fat.img ::
 mcopy -i fat.img fat/* ::

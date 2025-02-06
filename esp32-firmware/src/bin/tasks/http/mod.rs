@@ -1,5 +1,6 @@
 use crate::services::common::{DeviceConfig, DeviceState, MainPublisher, SystemMessage};
 use crate::services::state::PermanentStateService;
+use crate::utils::local_fs::LocalFs;
 use alloc::format;
 use alloc::string::ToString;
 use alloc::sync::Arc;
@@ -9,6 +10,7 @@ use delete_file::HandleFileDelete;
 use embassy_executor::Spawner;
 use embassy_net::Stack;
 use embassy_time::Duration;
+use esp_storage::FlashStorage;
 use list_files::HandleFileList;
 use ota::HandleOtaUpdate;
 use partitions_macro::partition_offset;
@@ -16,6 +18,7 @@ use picoserve::routing::{get_service, post};
 use picoserve::{make_static, routing::get, AppBuilder, AppRouter};
 use play_file::HandleFilePlay;
 use read_file::HandleFileRead;
+use serde::Serialize;
 use write_file::HandleFileWrite;
 
 mod common;
@@ -66,6 +69,41 @@ impl AppBuilder for AppProps {
                 }),
             )
             .route(
+                "/stats",
+                get(|| async {
+                    let mut flash = FlashStorage::new();
+                    let local_fs = LocalFs::new(&mut flash);
+
+                    let fs_stats = local_fs.stats();
+
+                    let clusters_total = fs_stats.as_ref().map_or_else(|err| 0, |stats| stats.total_clusters());
+                    let clusters_free = fs_stats.as_ref().map_or_else(|err| 0, |stats| stats.free_clusters());
+
+                    let heap_used = esp_alloc::HEAP.used() as u32;
+                    let heap_free = esp_alloc::HEAP.free() as u32;
+
+                    #[derive(Serialize)]
+                    struct Stats {
+                        clusters_used: u32,
+                        clusters_free: u32,
+                        heap_used: u32,
+                        heap_free: u32,
+                    }
+
+                    let stats = Stats {
+                        clusters_used: clusters_total - clusters_free,
+                        clusters_free,
+                        heap_used,
+                        heap_free,
+                    };
+
+                    let json = serde_json_core::to_string::<Stats, 128>(&stats)
+                        .map_or_else(|err| format!("\"{err:?}\"").into(), |json| json.to_string());
+
+                    StringResponse { str: json }
+                }),
+            )
+            .route(
                 "/latch-on",
                 post(|| async {
                     publisher.publish(SystemMessage::HandleLatchFromServer(true)).await;
@@ -97,9 +135,9 @@ const WEB_TASK_POOL_SIZE: usize = 1;
 #[embassy_executor::task(pool_size = WEB_TASK_POOL_SIZE)]
 async fn web_task(id: usize, stack: Stack<'static>, app: &'static AppRouter<AppProps>, config: &'static picoserve::Config<Duration>) -> ! {
     let port = 80;
-    let mut tcp_rx_buffer = [0; 512];
-    let mut tcp_tx_buffer = [0; 512];
-    let mut http_buffer = [0; 1024];
+    let mut tcp_rx_buffer = [0; 1024];
+    let mut tcp_tx_buffer = [0; 1024];
+    let mut http_buffer = [0; 2048];
 
     picoserve::listen_and_serve(
         id,
@@ -107,9 +145,9 @@ async fn web_task(id: usize, stack: Stack<'static>, app: &'static AppRouter<AppP
         config,
         stack,
         port,
-        &mut tcp_rx_buffer,
-        &mut tcp_tx_buffer,
-        &mut http_buffer,
+        tcp_rx_buffer.as_mut_slice(),
+        tcp_tx_buffer.as_mut_slice(),
+        http_buffer.as_mut_slice(),
     )
     .await
 }

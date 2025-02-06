@@ -21,7 +21,8 @@ use embassy_sync::pubsub::WaitResult;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
-use esp_hal::prelude::*;
+use esp_hal::clock::CpuClock;
+use esp_hal::delay::MicrosDurationU64;
 use esp_hal::timer::timg::MwdtStage;
 use esp_println::print;
 use esp_wifi::wifi::{self, WifiDevice, WifiStaDevice};
@@ -46,7 +47,7 @@ extern crate alloc;
 const NOTIFY_URL: &str = env!("NOTIFY_URL");
 const SEED: u64 = 8472;
 
-#[main]
+#[esp_hal_embassy::main]
 async fn main(spawner: Spawner) {
     let peripherals = esp_hal::init({
         let mut config = esp_hal::Config::default();
@@ -57,7 +58,7 @@ async fn main(spawner: Spawner) {
     // esp_alloc::heap_allocator!(72 * 1024);
 
     #[link_section = ".dram2_uninit"]
-    static mut HEAP2: core::mem::MaybeUninit<[u8; 96 * 1024]> = core::mem::MaybeUninit::uninit();
+    static mut HEAP2: core::mem::MaybeUninit<[u8; 72 * 1024]> = core::mem::MaybeUninit::uninit();
 
     unsafe {
         esp_alloc::HEAP.add_region(esp_alloc::HeapRegion::new(
@@ -86,13 +87,13 @@ async fn main(spawner: Spawner) {
     dhcp_config.hostname = Some(heapless::String::from_str("esp32-experiment").unwrap());
     let net_config = NetConfig::dhcpv4(dhcp_config);
 
-    static RESOURCES: StaticCell<StackResources<4>> = StaticCell::new(); // Increase this if you start getting socket ring errors.
+    static RESOURCES: StaticCell<StackResources<6>> = StaticCell::new(); // Increase this if you start getting socket ring errors.
 
     let (stack, runner) = embassy_net::new(wifi_interface, net_config, RESOURCES.init(StackResources::new()), SEED);
 
     let mut wdt = timer_group_1.wdt;
 
-    wdt.set_timeout(MwdtStage::Stage0, 30_000.millis());
+    wdt.set_timeout(MwdtStage::Stage0, MicrosDurationU64::millis(30_000));
     wdt.enable();
 
     let channel = make_static!(MainChannel, MainChannel::new());
@@ -102,7 +103,7 @@ async fn main(spawner: Spawner) {
 
     let _ = spawner;
 
-    // spawner.spawn(rfid_task(channel.publisher().unwrap())).ok();
+    spawner.spawn(rfid_task(channel.publisher().unwrap())).ok();
     spawner.spawn(net_task(runner)).ok();
     spawner.spawn(connection_task(wifi_controller, wifi_signal)).ok();
     spawner.spawn(button_task(channel.publisher().unwrap())).ok();
@@ -194,7 +195,7 @@ async fn main(spawner: Spawner) {
 
             match msg {
                 SystemMessage::ConnectionAvailable => {
-                    // audio_signal.signal(AudioSignal::Play("startup.mp3".to_string()));
+                    audio_signal.signal(AudioSignal::Play("startup.mp3".to_string()));
 
                     push_announce().await;
                 }
@@ -329,6 +330,8 @@ async fn watchdog_task(stack: Stack<'static>, publisher: MainPublisher) {
     let mut shown_ip = false;
 
     loop {
+        // info!("{}", esp_alloc::HEAP.stats());
+
         if !shown_ip {
             if let Some(ip_info) = stack.config_v4() {
                 shown_ip = true;
@@ -340,6 +343,6 @@ async fn watchdog_task(stack: Stack<'static>, publisher: MainPublisher) {
 
         publisher.publish(SystemMessage::Watchdog).await;
 
-        Timer::after(Duration::from_millis(10_000)).await;
+        Timer::after(Duration::from_millis(5_000)).await;
     }
 }

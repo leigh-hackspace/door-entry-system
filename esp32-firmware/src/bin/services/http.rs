@@ -1,4 +1,8 @@
-use alloc::string::{String, ToString};
+use alloc::{
+    boxed::Box,
+    format,
+    string::{String, ToString},
+};
 use core::{
     net::{IpAddr, Ipv4Addr},
     str::from_utf8,
@@ -42,10 +46,10 @@ pub struct HttpService<'a> {
 #[derive(Debug)]
 pub enum HttpError {
     LinkDown,
-    RequestError,
-    SendError,
-    ReadError,
-    DecodeError,
+    RequestError(String),
+    SendError(String),
+    ReadError(String),
+    DecodeError(String),
 }
 
 impl<'a> HttpService<'a> {
@@ -61,7 +65,7 @@ impl<'a> HttpService<'a> {
             return Err(HttpError::LinkDown);
         }
 
-        let state = TcpClientState::<1, 256, 256>::new();
+        let state = Box::new(TcpClientState::<1, 1024, 1024>::new());
         let mut tcp_client = TcpClient::new(stack, &state);
 
         tcp_client.set_timeout(Some(Duration::from_secs(1)));
@@ -70,17 +74,27 @@ impl<'a> HttpService<'a> {
 
         let s: &[u8] = data.as_bytes();
 
-        let mut rx_buf = [0; 256];
+        let mut rx_buf = Box::new([0; 1024]);
 
-        let handle = client.request(Method::POST, &url).await.map_err(|_err| HttpError::RequestError)?;
+        let handle = client
+            .request(Method::POST, &url)
+            .await
+            .map_err(|err| HttpError::RequestError(format!("{:?}", err)))?;
 
         let mut builder = handle.body(s).content_type(ContentType::TextPlain);
 
-        let response = builder.send(&mut rx_buf).await.map_err(|_err| HttpError::SendError)?;
+        let response = builder
+            .send(rx_buf.as_mut_slice())
+            .await
+            .map_err(|err| HttpError::SendError(format!("{:?}", err)))?;
 
-        let data = response.body().read_to_end().await.map_err(|_err| HttpError::ReadError)?;
+        let data = response
+            .body()
+            .read_to_end()
+            .await
+            .map_err(|err| HttpError::ReadError(format!("{:?}", err)))?;
 
-        let text = from_utf8(data).map_err(|_err| HttpError::DecodeError)?;
+        let text = from_utf8(data).map_err(|err| HttpError::DecodeError(format!("{:?}", err)))?;
 
         Ok(text.to_string())
     }

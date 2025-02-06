@@ -2,12 +2,13 @@ use super::flash_stream::FlashStream;
 use alloc::{
     format,
     string::{String, ToString},
-    vec::Vec,
 };
 use core::str::{self, from_utf8};
 use esp_storage::FlashStorage;
-use fatfs::{format_volume, FileSystem, FormatVolumeOptions, FsOptions, LossyOemCpConverter, NullTimeProvider, Read, Write};
-use log::error;
+use fatfs::{
+    format_volume, FileSystem, FileSystemStats, FormatVolumeOptions, FsOptions, LossyOemCpConverter, NullTimeProvider, Read, Write,
+};
+use log::{error, info};
 use partitions_macro::{partition_offset, partition_size};
 use serde::Serialize;
 
@@ -32,6 +33,8 @@ impl<'a> LocalFs<'a> {
     }
 
     pub fn new(flash: &'a mut FlashStorage) -> Self {
+        info!("LocalFs.new: {:?} {:?}", FS_OFFSET, FS_LENGTH);
+
         let flash_stream = FlashStream::new(flash, FS_OFFSET, FS_LENGTH);
 
         let fs = match FileSystem::new(flash_stream, FsOptions::new()) {
@@ -52,6 +55,10 @@ impl<'a> LocalFs<'a> {
         LocalFs { fs }
     }
 
+    pub fn stats(&self) -> Result<FileSystemStats, FsError> {
+        self.fs.stats().map_err(|err| FsError::OpenError(format!("{:?}", err)))
+    }
+
     pub fn dir(&self) -> Result<heapless::Vec<FileEntry, 100>, FsError> {
         let root_dir = self.fs.root_dir();
 
@@ -70,7 +77,7 @@ impl<'a> LocalFs<'a> {
 
             let entry = FileEntry { name, size };
 
-            entries.push(entry);
+            entries.push(entry).unwrap();
         }
 
         Ok(entries)
