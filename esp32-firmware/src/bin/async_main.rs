@@ -12,19 +12,25 @@ mod utils;
 use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::{String, ToString};
+use alloc::sync::Arc;
+use core::ptr::addr_of_mut;
 use core::str::FromStr;
 use embassy_executor::Spawner;
 use embassy_net::{Config as NetConfig, Runner, Stack};
 use embassy_net::{DhcpConfig, StackResources};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::mutex::Mutex;
 use embassy_sync::pubsub::WaitResult;
 use embassy_sync::signal::Signal;
 use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 use esp_hal::clock::CpuClock;
+use esp_hal::cpu_control::CpuControl;
 use esp_hal::delay::MicrosDurationU64;
 use esp_hal::timer::timg::MwdtStage;
-use esp_println::print;
+use esp_hal::Cpu;
+use esp_hal_embassy::Executor;
+use esp_println::{print, println};
 use esp_wifi::wifi::{self, WifiDevice, WifiStaDevice};
 use log::{error, info, warn};
 use services::auth::{check_code, CheckCodeResult};
@@ -40,12 +46,15 @@ use tasks::button::button_task;
 use tasks::http::start_http;
 use tasks::rfid::rfid_task;
 use tasks::wifi::{connection_task, WifiSignal};
+use utils::decoder::RawDecoder;
 use utils::get_latch_sound_file_name;
 
 extern crate alloc;
 
 const NOTIFY_URL: &str = env!("NOTIFY_URL");
 const SEED: u64 = 8472;
+
+static mut APP_CORE_STACK: esp_hal::cpu_control::Stack<{ 8 * 1024 }> = esp_hal::cpu_control::Stack::new();
 
 #[esp_hal_embassy::main]
 async fn main(spawner: Spawner) {
@@ -58,7 +67,7 @@ async fn main(spawner: Spawner) {
     // esp_alloc::heap_allocator!(72 * 1024);
 
     #[link_section = ".dram2_uninit"]
-    static mut HEAP2: core::mem::MaybeUninit<[u8; 96 * 1024]> = core::mem::MaybeUninit::uninit();
+    static mut HEAP2: core::mem::MaybeUninit<[u8; 64 * 1024]> = core::mem::MaybeUninit::uninit();
 
     unsafe {
         esp_alloc::HEAP.add_region(esp_alloc::HeapRegion::new(
@@ -87,7 +96,7 @@ async fn main(spawner: Spawner) {
     dhcp_config.hostname = Some(heapless::String::from_str("esp32-experiment").unwrap());
     let net_config = NetConfig::dhcpv4(dhcp_config);
 
-    static RESOURCES: StaticCell<StackResources<6>> = StaticCell::new(); // Increase this if you start getting socket ring errors.
+    static RESOURCES: StaticCell<StackResources<3>> = StaticCell::new(); // Increase this if you start getting socket ring errors.
 
     let (stack, runner) = embassy_net::new(wifi_interface, net_config, RESOURCES.init(StackResources::new()), SEED);
 
@@ -99,7 +108,7 @@ async fn main(spawner: Spawner) {
     let channel = make_static!(MainChannel, MainChannel::new());
 
     let wifi_signal = make_static!(Signal::<CriticalSectionRawMutex, WifiSignal>, Signal::new());
-    let audio_signal = make_static!(Signal::<CriticalSectionRawMutex, AudioSignal>, Signal::new());
+    // let audio_signal = make_static!(Signal::<CriticalSectionRawMutex, AudioSignal>, Signal::new());
 
     let _ = spawner;
 
@@ -107,8 +116,25 @@ async fn main(spawner: Spawner) {
     spawner.spawn(net_task(runner)).ok();
     spawner.spawn(connection_task(wifi_controller, wifi_signal)).ok();
     spawner.spawn(button_task(channel.publisher().unwrap())).ok();
-    spawner.spawn(audio_task(audio_signal)).ok();
+    // spawner.spawn(audio_task(audio_signal)).ok();
     spawner.spawn(watchdog_task(stack, channel.publisher().unwrap())).ok();
+
+    let mut cpu_control = CpuControl::new(peripherals.CPU_CTRL);
+
+    static AUDIO_SIGNAL: StaticCell<Signal<CriticalSectionRawMutex, AudioSignal>> = StaticCell::new();
+    let audio_signal = &*AUDIO_SIGNAL.init(Signal::new());
+
+    // let decoder = Arc::new(Mutex::new(Box::new(RawDecoder::new())));
+
+    let _guard = cpu_control
+        .start_app_core(unsafe { &mut *addr_of_mut!(APP_CORE_STACK) }, move || {
+            static EXECUTOR: StaticCell<Executor> = StaticCell::new();
+            let executor = EXECUTOR.init(Executor::new());
+            executor.run(|spawner| {
+                spawner.spawn(audio_task(/*decoder, */ audio_signal)).ok();
+            });
+        })
+        .unwrap();
 
     wifi_signal.signal(WifiSignal::Connect);
 
@@ -283,6 +309,8 @@ async fn main(spawner: Spawner) {
                 SystemMessage::Ping => {
                     print!(".");
                     last_seen = esp_hal::time::now().ticks();
+
+                    // led_ctrl_signal.signal(last_seen % 2 == 0);
                 }
                 SystemMessage::OtaStarting => {
                     let started = esp_hal::time::now().ticks();

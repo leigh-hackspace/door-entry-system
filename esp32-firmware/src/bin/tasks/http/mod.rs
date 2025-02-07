@@ -135,7 +135,7 @@ impl AppBuilder for AppProps {
     }
 }
 
-const WEB_TASK_POOL_SIZE: usize = 3;
+const WEB_TASK_POOL_SIZE: usize = 1;
 
 #[embassy_executor::task(pool_size = WEB_TASK_POOL_SIZE)]
 async fn web_task(id: usize, stack: Stack<'static>, app: &'static AppRouter<AppProps>, config: &'static picoserve::Config<Duration>) -> ! {

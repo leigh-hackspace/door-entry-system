@@ -6,8 +6,9 @@ use alloc::{
     boxed::Box,
     format,
     string::{String, ToString},
+    sync::Arc,
 };
-use core::mem;
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 use esp_hal::{
     dma_buffers,
     i2s::master::{DataFormat, I2s, Standard},
@@ -26,11 +27,12 @@ pub enum AudioError {
     PlayError(String),
 }
 
-pub async fn play_mp3(file: String) -> Result<(), AudioError> {
+pub async fn play_mp3(/*decoder: Arc<Mutex<CriticalSectionRawMutex, Box<RawDecoder>>>, */ file: String) -> Result<(), AudioError> {
     info!("==== play_mp3: {}", file);
 
-    let mut decoder = Box::new(RawDecoder::new());
-    info!("decoder created {}", mem::size_of_val(&decoder));
+    // let mut decoder = decoder.lock().await;
+    // let mut decoder = Box::new(RawDecoder::new());
+    let mut decoder = RawDecoder::new();
 
     let mut file_buf = Box::new([0u8; 512]);
     let mut frame_buf = Box::new([0i16; MAX_SAMPLES_PER_FRAME]);
@@ -62,12 +64,14 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
 
     println!("Read Header: {}", first_read_bytes);
 
-    let (first_frame, _skip) = match decoder.peek(&file_buf[0..512]) {
+    let (first_frame, skip) = match decoder.peek(&file_buf[0..512]) {
         Some(frame) => frame,
         None => {
             return Err(AudioError::ReadError("Could not decode first frame".to_string()));
         }
     };
+
+    println!("skip: {}", skip);
 
     let sample_rate = match first_frame {
         Frame::Audio(audio) => audio.sample_rate(),
@@ -184,6 +188,11 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
             };
         }
     }
+    // };
+
+    // decoder.lock(|d| f(d));
+
+    Ok(())
 }
 
 pub async fn play_wav(file: String, sample_rate: u32) {
@@ -267,9 +276,9 @@ pub async fn play_wav(file: String, sample_rate: u32) {
     }
 }
 
-pub async fn play_file(file: String) -> Result<(), AudioError> {
+pub async fn play_file(/*decoder: Arc<Mutex<CriticalSectionRawMutex, Box<RawDecoder>>>, */ file: String) -> Result<(), AudioError> {
     if file.ends_with(".mp3") {
-        play_mp3(file).await?
+        play_mp3(/*decoder, */ file).await?
     } else if file.ends_with(".wav") {
         // play_wav(file, 16000).await;
     }
