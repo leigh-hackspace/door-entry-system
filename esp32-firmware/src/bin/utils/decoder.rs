@@ -1,4 +1,4 @@
-use super::ffi::{mp3dec_decode_frame, mp3dec_frame_info_t, mp3dec_init, mp3dec_t};
+use super::ctest::{mp3dec_decode_frame, mp3dec_frame_info_t, mp3dec_init, mp3dec_t};
 use core::{
     ffi::c_int,
     marker::PhantomData,

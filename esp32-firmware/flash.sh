@@ -5,9 +5,6 @@ set -a
 source .env
 set +a
 
-xtensa-esp32-elf-gcc -mlongcalls ffi/ctest.c -c
-xtensa-esp32-elf-ar rcs libctest.a ctest.o
-
 cargo build -r
 
 espflash partition-table partitions.csv

@@ -32,7 +32,7 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
     let mut decoder = Box::new(RawDecoder::new());
     info!("decoder created {}", mem::size_of_val(&decoder));
 
-    let mut file_buf = [0u8; 512];
+    let mut file_buf = Box::new([0u8; 512]);
     let mut frame_buf = Box::new([0i16; MAX_SAMPLES_PER_FRAME]);
 
     let mut flash = FlashStorage::new();
@@ -43,7 +43,8 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
 
     let dma_channel = peripherals.DMA_I2S0;
 
-    let (_, rx_descriptors, tx_buffer, tx_descriptors) = dma_buffers!(0, 32000);
+    let (_, rx_descriptors, tx_buffer, tx_descriptors) = dma_buffers!(0, 16000);
+
     info!("dma init");
 
     info!("==== Play: {}", file);
@@ -56,12 +57,12 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
         .map_err(|err| AudioError::OpenError(format!("{:?}", err)))?;
 
     let first_read_bytes = mp3_file
-        .read(&mut file_buf)
+        .read(&mut file_buf[0..512])
         .map_err(|err| AudioError::ReadError(format!("{:?}", err)))?;
 
     println!("Read Header: {}", first_read_bytes);
 
-    let (first_frame, _skip) = match decoder.peek(&file_buf) {
+    let (first_frame, _skip) = match decoder.peek(&file_buf[0..512]) {
         Some(frame) => frame,
         None => {
             return Err(AudioError::ReadError("Could not decode first frame".to_string()));
@@ -71,7 +72,7 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
     let sample_rate = match first_frame {
         Frame::Audio(audio) => audio.sample_rate(),
         Frame::Other(items) => {
-            return Err(AudioError::ReadError("Could not first first frame".to_string()));
+            return Err(AudioError::ReadError("Could not use first frame".to_string()));
         }
     };
 
@@ -101,8 +102,10 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
         .build();
 
     tx_buffer.fill_with(|| 0);
+    info!("fill_with");
 
     let mut transaction = i2s_tx.write_dma_circular_async(tx_buffer).unwrap();
+    info!("transaction");
 
     loop {
         let mut read_bytes = 0usize;
@@ -145,6 +148,8 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
                     let mut samples_written = 0usize;
 
                     while samples_written < frame_size {
+                        // info!("samples_written: {}", samples_written);
+
                         samples_written += match transaction
                             .push_with(|data| {
                                 let samples_room = data.len() / 4;

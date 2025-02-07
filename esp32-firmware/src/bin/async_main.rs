@@ -127,7 +127,7 @@ async fn main(spawner: Spawner) {
         error!("State Service failed to initialised! {err:?}");
     }
 
-    info!("Hello Number: {}", unsafe { utils::ffi::hello_number() });
+    info!("Hello Number: {}", unsafe { utils::ctest::hello_number() });
 
     let mut door_service = DoorService::new();
     let http_service = HttpService::new(stack);
