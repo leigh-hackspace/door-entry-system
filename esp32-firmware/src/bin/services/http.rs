@@ -65,7 +65,7 @@ impl<'a> HttpService<'a> {
             return Err(HttpError::LinkDown);
         }
 
-        let state = Box::new(TcpClientState::<1, 1024, 1024>::new());
+        let state = TcpClientState::<1, 1024, 1024>::new();
         let mut tcp_client = TcpClient::new(stack, &state);
 
         tcp_client.set_timeout(Some(Duration::from_secs(1)));
@@ -74,7 +74,7 @@ impl<'a> HttpService<'a> {
 
         let s: &[u8] = data.as_bytes();
 
-        let mut rx_buf = Box::new([0; 1024]);
+        let mut rx_buf = [0; 1024];
 
         let handle = client
             .request(Method::POST, &url)

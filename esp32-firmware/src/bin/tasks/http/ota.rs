@@ -41,7 +41,17 @@ impl picoserve::routing::RequestHandlerService<()> for HandleOtaUpdate {
         let mut total_size = 0;
 
         loop {
-            let read_size = reader.read(&mut buffer).await?;
+            let mut read_size = 0;
+
+            // Make sure the buffer is full
+            loop {
+                let chunk_read_bytes = reader.read(&mut buffer[read_size..]).await?;
+                read_size += chunk_read_bytes;
+                if chunk_read_bytes == 0 {
+                    break;
+                }
+            }
+
             if read_size == 0 {
                 break;
             }

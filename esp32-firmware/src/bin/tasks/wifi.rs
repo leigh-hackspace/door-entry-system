@@ -20,6 +20,8 @@ pub async fn connection_task(mut controller: WifiController<'static>, signal: &'
 
     let mut current_state = WifiSignal::Connect;
 
+    controller.set_power_saving(esp_wifi::config::PowerSaveMode::None).unwrap();
+
     loop {
         Timer::after(Duration::from_millis(1000)).await;
 

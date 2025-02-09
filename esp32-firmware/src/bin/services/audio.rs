@@ -1,6 +1,7 @@
 use crate::utils::{
     decoder::{Frame, RawDecoder, MAX_SAMPLES_PER_FRAME},
     local_fs::LocalFs,
+    I2sPins,
 };
 use alloc::{
     boxed::Box,
@@ -8,6 +9,7 @@ use alloc::{
     string::{String, ToString},
 };
 use core::mem;
+use embassy_time::{Duration, Timer};
 use esp_hal::{
     dma_buffers,
     i2s::master::{DataFormat, I2s, Standard},
@@ -32,18 +34,16 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
     let mut decoder = Box::new(RawDecoder::new());
     info!("decoder created {}", mem::size_of_val(&decoder));
 
-    let mut file_buf = Box::new([0u8; 512]);
+    let mut file_buf = [0u8; 512];
     let mut frame_buf = Box::new([0i16; MAX_SAMPLES_PER_FRAME]);
 
     let mut flash = FlashStorage::new();
     let local_fs = LocalFs::new(&mut flash);
     info!("fs loaded");
 
-    let peripherals = unsafe { Peripherals::steal() };
+    let pins = I2sPins::new();
 
-    let dma_channel = peripherals.DMA_I2S0;
-
-    let (_, rx_descriptors, tx_buffer, tx_descriptors) = dma_buffers!(0, 16000);
+    let (_, rx_descriptors, tx_buffer, tx_descriptors) = dma_buffers!(0, 64000);
 
     info!("dma init");
 
@@ -51,6 +51,7 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
 
     let mut pos = 0usize;
     let mut total_samples = 0u32;
+    let started = esp_hal::time::now().ticks();
 
     let mut mp3_file = local_fs
         .open_file(&file)
@@ -83,29 +84,27 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
         .map_err(|err| AudioError::ReadError(format!("{:?}", err)))?;
 
     let i2s = I2s::new(
-        peripherals.I2S0,
+        pins.i2s,
         Standard::Philips,
         DataFormat::Data16Channel16,
         sample_rate.Hz(),
-        dma_channel,
+        pins.dma,
         rx_descriptors,
         tx_descriptors,
     )
     .into_async();
     info!("i2s init");
 
-    let mut i2s_tx = i2s
-        .i2s_tx
-        .with_bclk(peripherals.GPIO16)
-        .with_ws(peripherals.GPIO4)
-        .with_dout(peripherals.GPIO17)
-        .build();
+    let i2s_tx = i2s.i2s_tx.with_bclk(pins.bclk).with_ws(pins.ws).with_dout(pins.dout).build();
 
     tx_buffer.fill_with(|| 0);
     info!("fill_with");
 
     let mut transaction = i2s_tx.write_dma_circular_async(tx_buffer).unwrap();
+    // let mut transaction = i2s_tx.write_dma_circular(tx_buffer).unwrap();
     info!("transaction");
+
+    let mut frame_count = 0;
 
     loop {
         let mut read_bytes = 0usize;
@@ -139,16 +138,28 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
 
             match frame {
                 Frame::Audio(audio_data) => {
+                    frame_count += 1;
+
                     let frame_size = audio_data.sample_count();
 
                     total_samples += frame_size as u32;
+                    let frame_decoded_time = esp_hal::time::now().ticks();
+
+                    let real_time = (frame_decoded_time - started) / 1_000;
+                    let play_time = 1000 * (total_samples as u64) / sample_rate as u64;
+
+                    let performance = ((play_time as f32 / real_time as f32) * 100f32) as u8;
+
+                    info!("Frame {frame_count}: Time: {play_time}/{real_time} Performance: {performance}%");
 
                     let samples = audio_data.samples();
 
                     let mut samples_written = 0usize;
 
+                    let mut chunks = 0;
+
                     while samples_written < frame_size {
-                        // info!("samples_written: {}", samples_written);
+                        // info!("samples_written: {}/{}", samples_written, frame_size);
 
                         samples_written += match transaction
                             .push_with(|data| {
@@ -176,7 +187,15 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
                                 0
                             }
                         };
+
+                        chunks += 1;
                     }
+
+                    let frame_written_time = esp_hal::time::now().ticks();
+
+                    let write_time = (frame_written_time - frame_decoded_time) / 1_000;
+
+                    info!("Write Time: {write_time}ms Chunks: {chunks}");
                 }
                 Frame::Other(items) => {
                     info!("O:{:?}", items.len());
@@ -195,29 +214,22 @@ pub async fn play_wav(file: String, sample_rate: u32) {
     let mut flash = FlashStorage::new();
     let local_fs = LocalFs::new(&mut flash);
 
-    let peripherals = unsafe { Peripherals::steal() };
-
-    let dma_channel = peripherals.DMA_I2S0;
+    let pins = I2sPins::new();
 
     let (_, rx_descriptors, tx_buffer, tx_descriptors) = dma_buffers!(0, 16000);
 
     let i2s = I2s::new(
-        peripherals.I2S0,
+        pins.i2s,
         Standard::Philips,
         DataFormat::Data16Channel16,
         sample_rate.Hz(),
-        dma_channel,
+        pins.dma,
         rx_descriptors,
         tx_descriptors,
     )
     .into_async();
 
-    let i2s_tx = i2s
-        .i2s_tx
-        .with_bclk(peripherals.GPIO16)
-        .with_ws(peripherals.GPIO4)
-        .with_dout(peripherals.GPIO17)
-        .build();
+    let i2s_tx = i2s.i2s_tx.with_bclk(pins.bclk).with_ws(pins.ws).with_dout(pins.dout).build();
 
     let mut transaction = i2s_tx.write_dma_circular_async(tx_buffer).unwrap();
 

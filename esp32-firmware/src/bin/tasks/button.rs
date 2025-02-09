@@ -1,6 +1,9 @@
-use crate::services::common::{MainPublisher, SystemMessage};
+use crate::{
+    services::common::{MainPublisher, SystemMessage},
+    utils::ButtonPins,
+};
 use embassy_time::{Duration, Timer};
-use esp_hal::{gpio, peripherals::Peripherals};
+use esp_hal::gpio;
 use log::info;
 
 const DEBOUNCE_WAIT_MS: u64 = 20;
@@ -9,9 +12,7 @@ const LONG_PRESS_DELAY_MS: u64 = 3_000;
 
 #[embassy_executor::task]
 pub async fn button_task(publisher: MainPublisher) {
-    let peripherals = unsafe { Peripherals::steal() };
-
-    let mut door = gpio::Input::new(peripherals.GPIO21, gpio::Pull::Up);
+    let mut door = gpio::Input::new(ButtonPins::new().button, gpio::Pull::Up);
 
     'check_down: loop {
         door.wait_for_falling_edge().await;

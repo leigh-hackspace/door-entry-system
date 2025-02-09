@@ -50,14 +50,17 @@ impl picoserve::routing::RequestHandlerService<()> for HandleFileRead {
     }
 }
 
-pub struct TextChunks {
-    // file: File<'a, FlashStream<'a>, NullTimeProvider, LossyOemCpConverter>,
+struct TextChunks {
     file_name: String,
 }
 
 impl Chunks for TextChunks {
     fn content_type(&self) -> &'static str {
-        "text/plain"
+        if self.file_name.to_lowercase().ends_with(".txt") {
+            "text/plain"
+        } else {
+            "binary/octet-stream"
+        }
     }
 
     async fn write_chunks<W: picoserve::io::Write>(self, mut chunk_writer: ChunkWriter<W>) -> Result<ChunksWritten, W::Error> {
@@ -68,10 +71,8 @@ impl Chunks for TextChunks {
             match local_fs.open_file(&self.file_name) {
                 Ok(file) => file,
                 Err(err) => {
-                    panic!("Open Error: {err:?}");
-                    // return format!("Open Error: {err:?}")
-                    //     .write_to(request.body_connection.finalize().await?, response_writer)
-                    //     .await;
+                    write!(chunk_writer, "Open Error: {err:?}").await.expect("Error writing error!");
+                    return chunk_writer.finalize().await;
                 }
             }
         };
@@ -84,10 +85,8 @@ impl Chunks for TextChunks {
                 match file.read(&mut buffer) {
                     Ok(file) => file,
                     Err(err) => {
-                        panic!("Read Error: {err:?}");
-                        // return format!("Read Error: {err:?}")
-                        //     .write_to(connection, response_writer)
-                        //     .await;
+                        write!(chunk_writer, "Read Error: {err:?}").await.expect("Error writing error!");
+                        return chunk_writer.finalize().await;
                     }
                 }
             };

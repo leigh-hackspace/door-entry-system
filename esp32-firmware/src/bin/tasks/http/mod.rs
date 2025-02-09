@@ -140,9 +140,9 @@ const WEB_TASK_POOL_SIZE: usize = 3;
 #[embassy_executor::task(pool_size = WEB_TASK_POOL_SIZE)]
 async fn web_task(id: usize, stack: Stack<'static>, app: &'static AppRouter<AppProps>, config: &'static picoserve::Config<Duration>) -> ! {
     let port = 80;
-    let mut tcp_rx_buffer = Box::new([0; 1024]);
-    let mut tcp_tx_buffer = Box::new([0; 1024]);
-    let mut http_buffer = Box::new([0; 2048]);
+    let mut tcp_rx_buffer = [0; 1024];
+    let mut tcp_tx_buffer = [0; 1024];
+    let mut http_buffer = [0; 2048];
 
     picoserve::listen_and_serve(
         id,

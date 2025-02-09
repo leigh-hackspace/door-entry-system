@@ -1,28 +1,24 @@
 use esp_hal::{gpio, peripherals::Peripherals};
 use log::info;
 
+use crate::utils::DoorPins;
+
 pub struct DoorService<'a> {
     latch: bool,
     door: gpio::Output<'a>,
-    door2: gpio::Output<'a>,
 }
 
 impl<'a> DoorService<'a> {
     pub fn new() -> DoorService<'a> {
-        let peripherals = unsafe { Peripherals::steal() };
+        let door = gpio::Output::new(DoorPins::new().door, gpio::Level::High);
 
-        // On my dev board I blew up GPIO19 so we use GPIO3 as well...
-        let door = gpio::Output::new(peripherals.GPIO19, gpio::Level::High);
-        let door2 = gpio::Output::new(peripherals.GPIO23, gpio::Level::High);
-
-        DoorService { latch: false, door, door2 }
+        DoorService { latch: false, door }
     }
 
     pub fn release_door_lock(&mut self) {
         if !self.latch {
             info!("==== LOW ====");
             self.door.set_low();
-            self.door2.set_low();
         }
     }
 
@@ -30,7 +26,6 @@ impl<'a> DoorService<'a> {
         if !self.latch {
             info!("==== HIGH ====");
             self.door.set_high();
-            self.door2.set_high();
         }
     }
 
@@ -40,11 +35,9 @@ impl<'a> DoorService<'a> {
         if latch {
             info!("==== LOW ====");
             self.door.set_low();
-            self.door2.set_low();
         } else {
             info!("==== HIGH ====");
             self.door.set_high();
-            self.door2.set_high();
         }
     }
 }
