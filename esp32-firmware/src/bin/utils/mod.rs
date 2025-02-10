@@ -22,14 +22,6 @@ macro_rules! make_static {
     }};
 }
 
-pub fn get_latch_sound_file_name(latch: bool) -> String {
-    if latch {
-        "latchon.mp3".to_string()
-    } else {
-        "latchoff.mp3".to_string()
-    }
-}
-
 // pub struct I2sPins {
 //     pub bclk: GpioPin<15>,
 //     pub ws: GpioPin<18>,

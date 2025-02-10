@@ -17,4 +17,4 @@ espflash partition-table partitions.csv
 espflash erase-parts -c esp32c6 --partition-table partitions.csv -p /dev/cu.usbmodem101 otadata
 # espflash erase-parts -c esp32c6 --partition-table partitions.csv -p /dev/cu.usbmodem101 ota_1
 
-espflash flash --partition-table partitions.csv -s 4mb -B 921600 -p /dev/cu.usbmodem101 --monitor target/riscv32imac-unknown-none-elf/release/esp32c6-door
+espflash flash --partition-table partitions.csv -s 4mb -B 921600 -p /dev/cu.usbmodem101 --monitor target/riscv32imac-unknown-none-elf/release/door-entry-firmware

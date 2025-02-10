@@ -54,11 +54,7 @@ export class DeviceCollection {
   }
 
   public pushValidCodes() {
-    return Promise.all(
-      Object.values(this.devices).map((device) => {
-        device.pushValidCodes();
-      })
-    );
+    return Promise.all(Object.values(this.devices).map((device) => device.pushValidCodes()));
   }
 
   public async pushLatchState(name: string, latch: boolean) {

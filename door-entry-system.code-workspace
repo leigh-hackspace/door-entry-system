@@ -15,7 +15,7 @@
   ],
   "settings": {
     "rust-analyzer.cargo.allTargets": false,
-    "rust-analyzer.cargo.target": "xtensa-esp32-none-elf",
+    "rust-analyzer.cargo.target": "riscv32imac-unknown-none-elf",
     "prettier.printWidth": 120,
     "cSpell.words": [
       "assoc",

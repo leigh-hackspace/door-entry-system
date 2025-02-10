@@ -4,7 +4,6 @@ import { getTableColumns } from "drizzle-orm/utils";
 import { clearInterval, setInterval } from "node:timers";
 import * as uuid from "npm:uuid";
 import * as v from "valibot";
-import { Config } from "../../config/index.ts";
 import { ActivityLogTable, db, DeviceTable, TagTable, UserTable } from "../../db/index.ts";
 import { DeviceEvents, DeviceResponse, type DeviceState, type LogCodeRequest } from "./common.ts";
 
@@ -49,7 +48,7 @@ export class DeviceConnection {
 
         const body = rows.map((r) => `${r.code} ${r.user_name}`).join("\n") + "\n";
 
-        const res = await fetch(`http://${Config.DE_DEVICE_IP}/file?file=codes.txt`, {
+        const res = await fetch(`http://${this.device.ip_address}/file?file=codes.txt`, {
           signal: AbortSignal.timeout(5000),
           method: "POST",
           body,
@@ -70,7 +69,7 @@ export class DeviceConnection {
   public async pushLatchState(latch: boolean) {
     for (let i = 0; i < 5; i++) {
       try {
-        const res = await fetch(`http://${Config.DE_DEVICE_IP}/latch-${latch ? "on" : "off"}`, {
+        const res = await fetch(`http://${this.device.ip_address}/latch-${latch ? "on" : "off"}`, {
           signal: AbortSignal.timeout(5000),
           method: "POST",
         });

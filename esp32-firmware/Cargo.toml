@@ -1,10 +1,10 @@
 [package]
 edition = "2021"
-name    = "esp32c6-door"
+name    = "door-entry-firmware"
 version = "0.1.0"
 
 [[bin]]
-name = "esp32c6-door"
+name = "door-entry-firmware"
 path = "./src/bin/async_main.rs"
 
 [dependencies]
@@ -32,6 +32,7 @@ esp-wifi = { version = "0.12.0", default-features = false, features = [
   "log",
   "utils",
   "wifi",
+  # "ble",
 ] }
 heapless = { version = "0.8.0", default-features = false }
 log = { version = "0.4.21" }
@@ -70,6 +71,10 @@ embedded-hal-bus = "0.2.0"
 serde-json-core = "0.6.0"
 ws2812-async = { git = "https://github.com/kalkyl/ws2812-async.git" }
 smart-leds = "0.4.0"
+bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5148d8ae679e021b78f53fd33afb8bb35d0b62e", features = [
+    "macros",
+    "async",
+] }
 
 [profile.dev]
 # Rust debug is too slow.

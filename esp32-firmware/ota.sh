@@ -7,7 +7,7 @@ set +a
 
 cargo build -r
 
-espflash save-image --chip esp32 target/xtensa-esp32-none-elf/release/async_main ota.img
+espflash save-image --chip esp32 target/riscv32imac-unknown-none-elf/release/door-entry-firmware ota.img
 
 curl -X POST --data-binary @ota.img http://$ESP32_IP/update
 

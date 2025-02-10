@@ -7,7 +7,6 @@ import { pickPrefix } from "../../../common/src/index.ts"; // Drizzle Kit bodge
 
 export const ConfigSchema = v.object({
   DE_DATABASE_URL: v.pipe(v.string(), v.startsWith("postgresql://")),
-  DE_DEVICE_IP: v.pipe(v.string(), v.minLength(7)),
   DE_SECRET_KEY: v.pipe(v.string(), v.minLength(16)),
   DE_BACKEND_PORT: v.pipe(
     v.string(),

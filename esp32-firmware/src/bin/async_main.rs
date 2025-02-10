@@ -12,7 +12,7 @@ use alloc::{
     format,
     string::{String, ToString as _},
 };
-use core::str::FromStr as _;
+use core::{future::join, str::FromStr as _};
 use embassy_executor::Spawner;
 use embassy_net::{Config as NetConfig, DhcpConfig, Runner, Stack, StackResources};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, pubsub::WaitResult, signal::Signal};
@@ -21,8 +21,6 @@ use esp_backtrace as _;
 use esp_hal::{
     clock::CpuClock,
     delay::MicrosDurationU64,
-    gpio,
-    mcpwm::timer::TimerClockConfig,
     rng::Rng,
     timer::{
         systimer::SystemTimer,
@@ -31,6 +29,7 @@ use esp_hal::{
 };
 use esp_println::print;
 use esp_wifi::{
+    // ble::controller::BleConnector,
     wifi::{WifiDevice, WifiStaDevice},
     EspWifiController,
 };
@@ -45,12 +44,12 @@ use services::{
 };
 use tasks::{
     audio::{audio_task, AudioSignal},
+    // ble::{self, ble_task},
     button::button_task,
     http::start_http,
     rfid::rfid_task,
     wifi::{connection_task, WifiSignal},
 };
-use utils::get_latch_sound_file_name;
 
 extern crate alloc;
 
@@ -62,6 +61,18 @@ async fn main(spawner: Spawner) {
     let peripherals = esp_hal::init(config);
 
     esp_alloc::heap_allocator!(96 * 1024);
+
+    #[link_section = ".dram2_uninit"]
+    static mut HEAP2: core::mem::MaybeUninit<[u8; 64 * 1024]> = core::mem::MaybeUninit::uninit();
+
+    unsafe {
+        // COEX needs more RAM - add some more
+        esp_alloc::HEAP.add_region(esp_alloc::HeapRegion::new(
+            HEAP2.as_mut_ptr() as *mut u8,
+            core::mem::size_of_val(&*core::ptr::addr_of!(HEAP2)),
+            esp_alloc::MemoryCapability::Internal.into(),
+        ));
+    }
 
     esp_println::logger::init_logger_from_env();
 
@@ -125,6 +136,10 @@ async fn main(spawner: Spawner) {
     let wifi_signal = make_static!(Signal::<CriticalSectionRawMutex, WifiSignal>, Signal::new());
     let audio_signal = make_static!(Signal::<CriticalSectionRawMutex, AudioSignal>, Signal::new());
 
+    // let bluetooth = peripherals.BT;
+    // let connector = BleConnector::new(&wifi_init, bluetooth);
+
+    // spawner.spawn(ble_task(connector, channel.publisher().unwrap())).ok();
     spawner.spawn(rfid_task(channel.publisher().unwrap())).ok();
     spawner.spawn(net_task(runner)).ok();
     spawner.spawn(connection_task(wifi_controller, wifi_signal)).ok();
@@ -136,7 +151,7 @@ async fn main(spawner: Spawner) {
 
     info!("Hello Number: {}", unsafe { utils::ctest::hello_number() });
 
-    let mut door_service = DoorService::new();
+    let mut door_service = DoorService::new(state_service.clone(), audio_signal);
     let http_service = HttpService::new(stack);
 
     let push_announce = async || {
@@ -172,10 +187,6 @@ async fn main(spawner: Spawner) {
     };
 
     let push_state = async || {
-        if let Err(err) = state_service.save() {
-            error!("Error saving state: {:?}", err);
-        }
-
         if let Err(err) = http_service
             .do_http_request(
                 NOTIFY_URL.to_string() + "/state",
@@ -188,8 +199,6 @@ async fn main(spawner: Spawner) {
             info!("push_state: Success");
         }
     };
-
-    door_service.set_latch(state_service.get_data().latch);
 
     start_http(
         spawner,
@@ -204,136 +213,97 @@ async fn main(spawner: Spawner) {
 
     let mut last_seen = esp_hal::time::now().ticks();
 
-    loop {
-        if let WaitResult::Message(msg) = main_subscriber.next_message().await {
-            if msg != SystemMessage::Ping && msg != SystemMessage::Watchdog {
-                info!("#### SystemMessage: {:?}", msg);
-            }
+    let state_change_loop = async {
+        loop {
+            door_service.changed_signal.wait().await;
+            push_state().await;
+        }
+    };
 
-            match msg {
-                SystemMessage::ConnectionAvailable => {
-                    audio_signal.signal(AudioSignal::Play("startup.mp3".to_string()));
-
-                    push_announce().await;
+    let main_message_loop = async {
+        loop {
+            if let WaitResult::Message(msg) = main_subscriber.next_message().await {
+                if msg != SystemMessage::Ping && msg != SystemMessage::Watchdog {
+                    info!("#### SystemMessage: {:?}", msg);
                 }
-                SystemMessage::CodeDetected(code) => {
-                    let mut allowed = false;
 
-                    match check_code(&code).await {
-                        Ok(result) => match result {
-                            CheckCodeResult::Valid(name) => {
-                                info!("Welcome {}", name);
-                                main_publisher.publish(SystemMessage::Authorised).await;
-                                allowed = true;
-                            }
-                            CheckCodeResult::Invalid => {
+                match msg {
+                    SystemMessage::ConnectionAvailable => {
+                        audio_signal.signal(AudioSignal::Play("startup.mp3".to_string()));
+
+                        push_announce().await;
+                    }
+                    SystemMessage::CodeDetected(code) => {
+                        let mut allowed = false;
+
+                        match check_code(&code).await {
+                            Ok(result) => match result {
+                                CheckCodeResult::Valid(name) => {
+                                    info!("Welcome {}", name);
+                                    main_publisher.publish(SystemMessage::Authorised).await;
+                                    allowed = true;
+                                }
+                                CheckCodeResult::Invalid => {
+                                    main_publisher.publish(SystemMessage::Denied).await;
+                                }
+                            },
+                            Err(err) => {
+                                error!("CheckCode: {:?}", err);
                                 main_publisher.publish(SystemMessage::Denied).await;
                             }
-                        },
-                        Err(err) => {
-                            error!("CheckCode: {:?}", err);
-                            main_publisher.publish(SystemMessage::Denied).await;
                         }
+
+                        push_code(code, allowed).await;
                     }
-
-                    push_code(code, allowed).await;
-                }
-                SystemMessage::Authorised => {
-                    audio_signal.signal(AudioSignal::Play("success.mp3".to_string()));
-                    if state_service.get_data().latch {
-                        continue;
-                    }
-
-                    door_service.release_door_lock();
-
-                    Timer::after(Duration::from_millis(5000)).await;
-
-                    audio_signal.signal(AudioSignal::Play("close.mp3".to_string()));
-                    door_service.set_door_lock();
-                }
-                SystemMessage::Denied => {
-                    info!("Denied");
-
-                    audio_signal.signal(AudioSignal::Play("failure.mp3".to_string()));
-                }
-                SystemMessage::ButtonPressed => {
-                    if state_service.get_data().latch {
-                        continue;
-                    }
-
-                    door_service.release_door_lock();
-                    audio_signal.signal(AudioSignal::Play("open.mp3".to_string()));
-
-                    Timer::after(Duration::from_millis(5000)).await;
-
-                    audio_signal.signal(AudioSignal::Play("close.mp3".to_string()));
-                    door_service.set_door_lock();
-                }
-                SystemMessage::ButtonLongPressed => {
-                    let mut latch = state_service.get_data().latch;
-                    latch = !latch;
-                    state_service.get_data().latch = latch;
-
-                    door_service.set_latch(latch);
-
-                    audio_signal.signal(AudioSignal::Play(get_latch_sound_file_name(latch)));
-
-                    push_state().await;
-                }
-                SystemMessage::WifiOff => {
-                    wifi_signal.signal(WifiSignal::Disconnect);
-                }
-                SystemMessage::Watchdog => {
-                    let now = esp_hal::time::now().ticks();
-                    let last_seen_ago = now - last_seen;
-
-                    // info!("Last ping: {} seconds ago", last_seen_ago / 1_000_000);
-
-                    if last_seen_ago < 5 * 60_000_000 {
-                        // Keep feeding the watchdog if we've received a recent ping
-                        wdt.feed();
-                    } else {
-                        // Let the watchdog restart the system by NOT feeding it...
-                        error!("Not been pinged in over 5 minutes. Restarting!!!");
-                    }
-                }
-                SystemMessage::Ping => {
-                    print!(".");
-                    last_seen = esp_hal::time::now().ticks();
-                }
-                SystemMessage::OtaStarting => {
-                    let started = esp_hal::time::now().ticks();
-
-                    loop {
+                    SystemMessage::Authorised => door_service.open_door().await,
+                    SystemMessage::Denied => audio_signal.signal(AudioSignal::Play("failure.mp3".to_string())),
+                    SystemMessage::ButtonPressed => door_service.open_door().await,
+                    SystemMessage::ButtonLongPressed => door_service.toggle_latch(),
+                    SystemMessage::WifiOff => wifi_signal.signal(WifiSignal::Disconnect),
+                    SystemMessage::Watchdog => {
                         let now = esp_hal::time::now().ticks();
-                        let started_ago = now - started;
+                        let last_seen_ago = now - last_seen;
 
-                        if started_ago > 5 * 60_000_000 {
-                            error!("OTA failed. Waited 5 minutes. Restarting!!!");
-                            return;
+                        // info!("Last ping: {} seconds ago", last_seen_ago / 1_000_000);
+
+                        if last_seen_ago < 5 * 60_000_000 {
+                            // Keep feeding the watchdog if we've received a recent ping
+                            wdt.feed();
+                        } else {
+                            // Let the watchdog restart the system by NOT feeding it...
+                            error!("Not been pinged in over 5 minutes. Restarting!!!");
                         }
-
-                        info!("Ota is happening... {} seconds so far", started_ago / 1_000_000);
-                        wdt.feed();
-
-                        Timer::after(Duration::from_millis(10_000)).await;
                     }
-                }
-                SystemMessage::HandleLatchFromServer(latch) => {
-                    state_service.get_data().latch = latch;
+                    SystemMessage::Ping => {
+                        print!(".");
+                        last_seen = esp_hal::time::now().ticks();
+                    }
+                    SystemMessage::OtaStarting => {
+                        let started = esp_hal::time::now().ticks();
 
-                    door_service.set_latch(latch);
+                        loop {
+                            let now = esp_hal::time::now().ticks();
+                            let started_ago = now - started;
 
-                    push_state().await;
+                            if started_ago > 5 * 60_000_000 {
+                                error!("OTA failed. Waited 5 minutes. Restarting!!!");
+                                return;
+                            }
 
-                    audio_signal.signal(AudioSignal::Play(get_latch_sound_file_name(latch)));
+                            info!("Ota is happening... {} seconds so far", started_ago / 1_000_000);
+                            wdt.feed();
+
+                            Timer::after(Duration::from_millis(10_000)).await;
+                        }
+                    }
+                    SystemMessage::HandleLatchFromServer(latch) => door_service.set_latch(latch),
+                    SystemMessage::PlayFile(file) => audio_signal.signal(AudioSignal::Play(file)),
                 }
-                SystemMessage::PlayFile(file) => {
-                    audio_signal.signal(AudioSignal::Play(file));
-                }
-            }
-        };
-    }
+            };
+        }
+    };
+
+    join!(main_message_loop, state_change_loop).await;
 }
 
 // A background task, to process network events - when new packets, they need to processed, embassy-net, wraps smoltcp
