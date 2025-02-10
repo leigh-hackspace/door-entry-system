@@ -106,10 +106,8 @@ async fn main(spawner: Spawner) {
         EspWifiController<'static>,
         esp_wifi::init(timer_group_0.timer0, rng.clone(), peripherals.RADIO_CLK).unwrap()
     );
-    info!("WiFi inited!");
 
     let (wifi_interface, mut wifi_controller) = esp_wifi::wifi::new_with_mode(wifi_init, peripherals.WIFI, WifiStaDevice).unwrap();
-    info!("WiFi newed!");
 
     wifi_controller.set_power_saving(esp_wifi::config::PowerSaveMode::None).unwrap();
 
@@ -118,7 +116,6 @@ async fn main(spawner: Spawner) {
     let mut dhcp_config = DhcpConfig::default();
     dhcp_config.hostname = Some(heapless::String::from_str(dhcp_name).unwrap());
     let net_config = NetConfig::dhcpv4(dhcp_config);
-    info!("DHCP configured!");
 
     let seed = (rng.random() as u64) << 32 | rng.random() as u64;
 
@@ -128,7 +125,6 @@ async fn main(spawner: Spawner) {
         make_static!(StackResources<6>, StackResources::<6>::new()),
         seed,
     );
-    info!("Network stack newed!");
 
     set_led(0, 0, 128).await;
 
@@ -156,8 +152,6 @@ async fn main(spawner: Spawner) {
 
     wifi_signal.signal(WifiSignal::Connect);
 
-    info!("Hello Number: {}", unsafe { utils::ctest::hello_number() });
-
     let mut door_service = DoorService::new(state_service.clone(), audio_signal);
     let http_service = HttpService::new(stack);
 
@@ -180,30 +174,36 @@ async fn main(spawner: Spawner) {
     };
 
     let push_code = async |code: String, allowed: bool| {
-        if let Err(err) = http_service
-            .do_http_request(
-                NOTIFY_URL.to_string() + "/code",
-                format!(r#"{{"code":"{}","allowed":{}}}"#, code, if allowed { "true" } else { "false" }),
-            )
-            .await
-        {
-            warn!("push_code: Could not communicate with server! {:?}", err);
-        } else {
-            info!("push_code: Success: {} {}", code, allowed);
+        for _ in 0..10 {
+            if let Err(err) = http_service
+                .do_http_request(
+                    NOTIFY_URL.to_string() + "/code",
+                    format!(r#"{{"code":"{}","allowed":{}}}"#, code, if allowed { "true" } else { "false" }),
+                )
+                .await
+            {
+                warn!("push_code: Could not communicate with server! {:?}", err);
+            } else {
+                info!("push_code: Success: {} {}", code, allowed);
+                return;
+            }
         }
     };
 
     let push_state = async || {
-        if let Err(err) = http_service
-            .do_http_request(
-                NOTIFY_URL.to_string() + "/state",
-                state_service.get_json().map(|s| s.to_string()).unwrap_or("{}".to_string()),
-            )
-            .await
-        {
-            warn!("push_state: Could not communicate with server! {:?}", err);
-        } else {
-            info!("push_state: Success");
+        for _ in 0..10 {
+            if let Err(err) = http_service
+                .do_http_request(
+                    NOTIFY_URL.to_string() + "/state",
+                    state_service.get_json().map(|s| s.to_string()).unwrap_or("{}".to_string()),
+                )
+                .await
+            {
+                warn!("push_state: Could not communicate with server! {:?}", err);
+            } else {
+                info!("push_state: Success");
+                return;
+            }
         }
     };
 
@@ -262,9 +262,9 @@ async fn main(spawner: Spawner) {
 
                         push_code(code, allowed).await;
                     }
-                    SystemMessage::Authorised => door_service.open_door().await,
+                    SystemMessage::Authorised => door_service.open_door("success.mp3".to_string()).await,
                     SystemMessage::Denied => audio_signal.signal(AudioSignal::Play("failure.mp3".to_string())),
-                    SystemMessage::ButtonPressed => door_service.open_door().await,
+                    SystemMessage::ButtonPressed => door_service.open_door("open.mp3".to_string()).await,
                     SystemMessage::ButtonLongPressed => door_service.toggle_latch(),
                     SystemMessage::WifiOff => wifi_signal.signal(WifiSignal::Disconnect),
                     SystemMessage::Watchdog => {

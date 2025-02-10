@@ -65,13 +65,13 @@ impl<'a> DoorService<'a> {
         self.audio_signal.signal(AudioSignal::Play(self.get_latch_sound_file_name(latch)));
     }
 
-    pub async fn open_door(&mut self) {
+    pub async fn open_door(&mut self, open_sound: String) {
         if self.state.get_data().latch {
             return;
         }
 
         self.update_gpio(false);
-        self.audio_signal.signal(AudioSignal::Play("open.mp3".to_string()));
+        self.audio_signal.signal(AudioSignal::Play(open_sound));
 
         Timer::after(Duration::from_millis(5000)).await;
 

@@ -17,7 +17,7 @@ use esp_hal::{
 use esp_println::println;
 use esp_storage::FlashStorage;
 use fatfs::{Read, Seek};
-use log::info;
+use log::{info, warn};
 
 #[derive(Debug)]
 pub enum AudioError {
@@ -148,7 +148,7 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
 
                     let performance = ((play_time as f32 / real_time as f32) * 100f32) as u8;
 
-                    info!("Frame {frame_count}: Time: {play_time}/{real_time} Performance: {performance}%");
+                    // info!("Frame {frame_count}: Time: {play_time}/{real_time} Performance: {performance}%");
 
                     let samples = audio_data.samples();
 
@@ -193,7 +193,7 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
 
                     let write_time = (frame_written_time - frame_decoded_time) / 1_000;
 
-                    info!("Write Time: {write_time}ms Chunks: {chunks}");
+                    // info!("Write Time: {write_time}ms Chunks: {chunks}");
                 }
                 Frame::Other(items) => {
                     info!("O:{:?}", items.len());
