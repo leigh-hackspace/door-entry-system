@@ -12,9 +12,6 @@ Deno.serve({ port }, async (req: Request) => {
     req = new Request(`${url.protocol}//${url.host}/`, req);
   }
 
-  // Tell file server not to ever return 304 "Not Modified" response
-  // req.headers.append("Cache-Control", "no-cache");
-
   const res = await serveDir(req, {
     fsRoot: "web",
     urlRoot: "",

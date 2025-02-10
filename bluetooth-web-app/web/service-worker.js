@@ -1,4 +1,4 @@
-const CACHE_NAME = 'door-entry-bluetooth-web-app-v1';
+const CACHE_NAME = 'door-entry-bluetooth-web-app-v1.0.2';
 const ASSETS = [
   '/',
   '/js/app.js',
@@ -39,4 +39,11 @@ self.addEventListener('activate', event => {
       );
     })
   );
+});
+
+// Immediately stop the previously active Service Worker and activate the new one
+self.addEventListener('message', event => {
+  if (event.data === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
