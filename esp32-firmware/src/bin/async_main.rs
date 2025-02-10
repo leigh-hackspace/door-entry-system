@@ -20,7 +20,6 @@ use embassy_time::{Duration, Timer};
 use esp_backtrace as _;
 use esp_hal::{
     clock::CpuClock,
-    delay::MicrosDurationU64,
     rng::Rng,
     timer::{
         systimer::SystemTimer,
@@ -29,7 +28,7 @@ use esp_hal::{
 };
 use esp_println::print;
 use esp_wifi::{
-    // ble::controller::BleConnector,
+    ble::controller::BleConnector,
     wifi::{WifiDevice, WifiStaDevice},
     EspWifiController,
 };
@@ -44,7 +43,7 @@ use services::{
 };
 use tasks::{
     audio::{audio_task, AudioSignal},
-    // ble::{self, ble_task},
+    ble::{self, ble_task},
     button::button_task,
     http::start_http,
     rfid::rfid_task,
@@ -107,14 +106,19 @@ async fn main(spawner: Spawner) {
         EspWifiController<'static>,
         esp_wifi::init(timer_group_0.timer0, rng.clone(), peripherals.RADIO_CLK).unwrap()
     );
+    info!("WiFi inited!");
 
-    let (wifi_interface, wifi_controller) = esp_wifi::wifi::new_with_mode(wifi_init, peripherals.WIFI, WifiStaDevice).unwrap();
+    let (wifi_interface, mut wifi_controller) = esp_wifi::wifi::new_with_mode(wifi_init, peripherals.WIFI, WifiStaDevice).unwrap();
+    info!("WiFi newed!");
+
+    wifi_controller.set_power_saving(esp_wifi::config::PowerSaveMode::None).unwrap();
 
     let dhcp_name = &config_service.get_data().name.replace(" ", "-");
 
     let mut dhcp_config = DhcpConfig::default();
     dhcp_config.hostname = Some(heapless::String::from_str(dhcp_name).unwrap());
     let net_config = NetConfig::dhcpv4(dhcp_config);
+    info!("DHCP configured!");
 
     let seed = (rng.random() as u64) << 32 | rng.random() as u64;
 
@@ -124,11 +128,12 @@ async fn main(spawner: Spawner) {
         make_static!(StackResources<6>, StackResources::<6>::new()),
         seed,
     );
+    info!("Network stack newed!");
 
     set_led(0, 0, 128).await;
 
     let mut wdt = timer_group_0.wdt;
-    wdt.set_timeout(MwdtStage::Stage0, MicrosDurationU64::millis(30_000));
+    wdt.set_timeout(MwdtStage::Stage0, esp_hal::time::Duration::from_millis(30_000));
     wdt.enable();
 
     let channel = make_static!(MainChannel, MainChannel::new());
@@ -136,10 +141,12 @@ async fn main(spawner: Spawner) {
     let wifi_signal = make_static!(Signal::<CriticalSectionRawMutex, WifiSignal>, Signal::new());
     let audio_signal = make_static!(Signal::<CriticalSectionRawMutex, AudioSignal>, Signal::new());
 
-    // let bluetooth = peripherals.BT;
-    // let connector = BleConnector::new(&wifi_init, bluetooth);
+    let bluetooth = peripherals.BT;
+    let connector = BleConnector::new(&wifi_init, bluetooth);
 
-    // spawner.spawn(ble_task(connector, channel.publisher().unwrap())).ok();
+    spawner
+        .spawn(ble_task(connector, config_service.clone(), channel.publisher().unwrap()))
+        .ok();
     spawner.spawn(rfid_task(channel.publisher().unwrap())).ok();
     spawner.spawn(net_task(runner)).ok();
     spawner.spawn(connection_task(wifi_controller, wifi_signal)).ok();
@@ -211,7 +218,7 @@ async fn main(spawner: Spawner) {
     let main_publisher = channel.publisher().unwrap();
     let mut main_subscriber = channel.subscriber().unwrap();
 
-    let mut last_seen = esp_hal::time::now().ticks();
+    let mut last_seen = esp_hal::time::Instant::now().duration_since_epoch().as_micros();
 
     let state_change_loop = async {
         loop {
@@ -261,7 +268,7 @@ async fn main(spawner: Spawner) {
                     SystemMessage::ButtonLongPressed => door_service.toggle_latch(),
                     SystemMessage::WifiOff => wifi_signal.signal(WifiSignal::Disconnect),
                     SystemMessage::Watchdog => {
-                        let now = esp_hal::time::now().ticks();
+                        let now = esp_hal::time::Instant::now().duration_since_epoch().as_micros();
                         let last_seen_ago = now - last_seen;
 
                         // info!("Last ping: {} seconds ago", last_seen_ago / 1_000_000);
@@ -276,13 +283,13 @@ async fn main(spawner: Spawner) {
                     }
                     SystemMessage::Ping => {
                         print!(".");
-                        last_seen = esp_hal::time::now().ticks();
+                        last_seen = esp_hal::time::Instant::now().duration_since_epoch().as_micros();
                     }
                     SystemMessage::OtaStarting => {
-                        let started = esp_hal::time::now().ticks();
+                        let started = esp_hal::time::Instant::now().duration_since_epoch().as_micros();
 
                         loop {
-                            let now = esp_hal::time::now().ticks();
+                            let now = esp_hal::time::Instant::now().duration_since_epoch().as_micros();
                             let started_ago = now - started;
 
                             if started_ago > 5 * 60_000_000 {

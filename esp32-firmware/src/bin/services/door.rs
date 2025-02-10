@@ -3,7 +3,7 @@ use crate::{make_static, tasks::audio::AudioSignal, utils::DoorPins};
 use alloc::string::{String, ToString as _};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_time::{Duration, Timer};
-use esp_hal::gpio;
+use esp_hal::gpio::{self, OutputConfig};
 use log::{info, warn};
 
 pub struct DoorService<'a> {
@@ -18,7 +18,7 @@ impl<'a> DoorService<'a> {
         state: PermanentStateService<DeviceState>,
         audio_signal: &'static Signal<CriticalSectionRawMutex, AudioSignal>,
     ) -> DoorService<'a> {
-        let door = gpio::Output::new(DoorPins::new().door, gpio::Level::High);
+        let door = gpio::Output::new(DoorPins::new().door, gpio::Level::High, OutputConfig::default());
         let changed_signal = make_static!(Signal::<CriticalSectionRawMutex, ()>, Signal::new());
 
         let mut door_service = DoorService {

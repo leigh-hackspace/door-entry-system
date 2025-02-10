@@ -7,7 +7,6 @@ use crate::{
 };
 use alloc::{format, sync::Arc};
 use embassy_time::{Duration, Timer};
-use esp_hal::reset;
 use esp_println::print;
 use log::{info, warn};
 use picoserve::{io::Read, response::IntoResponse};
@@ -69,7 +68,7 @@ impl picoserve::routing::RequestHandlerService<()> for HandleOtaUpdate {
         warn!("Restarting...");
         Timer::after(Duration::from_secs(5)).await;
 
-        reset::software_reset();
+        esp_hal::system::software_reset();
 
         format!("Total Size: {total_size}\r\n")
             .write_to(request.body_connection.finalize().await?, response_writer)

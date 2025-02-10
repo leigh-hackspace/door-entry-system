@@ -5,12 +5,12 @@ use crate::{
 use alloc::string::ToString;
 use embassy_time::{Duration, Timer};
 use esp_hal::{
-    gpio,
+    gpio::{self, OutputConfig},
     spi::{
         master::{Config, Spi},
         Mode,
     },
-    time::RateExtU32,
+    time::Rate,
 };
 use esp_println::println;
 use mfrc522::Mfrc522;
@@ -24,9 +24,9 @@ use mfrc522::Mfrc522;
 pub async fn rfid_task(publisher: MainPublisher) {
     let pins = RfidPins::new();
 
-    let cs = gpio::Output::new(pins.cs, gpio::Level::Low);
+    let cs = gpio::Output::new(pins.cs, gpio::Level::Low, OutputConfig::default());
 
-    let spi = Spi::new(pins.spi, Config::default().with_frequency(100.kHz()).with_mode(Mode::_0))
+    let spi = Spi::new(pins.spi, Config::default().with_frequency(Rate::from_khz(100)).with_mode(Mode::_0))
         .unwrap()
         .with_sck(pins.sclk)
         .with_mosi(pins.mosi)

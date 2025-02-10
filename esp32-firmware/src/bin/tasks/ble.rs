@@ -1,8 +1,7 @@
-use crate::{
-    services::common::{MainPublisher, SystemMessage},
-    utils::local_fs::LocalFs,
+use crate::services::{
+    common::{DeviceConfig, MainPublisher, SystemMessage},
+    state::PermanentStateService,
 };
-use alloc::borrow::ToOwned;
 use bleps::{
     ad_structure::{create_advertising_data, AdStructure, BR_EDR_NOT_SUPPORTED, LE_GENERAL_DISCOVERABLE},
     async_attribute_server::AttributeServer,
@@ -11,42 +10,35 @@ use bleps::{
     gatt,
 };
 use core::cell::RefCell;
-use embassy_time::{Duration, Timer};
 use esp_alloc as _;
 use esp_backtrace as _;
 use esp_hal::{
     gpio::{self},
     peripherals::Peripherals,
-    time,
 };
 use esp_println::println;
-use esp_storage::FlashStorage;
 use esp_wifi::ble::controller::BleConnector;
 use log::info;
 
-// TODO: Figure out how to use constants...
-static SERVICE_ID: &str = "10000000-0000-0000-0000-000000008472";
-static CHAR_ID: &str = "20000000-0000-0000-0000-000000008472";
-
 #[embassy_executor::task]
-pub async fn ble_task(connector: BleConnector<'static>, publisher: MainPublisher) -> ! {
-    Timer::after(Duration::from_millis(5_000)).await;
+pub async fn ble_task(
+    connector: BleConnector<'static>,
+    config_service: PermanentStateService<DeviceConfig>,
+    publisher: MainPublisher,
+) -> ! {
     info!("BLE Task Started");
 
     let peripherals = unsafe { Peripherals::steal() };
 
-    let button = gpio::Input::new(peripherals.GPIO0, gpio::Pull::Down);
+    let button = gpio::Input::new(peripherals.GPIO0, gpio::InputConfig::default().with_pull(gpio::Pull::Up));
 
-    let now = || time::now().duration_since_epoch().to_millis();
+    let now = || esp_hal::time::Instant::now().duration_since_epoch().as_millis();
     let mut ble = Ble::new(connector, now);
 
     let pin_ref = RefCell::new(button);
     let pin_ref = &pin_ref;
 
-    let mut flash = FlashStorage::new();
-    let local_fs = LocalFs::new(&mut flash);
-
-    let name = local_fs.read_text_file("name.txt").unwrap_or("Unnamed ESP32".to_owned());
+    let name = config_service.get_data().name.clone();
 
     loop {
         println!("{:?}", ble.init().await);

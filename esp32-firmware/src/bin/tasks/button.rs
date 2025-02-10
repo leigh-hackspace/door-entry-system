@@ -12,12 +12,12 @@ const LONG_PRESS_DELAY_MS: u64 = 3_000;
 
 #[embassy_executor::task]
 pub async fn button_task(publisher: MainPublisher) {
-    let mut door = gpio::Input::new(ButtonPins::new().button, gpio::Pull::Up);
+    let mut door = gpio::Input::new(ButtonPins::new().button, gpio::InputConfig::default().with_pull(gpio::Pull::Up));
 
     'check_down: loop {
         door.wait_for_falling_edge().await;
 
-        let down_time = esp_hal::time::now().ticks();
+        let down_time = esp_hal::time::Instant::now().duration_since_epoch().as_micros();
 
         loop {
             // Eliminate noise by delaying
@@ -28,7 +28,7 @@ pub async fn button_task(publisher: MainPublisher) {
                 break;
             }
 
-            let now = esp_hal::time::now().ticks();
+            let now = esp_hal::time::Instant::now().duration_since_epoch().as_micros();
 
             let delay_ms = (now - down_time) / 1_000;
 
@@ -43,7 +43,7 @@ pub async fn button_task(publisher: MainPublisher) {
             }
         }
 
-        let up_time = esp_hal::time::now().ticks();
+        let up_time = esp_hal::time::Instant::now().duration_since_epoch().as_micros();
 
         // Found out how long it was down for...
         let delay_ms = (up_time - down_time) / 1_000;

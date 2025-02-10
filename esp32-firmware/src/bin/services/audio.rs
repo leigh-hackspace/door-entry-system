@@ -9,12 +9,10 @@ use alloc::{
     string::{String, ToString},
 };
 use core::mem;
-use embassy_time::{Duration, Timer};
 use esp_hal::{
     dma_buffers,
     i2s::master::{DataFormat, I2s, Standard},
-    peripherals::Peripherals,
-    time::RateExtU32,
+    time::Rate,
 };
 use esp_println::println;
 use esp_storage::FlashStorage;
@@ -51,7 +49,7 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
 
     let mut pos = 0usize;
     let mut total_samples = 0u32;
-    let started = esp_hal::time::now().ticks();
+    let started = esp_hal::time::Instant::now().duration_since_epoch().as_micros();
 
     let mut mp3_file = local_fs
         .open_file(&file)
@@ -87,7 +85,7 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
         pins.i2s,
         Standard::Philips,
         DataFormat::Data16Channel16,
-        sample_rate.Hz(),
+        Rate::from_hz(sample_rate),
         pins.dma,
         rx_descriptors,
         tx_descriptors,
@@ -143,7 +141,7 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
                     let frame_size = audio_data.sample_count();
 
                     total_samples += frame_size as u32;
-                    let frame_decoded_time = esp_hal::time::now().ticks();
+                    let frame_decoded_time = esp_hal::time::Instant::now().duration_since_epoch().as_micros();
 
                     let real_time = (frame_decoded_time - started) / 1_000;
                     let play_time = 1000 * (total_samples as u64) / sample_rate as u64;
@@ -191,7 +189,7 @@ pub async fn play_mp3(file: String) -> Result<(), AudioError> {
                         chunks += 1;
                     }
 
-                    let frame_written_time = esp_hal::time::now().ticks();
+                    let frame_written_time = esp_hal::time::Instant::now().duration_since_epoch().as_micros();
 
                     let write_time = (frame_written_time - frame_decoded_time) / 1_000;
 
@@ -222,7 +220,7 @@ pub async fn play_wav(file: String, sample_rate: u32) {
         pins.i2s,
         Standard::Philips,
         DataFormat::Data16Channel16,
-        sample_rate.Hz(),
+        Rate::from_hz(sample_rate),
         pins.dma,
         rx_descriptors,
         tx_descriptors,
