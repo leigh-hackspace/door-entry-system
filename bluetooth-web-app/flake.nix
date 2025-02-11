@@ -9,8 +9,8 @@
       in {
         packages.default = let
           hashes = {
-            aarch64-darwin = "sha256-Lzu8tpfgUp06Oc6NF96YOgKYxQO7PiapabjO0ka+PZ0=";
-            x86_64-linux = "sha256-FbdO/ckhxkc5JJqdOt14jInQfopdhMplha1Z7kSbYfA=";
+            aarch64-darwin = "sha256-NzvIoWv+Q1NETXNC6SUzv2HOAwKafVpXuurM6+WOpG0=";
+            x86_64-linux = "sha256-abdO/ckhxkc5JJqdOt14jInQfopdhMplha1Z7kSbYfA=";
           };
         in pkgs.stdenv.mkDerivation {
           pname = "door-entry-bluetooth-web-app";
@@ -40,7 +40,8 @@
             mkdir -p $out/bin
             mkdir -p $out/lib/frontend
 
-            cp -a web $out/lib/frontend/
+            cp -a deno.json $out/lib/frontend/
+            cp -a web       $out/lib/frontend/
 
             echo "Compiling frontend..."
             ${pkgs.deno}/bin/deno compile --cached-only --no-code-cache --allow-read --allow-net --allow-env -o $out/bin/door-entry-bluetooth-web-app server.ts
