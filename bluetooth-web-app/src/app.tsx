@@ -1,6 +1,9 @@
 import type {} from "npm:@types/web-bluetooth";
 import { render } from "npm:solid-js/web";
 
+// deno-lint-ignore no-process-globals
+const VERSION = process.env.VERSION;
+
 const SERVICE_ID = "937312e0-2354-11eb-9f10-fbc30a62cf38";
 const CHAR_ID = "987312e0-2354-11eb-9f10-fbc30a62cf38";
 
@@ -45,6 +48,8 @@ function App() {
 
   return (
     <div class="container">
+      <div>Version = {VERSION}</div>
+
       <a href="#" class="big-button" on:click={onButtonClick}>
         Open
       </a>
@@ -64,7 +69,7 @@ function main() {
   }
 
   // check if the browser supports serviceWorker at all
-  if ("serviceWorker" in navigator) {
+  if ("serviceWorker" in navigator && globalThis.location.hostname !== "localhost") {
     // wait for the page to load
     globalThis.addEventListener("load", async () => {
       // register the service worker from the file specified

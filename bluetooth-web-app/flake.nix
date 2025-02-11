@@ -9,14 +9,12 @@
       in {
         packages.default = let
           hashes = {
-            aarch64-darwin =
-              "sha256-Lzu8tpfgUp06Oc6NF96YOgKYxQO7PiapabjO0kO+PZ0=";
-            x86_64-linux =
-              "sha256-7X2lnTln7Fyse2mLYHVj1AxPl8RgY61M59Ajy3TCLnM=";
+            aarch64-darwin = "sha256-Lzu8tpfgUp06Oc6NF96YOgKYxQO7PiapabjO0kO+PZ0=";
+            x86_64-linux = "sha256-sLvGADAoX49UB/9P61kJ/BtbcEuuQE0qMGT7pF34Hno=";
           };
         in pkgs.stdenv.mkDerivation {
           pname = "door-entry-bluetooth-web-app";
-          version = "0.1.0";
+          version = (builtins.fromJSON (builtins.readFile ./deno.json)).version;
 
           src = ./.;
 
@@ -32,15 +30,10 @@
           installPhase = ''
             shopt -s extglob
 
-            rm -rf /tmp/build-inner
-
-            mkdir -p /tmp/build-inner/home
-            mv * /tmp/build-inner/
-            cd /tmp/build-inner
-
-            export HOME="/tmp/build-inner/home"
+            export HOME="$(mktemp -d)"
 
             ${pkgs.deno}/bin/deno i
+            ${pkgs.deno}/bin/deno cache server.ts
 
             ${pkgs.deno}/bin/deno task build
 
@@ -51,8 +44,6 @@
 
             echo "Compiling frontend..."
             ${pkgs.deno}/bin/deno compile --cached-only --no-code-cache --allow-read --allow-net --allow-env -o $out/bin/door-entry-bluetooth-web-app server.ts
-
-            rm -rf /tmp/build-inner
           '';
         };
       });

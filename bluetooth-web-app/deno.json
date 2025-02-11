@@ -1,5 +1,6 @@
 {
   "name": "@bluetooth-web-app/frontend",
+  "version": "1.0.3",
   "exports": "./src/app.tsx",
   "tasks": {
     "watch": "deno run --allow-read --allow-write --allow-env --allow-net --allow-run --cached-only bundle.ts --watch",

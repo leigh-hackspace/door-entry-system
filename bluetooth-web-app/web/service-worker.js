@@ -1,9 +1,9 @@
-const CACHE_NAME = 'door-entry-bluetooth-web-app-v1.0.2';
+const CACHE_NAME = 'door-entry-bluetooth-web-app-[VERSION]';
 const ASSETS = [
-  '/',
-  '/js/app.js',
-  '/css/app.css',
-  '/css/bootstrap.css',
+  '/?v=[VERSION]',
+  '/js/app.js?v=[VERSION]',
+  '/css/app.css?v=[VERSION]',
+  '/css/bootstrap.css?v=[VERSION]',
 ];
 
 // Install event: caching assets
