@@ -9,8 +9,8 @@
       in {
         packages.default = let
           hashes = {
-            aarch64-darwin = "sha256-Lzu8tpfgUp06Oc6NF96YOgKYxQO7PiapabjO0kO+PZ0=";
-            x86_64-linux = "sha256-sLvGADAoX49UB/9P61kJ/BtbcEuuQE0qMGT7pF34Hno=";
+            aarch64-darwin = "sha256-Lzu8tpfgUp06Oc6NF96YOgKYxQO7PiapabjO0ka+PZ0=";
+            x86_64-linux = "sha256-FbdO/ckhxkc5JJqdOt14jInQfopdhMplha1Z7kSbYfA=";
           };
         in pkgs.stdenv.mkDerivation {
           pname = "door-entry-bluetooth-web-app";
