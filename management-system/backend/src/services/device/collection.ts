@@ -42,13 +42,13 @@ export class DeviceCollection {
   }
 
   public async handleCode(ip_address: string, data: LogCodeRequest) {
-    const device = this.getDevice(ip_address);
+    const device = this.getDeviceConnection(ip_address);
 
     await device?.handleCode(data);
   }
 
   public async handleStateUpdate(ip_address: string, state: DeviceState) {
-    const device = this.getDevice(ip_address);
+    const device = this.getDeviceConnection(ip_address);
 
     await device?.handleStateUpdate(state);
   }
@@ -72,7 +72,7 @@ export class DeviceCollection {
     );
   }
 
-  private getDevice(ip_address: string) {
+  public getDeviceConnection(ip_address: string) {
     const device = Object.values(this.devices).find((d) => d.device.ip_address === ip_address);
 
     if (!device) {

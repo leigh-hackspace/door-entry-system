@@ -80,7 +80,7 @@ impl picoserve::routing::RequestHandlerService<()> for HandleFileWrite {
                     .await;
             }
 
-            print!(".");
+            print!("W");
 
             total_size += read_size;
 

@@ -30,7 +30,7 @@ pub async fn set_led(r: u8, g: u8, b: u8) {
     )
     .unwrap()
     .with_mosi(peripherals.GPIO8)
-    .with_dma(peripherals.DMA_CH0)
+    .with_dma(peripherals.DMA_CH2)
     .with_buffers(dma_rx_buf, dma_tx_buf)
     .into_async();
 

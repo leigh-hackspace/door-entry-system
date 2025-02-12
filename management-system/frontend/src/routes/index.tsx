@@ -2,8 +2,8 @@ import { Button, Card, Tile } from "@frontend/components";
 import { beginPage } from "@frontend/helper";
 import { AppService } from "@frontend/lib";
 import type { Unsubscribable } from "npm:@trpc/server/observable";
-import { createResource, Match, onCleanup, Show, Switch } from "npm:solid-js";
-import { createSignal, onMount } from "solid-js";
+import { createResource, For, Match, onCleanup, onMount, Show, Switch } from "npm:solid-js";
+import { createStore } from "npm:solid-js/store";
 
 export function Home() {
   const { user } = beginPage(["admin", "user"]);
@@ -33,14 +33,14 @@ export function Home() {
 }
 
 function AdminControls() {
-  const [latch, setLatch] = createSignal<boolean>();
+  const [deviceState, setDeviceState] = createStore<Record<string, boolean>>();
 
   let activitySubscription: Unsubscribable | undefined;
 
   onMount(() => {
     activitySubscription = AppService.get().tRPC.Stats.DeviceState.subscribe(undefined, {
       onData: (data) => {
-        setLatch(data.latch);
+        setDeviceState(data.name, data.latch);
       },
     });
   });
@@ -50,8 +50,6 @@ function AdminControls() {
   });
 
   const onClickSetLatch = (latch: boolean) => {
-    setLatch(undefined);
-
     return AppService.get().tRPC.Stats.SetLatch.mutate({ latch });
   };
 
@@ -59,12 +57,16 @@ function AdminControls() {
     <Card colour="danger">
       <Card.Header text="Admin Controls" />
       <Card.Body>
-        <Show when={latch() !== undefined} fallback={<p>Loading...</p>}>
-          <p>
-            Latch is currently{" "}
-            <span class={`badge text-bg-${latch() ? "danger" : "success"}`}>{latch() ? "ON" : "OFF"}</span>
-          </p>
-        </Show>
+        <For each={Object.entries(deviceState)}>
+          {([name, latch]) => (
+            <p class="d-flex gap-2 align-items-center">
+              <span>
+                <b>{name}</b> Latch is currently
+              </span>
+              <span class={`badge text-bg-${latch ? "danger" : "success"}`}>{latch ? "ON" : "OFF"}</span>
+            </p>
+          )}
+        </For>
         <p>Turning latch ON will disable the mag-lock and allow entry to all.</p>
         <p>Turning latch OFF will re-enable security and a RFID tag will be required for entry.</p>
         <Button colour="danger" on:click={() => onClickSetLatch(true)}>

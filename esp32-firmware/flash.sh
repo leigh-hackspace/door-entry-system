@@ -14,7 +14,9 @@ cargo build -r
 
 espflash partition-table partitions.csv
 
-espflash erase-parts -c esp32c6 --partition-table partitions.csv -p /dev/cu.usbmodem101 otadata
-# espflash erase-parts -c esp32c6 --partition-table partitions.csv -p /dev/cu.usbmodem101 ota_1
+espflash erase-parts -c esp32c6 --partition-table partitions.csv -p /dev/cu.usbmodem* otadata
+# espflash erase-parts -c esp32c6 --partition-table partitions.csv -p /dev/cu.usbmodem* ota_1
 
-espflash flash --partition-table partitions.csv -s 4mb -B 921600 -p /dev/cu.usbmodem101 --monitor target/riscv32imac-unknown-none-elf/release/door-entry-firmware
+espflash flash --partition-table partitions.csv -s 4mb -B 921600 -p /dev/cu.usbmodem* --monitor target/riscv32imac-unknown-none-elf/release/door-entry-firmware
+
+# /usr/local/bin/openocd -s /usr/local/share/openocd/scripts -f /usr/local/share/openocd/scripts/board/esp32c6-builtin.cfg

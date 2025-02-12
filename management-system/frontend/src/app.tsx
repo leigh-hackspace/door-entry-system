@@ -5,6 +5,8 @@ import { type Component, Suspense } from "npm:solid-js";
 import { render } from "npm:solid-js/web";
 import { ActivityLogs } from "./routes/activity-log/index.tsx";
 import { AuthReturn } from "./routes/auth-return.tsx";
+import { DeviceEdit } from "./routes/devices/edit.tsx";
+import { Devices } from "./routes/devices/index.tsx";
 import { Home } from "./routes/index.tsx";
 import { Login } from "./routes/login.tsx";
 import { TagEdit } from "./routes/tags/edit.tsx";
@@ -34,6 +36,9 @@ function App() {
       <Route path="/users/" component={Users} />
       <Route path="/users/new" component={UserNew} />
       <Route path="/users/:id" component={UserEdit} />
+
+      <Route path="/devices/" component={Devices} />
+      <Route path="/devices/:id" component={DeviceEdit} />
 
       <Route path="/tags/" component={Tags} />
       <Route path="/tags/new" component={TagNew} />

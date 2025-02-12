@@ -486,6 +486,7 @@ dependencies = [
  "bleps",
  "crc",
  "critical-section",
+ "embassy-embedded-hal",
  "embassy-executor",
  "embassy-net",
  "embassy-sync",
@@ -499,6 +500,7 @@ dependencies = [
  "esp-backtrace",
  "esp-hal",
  "esp-hal-embassy",
+ "esp-hal-mfrc522",
  "esp-println",
  "esp-storage",
  "esp-wifi",
@@ -924,6 +926,18 @@ dependencies = [
  "esp-metadata",
  "portable-atomic",
  "static_cell",
+]
+
+[[package]]
+name = "esp-hal-mfrc522"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1af6ff595b0798c601021e29b5addbb531bfebfd0beda827a76adcecac2059a"
+dependencies = [
+ "embassy-time",
+ "embedded-hal-async",
+ "heapless 0.8.0",
+ "log",
 ]
 
 [[package]]

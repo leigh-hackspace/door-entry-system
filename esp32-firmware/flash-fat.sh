@@ -10,6 +10,6 @@ mdir -i fat.img ::
 # Remember to check that partitions align
 espflash partition-table partitions.csv
 
-espflash write-bin -B 921600 0x2b0000 -p /dev/cu.usbmodem101 fat.img
+espflash write-bin -B 921600 0x2b0000 -p /dev/cu.usbmodem* fat.img
 
 rm fat.img

@@ -1,5 +1,7 @@
 import * as v from "valibot";
 
+export const IpAddressLength = 15;
+
 export type SearchResult<T> = { rows: readonly T[]; total: number };
 
 export type EntityType = "User" | "Tag";

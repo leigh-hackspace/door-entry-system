@@ -8,8 +8,8 @@ ESP32 C6 Zero
 
                      |    |
               =======|    |=======
-              | 5V            TX |  
-              | GND           RX |  
+              | 5V            TX |
+              | GND           RX |
               | 3V3           14 |  DOUT
               | 0             15 |  BCLK
       BUTTON  | 1             18 |  WS
@@ -25,16 +25,16 @@ ESP32 C6 SuperMini
 
                      |    |
               =======|    |=======
-              | TX            5V |  
-              | RX           GND |  
-              | 0            3V3 |  
-      BUTTON  | 1             20 |  DOUT
-      MAGLOCK | 2             19 |  BCLK
-              | 3             18 |  WS
-              | 4             15 |  CS/SDA
-              | 5             14 |  SCLK
-              | 6              9 |  MOSI
-              | 7              8 |  MISO
+              | TX            5V |
+              | RX           GND |
+              | 0            3V3 |
+      BUTTON  | 1             20 |
+      MAGLOCK | 2             19 |  MISO
+              | 3             18 |  MOSI
+              | 4             15 |  SCLK
+       LRC/WS | 5             14 |  CS/SDA
+         BCLK | 6              9 |  Boot DON'T USE
+         DOUT | 7              8 |  Built-in LED
               ====================
 
 ### Sounds

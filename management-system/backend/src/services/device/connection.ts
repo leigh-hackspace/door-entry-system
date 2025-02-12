@@ -7,6 +7,8 @@ import * as v from "valibot";
 import { ActivityLogTable, db, DeviceTable, TagTable, UserTable } from "../../db/index.ts";
 import { DeviceEvents, DeviceResponse, type DeviceState, type LogCodeRequest } from "./common.ts";
 
+const HTTP_RETRY_LIMIT = 5;
+
 export class DeviceConnection {
   private interval: NodeJS.Timeout;
 
@@ -18,71 +20,80 @@ export class DeviceConnection {
     }, 10_000);
   }
 
-  public async checkDevice() {
-    try {
-      const res = await fetch(`http://${this.device.ip_address}`, { signal: AbortSignal.timeout(5000) });
-
-      if (res.status === 200) {
-        console.log("Device OK");
-
-        await db.update(DeviceTable).set({ updated: new Date() }).where(eq(DeviceTable.id, this.device.id));
-
-        const parsed = v.parse(DeviceResponse, await res.json());
-
-        DeviceEvents.emit("update", { ...parsed[0], ...parsed[1] });
-      } else {
-        console.error("Device NOT OK");
-      }
-    } catch (err) {
-      console.error("Device ping failed!", err);
-    }
-  }
-
-  public async pushValidCodes() {
-    for (let i = 0; i < 5; i++) {
+  private async doRequest(url: string, method: "GET" | "POST", body?: string) {
+    for (let i = 0; i < HTTP_RETRY_LIMIT; i++) {
       try {
-        const rows = await db
-          .select({ ...getTableColumns(TagTable), user_name: UserTable.name })
-          .from(TagTable)
-          .innerJoin(UserTable, eq(TagTable.user_id, UserTable.id));
-
-        const body = rows.map((r) => `${r.code} ${r.user_name}`).join("\n") + "\n";
-
-        const res = await fetch(`http://${this.device.ip_address}/file?file=codes.txt`, {
-          signal: AbortSignal.timeout(5000),
-          method: "POST",
+        const res = await fetch(`http://${this.device.ip_address}/${url}`, {
+          method,
           body,
+          signal: AbortSignal.timeout(5000),
         });
 
         if (res.status === 200) {
-          console.log("Device Codes Update Successful");
-          break;
+          return res;
         } else {
-          console.error("Device Codes Update Error!");
+          console.error("doRequest: Bad response:", res.status, await res.text());
         }
       } catch (err) {
-        console.error("Device Codes Update Error!", err);
+        console.error("doRequest: Error:", err);
       }
+    }
+
+    return null;
+  }
+
+  public async checkDevice() {
+    try {
+      const res = await this.doRequest("", "GET");
+
+      if (!res) {
+        console.log("Device NOT OK!");
+        return;
+      }
+
+      await db.update(DeviceTable).set({ updated: new Date() }).where(eq(DeviceTable.id, this.device.id));
+
+      const parsed = v.parse(DeviceResponse, await res.json());
+
+      DeviceEvents.emit("update", { ...parsed[0], ...parsed[1] });
+
+      console.log("Device OK");
+    } catch (err) {
+      console.error("checkDevice: ERROR:", err);
+    }
+  }
+
+  public async getStats() {
+    const res = await this.doRequest("stats", "GET");
+    if (!res) return null;
+
+    return await res.json();
+  }
+
+  public async pushValidCodes() {
+    const rows = await db
+      .select({ ...getTableColumns(TagTable), user_name: UserTable.name })
+      .from(TagTable)
+      .innerJoin(UserTable, eq(TagTable.user_id, UserTable.id));
+
+    const body = rows.map((r) => `${r.code} ${r.user_name}`).join("\n") + "\n";
+
+    const res = await this.doRequest(`file?file=codes.txt`, "POST", body);
+
+    if (res) {
+      console.log("Device Codes Update Successful");
+    } else {
+      console.error("Device Codes Update Error!");
     }
   }
 
   public async pushLatchState(latch: boolean) {
-    for (let i = 0; i < 5; i++) {
-      try {
-        const res = await fetch(`http://${this.device.ip_address}/latch-${latch ? "on" : "off"}`, {
-          signal: AbortSignal.timeout(5000),
-          method: "POST",
-        });
+    const res = await this.doRequest(`latch-${latch ? "on" : "off"}`, "POST");
 
-        if (res.status === 200) {
-          console.log("setLatch: Success", latch);
-          break;
-        } else {
-          console.error("setLatch: Error!", await res.text());
-        }
-      } catch (err) {
-        console.error("setLatch:", err);
-      }
+    if (res) {
+      console.log("setLatch: Success", latch);
+    } else {
+      console.error("setLatch: Error!");
     }
   }
 
@@ -116,7 +127,7 @@ export class DeviceConnection {
   }
 
   /** Called when this device has changed its latch state */
-  public async handleStateUpdate(deviceState: DeviceState) {
+  public handleStateUpdate(deviceState: DeviceState) {
     console.log("DeviceConnection.handleStateUpdate:", deviceState);
 
     DeviceEvents.emit("update", { name: this.device.name, ...deviceState });

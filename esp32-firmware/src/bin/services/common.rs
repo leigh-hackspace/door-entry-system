@@ -16,6 +16,7 @@ pub enum SystemMessage {
     WifiOff,
     Watchdog,
     Ping,
+    RfidPing,
     OtaStarting,
     HandleLatchFromServer(bool),
     PlayFile(String),

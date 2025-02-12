@@ -26,6 +26,7 @@ esp-backtrace = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-
 ] }
 esp-hal = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-hal", features = ["esp32c6", "unstable"] }
 esp-println = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-println", features = ["esp32c6", "log"] }
+# esp-println = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-println", default-features = false, features = ["esp32c6", "log", "jtag-serial", "critical-section", "colors"] }
 esp-wifi = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-wifi", default-features = false, features = [
   "esp-alloc",
   "esp32c6",
@@ -76,6 +77,8 @@ bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5
     "macros",
     "async",
 ] }
+esp-hal-mfrc522 = { version ="0.2.1", features = ["embassy-time"] }
+embassy-embedded-hal = "0.3.0"
 
 [profile.dev]
 # Rust debug is too slow.

@@ -1,7 +1,6 @@
 import { relations, sql } from "drizzle-orm";
 import { pgEnum, pgTable, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
-import { ActivityLogAction } from "../../../common/src/activity-log.ts";
-import { UserRole } from "../../../common/src/index.ts"; // Drizzle Kit bodge
+import { ActivityLogAction, DeviceNameLength, IpAddressLength, UserRole } from "../../../common/src/index.ts"; // Drizzle Kit bodge
 
 export type TableType = typeof UserTable | typeof TagTable | typeof ActivityLogTable | typeof DeviceTable;
 
@@ -60,9 +59,6 @@ export const ActivityLogRelations = relations(ActivityLogTable, ({ one }) => ({
     references: [UserTable.id],
   }),
 }));
-
-export const DeviceNameLength = 16;
-export const IpAddressLength = 15;
 
 export const DeviceTable = pgTable("device", {
   id: uuid().primaryKey(),

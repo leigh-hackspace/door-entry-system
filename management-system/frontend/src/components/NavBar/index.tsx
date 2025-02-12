@@ -58,6 +58,12 @@ export function NavBar() {
                   👤 Users
                 </a>
               </li>
+
+              <li class="nav-item">
+                <a class="nav-link active" href="/devices">
+                  📟 Devices
+                </a>
+              </li>
             </Show>
 
             <li class="nav-item">

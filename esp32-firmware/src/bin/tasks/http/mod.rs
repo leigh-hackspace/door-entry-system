@@ -1,7 +1,6 @@
 use crate::services::common::{DeviceConfig, DeviceState, MainPublisher, SystemMessage};
 use crate::services::state::PermanentStateService;
 use crate::utils::local_fs::LocalFs;
-use alloc::boxed::Box;
 use alloc::format;
 use alloc::string::ToString;
 use alloc::sync::Arc;
@@ -11,6 +10,7 @@ use delete_file::HandleFileDelete;
 use embassy_executor::Spawner;
 use embassy_net::Stack;
 use embassy_time::Duration;
+use esp_println::print;
 use esp_storage::FlashStorage;
 use list_files::HandleFileList;
 use ota::HandleOtaUpdate;
@@ -53,6 +53,8 @@ impl AppBuilder for AppProps {
                 "/",
                 get(|| async {
                     publisher.publish(SystemMessage::Ping).await;
+
+                    print!(".");
 
                     let json = format!(
                         "[{},{}]",
