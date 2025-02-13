@@ -14,7 +14,7 @@
         packages.default = let
           hashes = {
             aarch64-darwin = "sha256-N4GxH/ItKUSatEq7NiMqgzvIS5bIZ8u9itKoVdhTz6g=";
-            x86_64-linux = "sha256-AF69t+Yn43JAtbZuQKRqT87qrJStvUwaUTWVRNGlrDc=";
+            x86_64-linux = "sha256-4uJBTPOEt5FTgQGDnerq9/OJiLIE3kfJi2g3aNQ70NY=";
           };
         in pkgs.stdenv.mkDerivation {
           pname = "door-entry-management-system";
