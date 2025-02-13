@@ -37,7 +37,7 @@
             export HOME="$(mktemp -d)"
 
             ${pkgs.deno}/bin/deno i
-            ${pkgs.deno}/bin/deno cache server.ts
+            ${pkgs.deno}/bin/deno cache frontend/server.ts
 
             ${pkgs.deno}/bin/deno task build
 
