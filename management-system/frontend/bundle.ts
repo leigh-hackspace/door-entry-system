@@ -1,4 +1,5 @@
 import { denoPlugins } from "jsr:@luca/esbuild-deno-loader@0.11.1";
+import path from "node:path";
 import * as esbuild from "npm:esbuild";
 import { solidPlugin } from "npm:esbuild-plugin-solid";
 import * as v from "npm:valibot";
@@ -7,6 +8,9 @@ import { assertUnreachable } from "../common/src/index.ts";
 const mode = v.parse(v.picklist(["--watch", "--build"]), Deno.args[0]);
 
 const [denoResolver, denoLoader] = [...denoPlugins({})];
+
+const denoJsonPath = path.resolve("../deno.json");
+const version = JSON.parse(Deno.readTextFileSync(denoJsonPath)).version;
 
 const ctx = await esbuild.context({
   plugins: [
@@ -21,6 +25,8 @@ const ctx = await esbuild.context({
 
     denoLoader,
   ],
+
+  define: { "process.env.VERSION": JSON.stringify(version) },
 
   entryPoints: ["src/app.tsx"],
   outdir: "web/js/",

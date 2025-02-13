@@ -1,7 +1,6 @@
 import { and, count, eq, getTableColumns, ilike, or } from "drizzle-orm";
 import * as v from "valibot";
-import { db, DeviceTable } from "../db/index.ts";
-import { UserTable } from "../db/schema.ts";
+import { db, DeviceTable, UserTable } from "../db/index.ts";
 import { GlobalDeviceCollection } from "../services/index.ts";
 import { assertOneRecord, PaginationSchema, toDrizzleOrderBy, UUID } from "./common.ts";
 import { tRPC } from "./trpc.ts";
@@ -57,6 +56,6 @@ export const DeviceRouter = tRPC.router({
 
     await db.delete(DeviceTable).where(eq(DeviceTable.id, input));
 
-    await GlobalDeviceCollection.pushValidCodes();
+    await GlobalDeviceCollection.reloadDevices();
   }),
 });

@@ -26,7 +26,7 @@ Deno.serve({ port }, async (req: Request) => {
   } else if (isAsset) {
     return serveAsset(assetDir, version, url);
   } else {
-    return serveHtmlFile(assetDir, version);
+    return serveHtmlFile(assetDir, version, url);
   }
 });
 
@@ -78,7 +78,16 @@ async function serveServiceWorker(assetDir: string, version: string) {
   return new Response(js, { headers: { ...BASE_HEADERS, "Content-Type": "text/javascript", "Content-Length": String(js.length) } });
 }
 
-async function serveHtmlFile(assetDir: string, version: string) {
+async function serveHtmlFile(assetDir: string, version: string, url: URL) {
+  const requestVersion = url.searchParams.get("v");
+
+  if (requestVersion && version !== requestVersion) {
+    return new Response(`${version} !== ${requestVersion}`, {
+      ...BASE_HEADERS,
+      headers: { "Content-Type": "text/plain" },
+    });
+  }
+
   const assetPath = path.join(assetDir, "index.html");
   console.log("assetPath:", assetPath);
 

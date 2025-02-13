@@ -29,7 +29,7 @@ async function start() {
 
   // deno-lint-ignore no-explicit-any
   homeAssistantService.callback = (entityId: string, newState: any) => {
-    if (entityId === "binary_sensor.hackspace_status") {
+    if (entityId === "input_boolean.hackspace_open") {
       console.log("hackspace_status:", newState);
 
       GlobalDeviceCollection.pushLatchStateAll(newState.state === "on");

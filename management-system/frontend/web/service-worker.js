@@ -1,6 +1,7 @@
-const CACHE_NAME = 'door-entry-bluetooth-web-app-[VERSION]';
+const CACHE_NAME = 'door-entry-management-system-[VERSION]';
 const ASSETS = [
   '/',
+  '/login',
   '/js/app.js?v=[VERSION]',
   '/css/app.css?v=[VERSION]',
   '/css/bootstrap.css?v=[VERSION]',
@@ -18,9 +19,34 @@ self.addEventListener('install', event => {
 
 // Fetch event: serve assets from cache
 self.addEventListener('fetch', event => {
+  let request = event.request;
+
+  // const url = new URL(request.url);
+  // const version = url.searchParams.get('v');
+
+  // const [path] = request.url.split('?');
+
+  // // All pages are the same. No "." means it's not an asset
+  // if (!path.includes('.')) {
+  //   const url = path.split('/').slice(0, -1).join('/') + '/' + (version ? '?v=' + version : '')
+
+  //   request = new Request(url, {
+  //     method: request.method,
+  //     headers: request.headers,
+  //     integrity: request.integrity,
+  //   });
+  // }
+
   event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request);
+    caches.match(request).then(response => {
+      if (response) {
+        console.log('Cached response:', request.url);
+        return response
+      } else {
+        console.log('Fetching...:', request.url);
+        return fetch(request);
+      }
+      // return response || fetch(request);
     })
   );
 });

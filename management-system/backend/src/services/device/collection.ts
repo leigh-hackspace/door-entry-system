@@ -8,11 +8,16 @@ export class DeviceCollection {
   private devices: Record<string, DeviceConnection> = {};
 
   constructor() {
-    void this.loadDevices();
+    void this.reloadDevices();
   }
 
-  private async loadDevices() {
+  public async reloadDevices() {
     const rows = await db.select().from(DeviceTable);
+
+    for (const [name, deviceConnection] of Object.entries(this.devices)) {
+      deviceConnection.destroy();
+      delete this.devices[name];
+    }
 
     for (const row of rows) {
       this.devices[row.name] = new DeviceConnection(row);

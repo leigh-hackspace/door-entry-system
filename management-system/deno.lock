@@ -1,10 +1,16 @@
 {
   "version": "4",
   "specifiers": {
+    "jsr:@b-fuze/deno-dom@*": "0.1.49",
+    "jsr:@geacko/deno-mimetypes@*": "1.0.4",
     "jsr:@luca/esbuild-deno-loader@0.11.1": "0.11.1",
     "jsr:@luca/esbuild-deno-loader@~0.11.1": "0.11.1",
+    "jsr:@quentinadam/assert@~0.1.10": "0.1.10",
+    "jsr:@quentinadam/base64@*": "0.1.4",
+    "jsr:@quentinadam/require@~0.1.4": "0.1.4",
     "jsr:@std/bytes@^1.0.2": "1.0.4",
     "jsr:@std/cli@^1.0.8": "1.0.8",
+    "jsr:@std/crypto@*": "1.0.4",
     "jsr:@std/encoding@^1.0.5": "1.0.5",
     "jsr:@std/fmt@^1.0.3": "1.0.3",
     "jsr:@std/html@^1.0.3": "1.0.3",
@@ -47,6 +53,12 @@
     "npm:valibot@*": "1.0.0-beta.12"
   },
   "jsr": {
+    "@b-fuze/deno-dom@0.1.49": {
+      "integrity": "45c40175fdd1e74ab2d4b54c4fdaabbad6e5b76ee28df12a48e076b3fa7901a9"
+    },
+    "@geacko/deno-mimetypes@1.0.4": {
+      "integrity": "c99a61705ee8f5cc81cbe8ae8025d5824f8444b266edabd3e4268e2fc113fe88"
+    },
     "@luca/esbuild-deno-loader@0.11.1": {
       "integrity": "dc020d16d75b591f679f6b9288b10f38bdb4f24345edb2f5732affa1d9885267",
       "dependencies": [
@@ -55,11 +67,30 @@
         "jsr:@std/path@^1.0.6"
       ]
     },
+    "@quentinadam/assert@0.1.10": {
+      "integrity": "623eb01c4eb8bbe6420abcbc06792dbd5ca4301c270ac04b3745deac099f70df"
+    },
+    "@quentinadam/base64@0.1.4": {
+      "integrity": "34cf95ee65c2889333574205ace6fd59518fc7a544b7d55217044fbea9756602",
+      "dependencies": [
+        "jsr:@quentinadam/assert",
+        "jsr:@quentinadam/require"
+      ]
+    },
+    "@quentinadam/require@0.1.4": {
+      "integrity": "ef2a475d3fc241817470e540bd892ac23520d620ffb23b7796c940df31391c72",
+      "dependencies": [
+        "jsr:@quentinadam/assert"
+      ]
+    },
     "@std/bytes@1.0.4": {
       "integrity": "11a0debe522707c95c7b7ef89b478c13fb1583a7cfb9a85674cd2cc2e3a28abc"
     },
     "@std/cli@1.0.8": {
       "integrity": "3762d8dc9a373715c08d871c38d45e637b25266f013a1d0bbe560bca409de94e"
+    },
+    "@std/crypto@1.0.4": {
+      "integrity": "cee245c453bd5366207f4d8aa25ea3e9c86cecad2be3fefcaa6cb17203d79340"
     },
     "@std/encoding@1.0.5": {
       "integrity": "ecf363d4fc25bd85bd915ff6733a7e79b67e0e7806334af15f4645c569fefc04"

@@ -4,7 +4,11 @@ import { createSignal, Show } from "npm:solid-js";
 import { onCleanup, onMount } from "solid-js";
 import { Button } from "../Button/index.tsx";
 
-export function NavBar() {
+interface Props {
+  version: string;
+}
+
+export function NavBar(props: Props) {
   const user = () => AppService.get().getCurrentUser();
 
   const navigate = useNavigate();
@@ -37,7 +41,7 @@ export function NavBar() {
     <nav class="navbar navbar-expand-lg mb-3">
       <div class="container-fluid">
         <a class="navbar-brand" href="#">
-          Door Entry System
+          Door System (v{props.version})
         </a>
 
         <button class="navbar-toggler" type="button" aria-label="Toggle navigation" on:click={onToggle}>
