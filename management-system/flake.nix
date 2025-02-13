@@ -44,7 +44,7 @@
             mkdir -p $out/bin
             mkdir -p $out/lib/frontend
 
-            cp -a deno.json       $out/lib/frontend/
+            cp -a deno.json       $out/lib/
             cp -a frontend/web    $out/lib/frontend/
 
             echo "Compiling backend..."
