@@ -1,6 +1,7 @@
-use crate::services::common::{DeviceConfig, DeviceState, MainPublisher, SystemMessage};
+use crate::services::common::{DeviceConfig, DeviceInfo, DeviceState, MainPublisher, SystemMessage, VERSION};
 use crate::services::state::PermanentStateService;
 use crate::utils::local_fs::LocalFs;
+use alloc::borrow::ToOwned;
 use alloc::format;
 use alloc::string::ToString;
 use alloc::sync::Arc;
@@ -56,19 +57,30 @@ impl AppBuilder for AppProps {
 
                     print!(".");
 
-                    let json = format!(
-                        "[{},{}]",
-                        config_service
-                            .get_json()
-                            .map(|str| str.to_string())
-                            .unwrap_or_else(|err| format!("\"{err:?}\"").try_into().unwrap()),
-                        state_service
-                            .get_json()
-                            .map(|str| str.to_string())
-                            .unwrap_or_else(|err| format!("\"{err:?}\"").try_into().unwrap()),
-                    );
+                    let mut str = "[".to_owned();
 
-                    StringResponse { str: json }
+                    str += &serde_json_core::to_string::<DeviceInfo, 128>(&DeviceInfo {
+                        version: VERSION.try_into().unwrap(),
+                    })
+                    .unwrap();
+
+                    str += ",";
+
+                    str += &config_service
+                        .get_json()
+                        .map(|str| str.to_string())
+                        .unwrap_or_else(|err| format!("\"{err:?}\"").try_into().unwrap());
+
+                    str += ",";
+
+                    str += &state_service
+                        .get_json()
+                        .map(|str| str.to_string())
+                        .unwrap_or_else(|err| format!("\"{err:?}\"").try_into().unwrap());
+
+                    str += "]";
+
+                    StringResponse { str }
                 }),
             )
             .route(
@@ -104,8 +116,7 @@ impl AppBuilder for AppProps {
                         heap_free,
                     };
 
-                    let json = serde_json_core::to_string::<Stats, 128>(&stats)
-                        .map_or_else(|err| format!("\"{err:?}\"").into(), |json| json.to_string());
+                    let json = serde_json_core::to_string::<Stats, 128>(&stats).map_or_else(|err| format!("\"{err:?}\"").into(), |json| json.to_string());
 
                     StringResponse { str: json }
                 }),

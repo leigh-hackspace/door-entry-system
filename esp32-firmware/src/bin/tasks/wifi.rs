@@ -1,3 +1,5 @@
+use core::net::Ipv4Addr;
+use embassy_net::Stack;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_time::{Duration, Timer};
 use esp_println::println;
@@ -16,7 +18,7 @@ pub type WifiCommandSignal = Signal<CriticalSectionRawMutex, WifiCommandSignalMe
 
 #[derive(PartialEq, Debug)]
 pub enum WifiStatusSignalMessage {
-    Connected,
+    Connected(Ipv4Addr),
     Interrupted,
     Disconnected,
 }
@@ -25,7 +27,12 @@ pub type WifiStatusSignal = Signal<CriticalSectionRawMutex, WifiStatusSignalMess
 
 // maintains wifi connection, when it disconnects it tries to reconnect
 #[embassy_executor::task]
-pub async fn connection_task(mut controller: WifiController<'static>, command_signal: &'static WifiCommandSignal, status_signal: &'static WifiStatusSignal) {
+pub async fn connection_task(
+    mut controller: WifiController<'static>,
+    stack: Stack<'static>,
+    command_signal: &'static WifiCommandSignal,
+    status_signal: &'static WifiStatusSignal,
+) {
     println!("start connection task");
     println!("Device capabilities: {:?}", controller.capabilities());
 
@@ -79,16 +86,24 @@ pub async fn connection_task(mut controller: WifiController<'static>, command_si
 
                 println!("About to connect...");
 
-                match controller.connect_async().await {
-                    Ok(_) => {
-                        println!("Wifi connected!");
-                        was_connected = true;
-                        status_signal.signal(WifiStatusSignalMessage::Connected);
+                if let Err(err) = controller.connect_async().await {
+                    println!("Failed to connect to wifi: {err:?}");
+                    Timer::after(Duration::from_millis(5000)).await;
+                    continue;
+                }
+
+                println!("Wifi connected!");
+                was_connected = true;
+
+                loop {
+                    if let Some(ip_info) = stack.config_v4() {
+                        println!("IP ADDRESS: {:?}", ip_info.address.address());
+                        status_signal.signal(WifiStatusSignalMessage::Connected(ip_info.address.address()));
+
+                        break;
                     }
-                    Err(e) => {
-                        println!("Failed to connect to wifi: {e:?}");
-                        Timer::after(Duration::from_millis(5000)).await
-                    }
+
+                    Timer::after(Duration::from_millis(100)).await;
                 }
             }
         }

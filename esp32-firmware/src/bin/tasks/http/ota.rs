@@ -65,10 +65,7 @@ impl picoserve::routing::RequestHandlerService<()> for HandleOtaUpdate {
 
         ota.set_current_slot(new_slot);
 
-        warn!("Restarting...");
-        Timer::after(Duration::from_secs(5)).await;
-
-        esp_hal::system::software_reset();
+        self.publisher.publish(SystemMessage::OtaComplete).await;
 
         format!("Total Size: {total_size}\r\n")
             .write_to(request.body_connection.finalize().await?, response_writer)

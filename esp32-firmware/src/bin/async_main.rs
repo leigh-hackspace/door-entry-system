@@ -14,7 +14,7 @@ use alloc::{
 };
 use core::{cell::RefCell, future::join, str::FromStr as _};
 use embassy_executor::Spawner;
-use embassy_net::{Config as NetConfig, DhcpConfig, Runner, Stack, StackResources};
+use embassy_net::{Config as NetConfig, DhcpConfig, Runner, StackResources};
 use embassy_sync::pubsub::WaitResult;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_time::{Duration, Timer};
@@ -36,7 +36,7 @@ use esp_wifi::{
 use log::{error, info, warn};
 use services::{
     auth::{check_code, CheckCodeResult},
-    common::{DeviceConfig, DeviceState, MainChannel, MainPublisher, SystemMessage, DEVICE_CONFIG_FILE_NAME, DEVICE_STATE_FILE_NAME},
+    common::{DeviceConfig, DeviceState, MainChannel, SystemMessage, DEVICE_CONFIG_FILE_NAME, DEVICE_STATE_FILE_NAME, NOTIFY_URL, VERSION},
     door::DoorService,
     http::HttpService,
     led::set_led,
@@ -52,8 +52,6 @@ use tasks::{
 };
 
 extern crate alloc;
-
-const NOTIFY_URL: &str = env!("NOTIFY_URL");
 
 #[esp_hal_embassy::main]
 async fn main(spawner: Spawner) {
@@ -81,7 +79,7 @@ async fn main(spawner: Spawner) {
     let systimer = SystemTimer::new(peripherals.SYSTIMER);
     esp_hal_embassy::init(systimer.alarm0);
 
-    info!("Embassy initialized!");
+    info!("Embassy initialized! Version: {VERSION}");
 
     let timer_group_0 = TimerGroup::new(peripherals.TIMG0);
 
@@ -113,9 +111,9 @@ async fn main(spawner: Spawner) {
         esp_wifi::init(timer_group_0.timer0, rng.clone(), peripherals.RADIO_CLK).unwrap()
     );
 
-    let (wifi_interface, mut wifi_controller) = esp_wifi::wifi::new_with_mode(wifi_init, peripherals.WIFI, WifiStaDevice).unwrap();
+    let (wifi_int, mut wifi_cont) = esp_wifi::wifi::new_with_mode(wifi_init, peripherals.WIFI, WifiStaDevice).unwrap();
 
-    wifi_controller.set_power_saving(esp_wifi::config::PowerSaveMode::None).unwrap();
+    wifi_cont.set_power_saving(esp_wifi::config::PowerSaveMode::None).unwrap();
 
     let dhcp_name = &config_service.get_data().name.replace(" ", "-");
 
@@ -125,7 +123,7 @@ async fn main(spawner: Spawner) {
 
     let seed = (rng.random() as u64) << 32 | rng.random() as u64;
 
-    let (stack, runner) = embassy_net::new(wifi_interface, net_config, make_static!(StackResources<6>, StackResources::<6>::new()), seed);
+    let (stack, runner) = embassy_net::new(wifi_int, net_config, make_static!(StackResources<6>, StackResources::<6>::new()), seed);
 
     set_led(0, 0, 128).await;
 
@@ -139,13 +137,12 @@ async fn main(spawner: Spawner) {
 
     let connector = BleConnector::new(&wifi_init, peripherals.BT);
 
+    spawner.spawn(net_task(runner)).ok();
     spawner.spawn(ble_task(connector, config_service.clone(), button_signal)).ok();
     spawner.spawn(rfid_task(rfid_signal)).ok();
-    spawner.spawn(net_task(runner)).ok();
-    spawner.spawn(connection_task(wifi_controller, wifi_command_signal, wifi_status_signal)).ok();
     spawner.spawn(button_task(button_signal)).ok();
+    spawner.spawn(connection_task(wifi_cont, stack, wifi_command_signal, wifi_status_signal)).ok();
     spawner.spawn(audio_task(audio_signal)).ok();
-    spawner.spawn(watchdog_task(channel.publisher().unwrap())).ok();
 
     wifi_command_signal.signal(WifiCommandSignalMessage::Connect);
 
@@ -153,82 +150,100 @@ async fn main(spawner: Spawner) {
     let http_service = HttpService::new(stack);
 
     let push_announce = async || {
-        for _ in 0..10 {
-            if let Err(err) = http_service
-                .do_http_request(
-                    NOTIFY_URL.to_string() + "/announce",
-                    format!(r#"{{"name":"{}"}}"#, config_service.get_data().name),
-                )
-                .await
-            {
-                warn!("push_announce: Could not communicate with server! {:?}", err);
-                Timer::after(Duration::from_millis(1_000)).await;
-            } else {
-                info!("push_announce: Success");
-                return;
-            }
+        let data = format!(r#"{{"name":"{}"}}"#, config_service.get_data().name);
+
+        if let Ok(_) = http_service.do_http_request_with_retry(NOTIFY_URL.to_string() + "/announce", data).await {
+            info!("push_announce: Success");
         }
     };
 
     let push_code = async |code: String, allowed: bool| {
-        for _ in 0..10 {
-            if let Err(err) = http_service
-                .do_http_request(
-                    NOTIFY_URL.to_string() + "/code",
-                    format!(r#"{{"code":"{}","allowed":{}}}"#, code, if allowed { "true" } else { "false" }),
-                )
-                .await
-            {
-                warn!("push_code: Could not communicate with server! {:?}", err);
-            } else {
-                info!("push_code: Success: {} {}", code, allowed);
-                return;
-            }
+        let data = format!(r#"{{"code":"{}","allowed":{}}}"#, code, if allowed { "true" } else { "false" });
+
+        if let Ok(_) = http_service.do_http_request_with_retry(NOTIFY_URL.to_string() + "/code", data).await {
+            info!("push_code: Success: {} {}", code, allowed);
         }
     };
 
     let push_state = async || {
-        for _ in 0..10 {
-            if let Err(err) = http_service
-                .do_http_request(
-                    NOTIFY_URL.to_string() + "/state",
-                    state_service.get_json().map(|s| s.to_string()).unwrap_or("{}".to_string()),
-                )
-                .await
-            {
-                warn!("push_state: Could not communicate with server! {:?}", err);
-            } else {
-                info!("push_state: Success");
-                return;
+        let data = state_service.get_json().map(|s| s.to_string()).unwrap_or("{}".to_string());
+
+        if let Ok(_) = http_service.do_http_request_with_retry(NOTIFY_URL.to_string() + "/state", data).await {
+            info!("push_state: Success");
+        }
+    };
+
+    let flash_leds = async |status: u8| {
+        if status == 0 {
+            for i in 0..10 {
+                set_led(255, 0, 0).await;
+                Timer::after(Duration::from_millis(100)).await;
+                set_led(0, 0, 0).await;
+                Timer::after(Duration::from_millis(100)).await;
+            }
+        } else {
+            for i in 0..10 {
+                set_led(0, 255, 0).await;
+                Timer::after(Duration::from_millis(100)).await;
+                set_led(0, 0, 0).await;
+                Timer::after(Duration::from_millis(100)).await;
             }
         }
     };
 
-    start_http(spawner, stack, channel.publisher().unwrap(), config_service.clone(), state_service.clone());
+    let handle_code = async |code: String| {
+        let mut allowed = false;
 
-    let mut last_seen = Instant::now().duration_since_epoch().as_millis();
+        match check_code(&code).await {
+            Ok(result) => match result {
+                CheckCodeResult::Valid(name) => {
+                    info!("Welcome {}", name);
+                    flash_leds(1).await;
+                    door_service.open_door("success.mp3".to_string()).await;
+                    allowed = true;
+                }
+                CheckCodeResult::Invalid => {
+                    flash_leds(0).await;
+                    audio_signal.signal(AudioSignal::Play("failure.mp3".to_string()));
+                }
+            },
+            Err(err) => {
+                error!("CheckCode: {:?}", err);
+                audio_signal.signal(AudioSignal::Play("failure.mp3".to_string()));
+            }
+        }
+
+        push_code(code, allowed).await;
+    };
+
+    let last_seen = RefCell::new(Instant::now().duration_since_epoch().as_millis());
     let rfid_last_seen = RefCell::new(Instant::now().duration_since_epoch().as_millis());
+    let ota_happening = RefCell::new(false);
+
+    start_http(spawner, stack, channel.publisher().unwrap(), config_service.clone(), state_service.clone());
 
     join!(
         async {
             loop {
-                match wifi_status_signal.wait().await {
-                    WifiStatusSignalMessage::Connected => {
-                        loop {
-                            if let Some(ip_info) = stack.config_v4() {
-                                info!("IP ADDRESS: {:?}", ip_info.address.address());
-                                break;
-                            }
-                            Timer::after(Duration::from_millis(100)).await;
-                        }
+                let now = Instant::now().duration_since_epoch().as_millis();
 
-                        audio_signal.signal(AudioSignal::Play("startup.mp3".to_string()));
+                // Make sure OTA gets at least 10 minutes to complete
+                let timeout = if *ota_happening.borrow() { 10 * 60_000 } else { 5 * 60_000 };
 
-                        push_announce().await;
-                    }
-                    WifiStatusSignalMessage::Interrupted => {}
-                    WifiStatusSignalMessage::Disconnected => {}
+                let last_seen_ago = now - *last_seen.borrow();
+                let rfid_last_seen_ago = now - *rfid_last_seen.borrow();
+
+                // info!("Last ping: {} seconds ago", last_seen_ago / 1_000);
+
+                if last_seen_ago < timeout && rfid_last_seen_ago < timeout {
+                    // Keep feeding the watchdog if we've received a recent ping
+                    wdt.feed();
+                } else {
+                    // Let the watchdog restart the system by NOT feeding it...
+                    error!("Not been pinged in over 5 minutes. Restarting!!!");
                 }
+
+                Timer::after(Duration::from_millis(5_000)).await;
             }
         },
         async {
@@ -239,28 +254,21 @@ async fn main(spawner: Spawner) {
         },
         async {
             loop {
+                match wifi_status_signal.wait().await {
+                    WifiStatusSignalMessage::Connected(ip_address) => {
+                        audio_signal.signal(AudioSignal::Play("startup.mp3".to_string()));
+                        push_announce().await;
+                    }
+                    WifiStatusSignalMessage::Interrupted => {}
+                    WifiStatusSignalMessage::Disconnected => {}
+                }
+            }
+        },
+        async {
+            loop {
                 match rfid_signal.wait().await {
                     RfidSignalMessage::Ping => *rfid_last_seen.borrow_mut() = Instant::now().duration_since_epoch().as_millis(),
-                    RfidSignalMessage::CodeDetected(code) => {
-                        let mut allowed = false;
-
-                        match check_code(&code).await {
-                            Ok(result) => match result {
-                                CheckCodeResult::Valid(name) => {
-                                    info!("Welcome {}", name);
-                                    door_service.open_door("success.mp3".to_string()).await;
-                                    allowed = true;
-                                }
-                                CheckCodeResult::Invalid => audio_signal.signal(AudioSignal::Play("failure.mp3".to_string())),
-                            },
-                            Err(err) => {
-                                error!("CheckCode: {:?}", err);
-                                audio_signal.signal(AudioSignal::Play("failure.mp3".to_string()));
-                            }
-                        }
-
-                        push_code(code, allowed).await;
-                    }
+                    RfidSignalMessage::CodeDetected(code) => handle_code(code).await,
                 }
             }
         },
@@ -277,48 +285,20 @@ async fn main(spawner: Spawner) {
 
             loop {
                 if let WaitResult::Message(msg) = main_subscriber.next_message().await {
-                    if msg != SystemMessage::Ping && msg != SystemMessage::Watchdog {
+                    if msg != SystemMessage::Ping {
                         info!("#### SystemMessage: {:?}", msg);
                     }
 
                     match msg {
                         SystemMessage::WifiOff => wifi_command_signal.signal(WifiCommandSignalMessage::Disconnect),
-                        SystemMessage::Ping => last_seen = Instant::now().duration_since_epoch().as_millis(),
+                        SystemMessage::Ping => *last_seen.borrow_mut() = Instant::now().duration_since_epoch().as_millis(),
                         SystemMessage::HandleLatchFromServer(latch) => door_service.set_latch(latch),
                         SystemMessage::PlayFile(file) => audio_signal.signal(AudioSignal::Play(file)),
-                        SystemMessage::Watchdog => {
-                            let now = Instant::now().duration_since_epoch().as_millis();
-
-                            let last_seen_ago = now - last_seen;
-                            let rfid_last_seen_ago = now - *rfid_last_seen.borrow();
-
-                            // info!("Last ping: {} seconds ago", last_seen_ago / 1_000);
-
-                            if last_seen_ago < 5 * 60_000 && rfid_last_seen_ago < 5 * 60_000 {
-                                // Keep feeding the watchdog if we've received a recent ping
-                                wdt.feed();
-                            } else {
-                                // Let the watchdog restart the system by NOT feeding it...
-                                error!("Not been pinged in over 5 minutes. Restarting!!!");
-                            }
-                        }
-                        SystemMessage::OtaStarting => {
-                            let started = Instant::now().duration_since_epoch().as_millis();
-
-                            loop {
-                                let now = Instant::now().duration_since_epoch().as_millis();
-                                let started_ago = now - started;
-
-                                if started_ago > 5 * 60_000 {
-                                    error!("OTA failed. Waited 5 minutes. Restarting!!!");
-                                    return;
-                                }
-
-                                info!("Ota is happening... {} seconds so far", started_ago / 1_000);
-                                wdt.feed();
-
-                                Timer::after(Duration::from_millis(10_000)).await;
-                            }
+                        SystemMessage::OtaStarting => *ota_happening.borrow_mut() = true,
+                        SystemMessage::OtaComplete => {
+                            warn!("Restarting...");
+                            Timer::after(Duration::from_secs(5)).await;
+                            esp_hal::system::software_reset()
                         }
                     }
                 };
@@ -332,13 +312,4 @@ async fn main(spawner: Spawner) {
 #[embassy_executor::task]
 async fn net_task(mut runner: Runner<'static, WifiDevice<'static, WifiStaDevice>>) {
     runner.run().await
-}
-
-#[embassy_executor::task]
-async fn watchdog_task(publisher: MainPublisher) {
-    loop {
-        publisher.publish(SystemMessage::Watchdog).await;
-
-        Timer::after(Duration::from_millis(5_000)).await;
-    }
 }

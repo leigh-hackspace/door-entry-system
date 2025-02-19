@@ -19,7 +19,7 @@ export type DeviceState = v.InferInput<typeof DeviceState>;
 
 export type DeviceStateAndConfig = DeviceConfig & DeviceState;
 
-export const DeviceResponse = v.tuple([DeviceConfig, DeviceState] as const);
+export const DeviceResponse = v.tuple([v.object({}), DeviceConfig, DeviceState] as const);
 
 export const AnnounceRequest = v.object({
   name: v.pipe(v.string(), v.minLength(2)),

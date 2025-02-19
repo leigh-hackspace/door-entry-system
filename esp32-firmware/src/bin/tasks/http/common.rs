@@ -13,6 +13,6 @@ impl IntoResponse for StringResponse {
     ) -> Result<ResponseSent, W::Error> {
         let Self { str } = self;
 
-        format_args!("{str}").write_to(connection, response_writer).await
+        str.write_to(connection, response_writer).await
     }
 }

@@ -57,7 +57,7 @@ export class DeviceConnection {
 
       const parsed = v.parse(DeviceResponse, await res.json());
 
-      DeviceEvents.emit("update", { ...parsed[0], ...parsed[1] });
+      DeviceEvents.emit("update", { ...parsed[1], ...parsed[2] });
 
       console.log("Device OK");
     } catch (err) {
