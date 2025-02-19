@@ -11,7 +11,6 @@ use esp_hal::{
     dma::{DmaRxBuf, DmaTxBuf},
     dma_buffers,
     gpio::{Level, Output, OutputConfig},
-    peripheral::Peripheral,
     spi::{
         master::{Config, Spi, SpiDmaBus},
         Mode,
@@ -48,7 +47,6 @@ pub async fn rfid_task(signal: &'static RfidSignal) {
     let dma_tx_buf = DmaTxBuf::new(tx_descriptors, tx_buffer).unwrap();
 
     let cs = Output::new(pins.cs, Level::High, OutputConfig::default());
-    let cs2 = unsafe { cs.clone_unchecked() };
 
     let spi = Spi::new(pins.spi, Config::default().with_frequency(Rate::from_khz(100)).with_mode(Mode::_0)).unwrap();
 
@@ -73,6 +71,8 @@ pub async fn rfid_task(signal: &'static RfidSignal) {
     let mut loop_count = 0;
 
     loop {
+        // print!("L");
+
         if mfrc522.picc_is_new_card_present().await.is_ok() {
             let card = mfrc522.get_card(UidSize::Four).await;
 

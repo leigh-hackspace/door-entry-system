@@ -28,6 +28,7 @@ use esp_hal::{
         timg::{MwdtStage, TimerGroup},
     },
 };
+use esp_println::println;
 use esp_wifi::{
     ble::controller::BleConnector,
     wifi::{WifiDevice, WifiStaDevice},
@@ -166,10 +167,13 @@ async fn main(spawner: Spawner) {
     };
 
     let push_state = async || {
-        let data = state_service.get_json().map(|s| s.to_string()).unwrap_or("{}".to_string());
+        // If online...
+        if let Some(_) = stack.config_v4() {
+            let data = state_service.get_json().map(|s| s.to_string()).unwrap_or("{}".to_string());
 
-        if let Ok(_) = http_service.do_http_request_with_retry(NOTIFY_URL.to_string() + "/state", data).await {
-            info!("push_state: Success");
+            if let Ok(_) = http_service.do_http_request_with_retry(NOTIFY_URL.to_string() + "/state", data).await {
+                info!("push_state: Success");
+            }
         }
     };
 
@@ -198,12 +202,12 @@ async fn main(spawner: Spawner) {
             Ok(result) => match result {
                 CheckCodeResult::Valid(name) => {
                     info!("Welcome {}", name);
-                    flash_leds(1).await;
+                    // flash_leds(1).await;
                     door_service.open_door("success.mp3".to_string()).await;
                     allowed = true;
                 }
                 CheckCodeResult::Invalid => {
-                    flash_leds(0).await;
+                    // flash_leds(0).await;
                     audio_signal.signal(AudioSignal::Play("failure.mp3".to_string()));
                 }
             },
