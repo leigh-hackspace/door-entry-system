@@ -7,30 +7,46 @@ const SSID: &str = env!("SSID");
 const PASSWORD: &str = env!("PASSWORD");
 
 #[derive(PartialEq, Debug)]
-pub enum WifiSignal {
+pub enum WifiCommandSignalMessage {
     Connect,
     Disconnect,
 }
 
+pub type WifiCommandSignal = Signal<CriticalSectionRawMutex, WifiCommandSignalMessage>;
+
+#[derive(PartialEq, Debug)]
+pub enum WifiStatusSignalMessage {
+    Connected,
+    Interrupted,
+    Disconnected,
+}
+
+pub type WifiStatusSignal = Signal<CriticalSectionRawMutex, WifiStatusSignalMessage>;
+
 // maintains wifi connection, when it disconnects it tries to reconnect
 #[embassy_executor::task]
-pub async fn connection_task(mut controller: WifiController<'static>, signal: &'static Signal<CriticalSectionRawMutex, WifiSignal>) {
+pub async fn connection_task(mut controller: WifiController<'static>, command_signal: &'static WifiCommandSignal, status_signal: &'static WifiStatusSignal) {
     println!("start connection task");
     println!("Device capabilities: {:?}", controller.capabilities());
 
-    let mut current_state = WifiSignal::Connect;
+    let mut current_state = WifiCommandSignalMessage::Connect;
+    let mut was_connected = false;
 
     loop {
         Timer::after(Duration::from_millis(1000)).await;
 
-        if let Some(signal) = signal.try_take() {
+        if let Some(signal) = command_signal.try_take() {
             current_state = signal;
         }
 
-        if current_state == WifiSignal::Disconnect {
+        if current_state == WifiCommandSignalMessage::Disconnect {
             if esp_wifi::wifi::wifi_state() != WifiState::StaDisconnected {
                 match controller.disconnect_async().await {
-                    Ok(_) => println!("Wifi disconnected!"),
+                    Ok(_) => {
+                        println!("Wifi disconnected!");
+                        was_connected = false;
+                        status_signal.signal(WifiStatusSignalMessage::Disconnected);
+                    }
                     Err(e) => {
                         println!("Failed to disconnect from wifi: {e:?}");
                         Timer::after(Duration::from_millis(5000)).await
@@ -39,8 +55,14 @@ pub async fn connection_task(mut controller: WifiController<'static>, signal: &'
             }
         }
 
-        if current_state == WifiSignal::Connect {
+        if current_state == WifiCommandSignalMessage::Connect {
             if esp_wifi::wifi::wifi_state() != WifiState::StaConnected {
+                if was_connected {
+                    println!("Wifi interrupted!");
+                    was_connected = false;
+                    status_signal.signal(WifiStatusSignalMessage::Interrupted);
+                }
+
                 if !matches!(controller.is_started(), Ok(true)) {
                     let config = esp_wifi::wifi::Configuration::Client(esp_wifi::wifi::ClientConfiguration {
                         ssid: SSID.try_into().unwrap(),
@@ -58,7 +80,11 @@ pub async fn connection_task(mut controller: WifiController<'static>, signal: &'
                 println!("About to connect...");
 
                 match controller.connect_async().await {
-                    Ok(_) => println!("Wifi connected!"),
+                    Ok(_) => {
+                        println!("Wifi connected!");
+                        was_connected = true;
+                        status_signal.signal(WifiStatusSignalMessage::Connected);
+                    }
                     Err(e) => {
                         println!("Failed to connect to wifi: {e:?}");
                         Timer::after(Duration::from_millis(5000)).await

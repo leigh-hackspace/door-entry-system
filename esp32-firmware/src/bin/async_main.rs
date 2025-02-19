@@ -12,7 +12,7 @@ use alloc::{
     format,
     string::{String, ToString as _},
 };
-use core::{future::join, str::FromStr as _};
+use core::{cell::RefCell, future::join, str::FromStr as _};
 use embassy_executor::Spawner;
 use embassy_net::{Config as NetConfig, DhcpConfig, Runner, Stack, StackResources};
 use embassy_sync::pubsub::WaitResult;
@@ -22,6 +22,7 @@ use esp_backtrace as _;
 use esp_hal::{
     clock::CpuClock,
     rng::Rng,
+    time::Instant,
     timer::{
         systimer::SystemTimer,
         timg::{MwdtStage, TimerGroup},
@@ -44,10 +45,10 @@ use services::{
 use tasks::{
     audio::{audio_task, AudioSignal},
     ble::ble_task,
-    button::button_task,
+    button::{button_task, ButtonSignal, ButtonSignalMessage},
     http::start_http,
-    rfid::rfid_task,
-    wifi::{connection_task, WifiSignal},
+    rfid::{rfid_task, RfidSignal, RfidSignalMessage},
+    wifi::{connection_task, WifiCommandSignal, WifiCommandSignalMessage, WifiStatusSignal, WifiStatusSignalMessage},
 };
 
 extern crate alloc;
@@ -124,36 +125,31 @@ async fn main(spawner: Spawner) {
 
     let seed = (rng.random() as u64) << 32 | rng.random() as u64;
 
-    let (stack, runner) = embassy_net::new(
-        wifi_interface,
-        net_config,
-        make_static!(StackResources<6>, StackResources::<6>::new()),
-        seed,
-    );
+    let (stack, runner) = embassy_net::new(wifi_interface, net_config, make_static!(StackResources<6>, StackResources::<6>::new()), seed);
 
     set_led(0, 0, 128).await;
 
     let channel = make_static!(MainChannel, MainChannel::new());
 
-    let wifi_signal = make_static!(Signal::<CriticalSectionRawMutex, WifiSignal>, Signal::new());
+    let rfid_signal = make_static!(RfidSignal, Signal::new());
+    let button_signal = make_static!(ButtonSignal, Signal::new());
+    let wifi_command_signal = make_static!(WifiCommandSignal, Signal::new());
+    let wifi_status_signal = make_static!(WifiStatusSignal, Signal::new());
     let audio_signal = make_static!(Signal::<CriticalSectionRawMutex, AudioSignal>, Signal::new());
 
-    let bluetooth = peripherals.BT;
-    let connector = BleConnector::new(&wifi_init, bluetooth);
+    let connector = BleConnector::new(&wifi_init, peripherals.BT);
 
-    spawner
-        .spawn(ble_task(connector, config_service.clone(), channel.publisher().unwrap()))
-        .ok();
-    spawner.spawn(rfid_task(channel.publisher().unwrap())).ok();
+    spawner.spawn(ble_task(connector, config_service.clone(), button_signal)).ok();
+    spawner.spawn(rfid_task(rfid_signal)).ok();
     spawner.spawn(net_task(runner)).ok();
-    spawner.spawn(connection_task(wifi_controller, wifi_signal)).ok();
-    spawner.spawn(button_task(channel.publisher().unwrap())).ok();
+    spawner.spawn(connection_task(wifi_controller, wifi_command_signal, wifi_status_signal)).ok();
+    spawner.spawn(button_task(button_signal)).ok();
     spawner.spawn(audio_task(audio_signal)).ok();
-    spawner.spawn(watchdog_task(stack, channel.publisher().unwrap())).ok();
+    spawner.spawn(watchdog_task(channel.publisher().unwrap())).ok();
 
-    wifi_signal.signal(WifiSignal::Connect);
+    wifi_command_signal.signal(WifiCommandSignalMessage::Connect);
 
-    let mut door_service = DoorService::new(state_service.clone(), audio_signal);
+    let door_service = DoorService::new(state_service.clone(), audio_signal);
     let http_service = HttpService::new(stack);
 
     let push_announce = async || {
@@ -208,21 +204,33 @@ async fn main(spawner: Spawner) {
         }
     };
 
-    start_http(
-        spawner,
-        stack,
-        channel.publisher().unwrap(),
-        config_service.clone(),
-        state_service.clone(),
-    );
+    start_http(spawner, stack, channel.publisher().unwrap(), config_service.clone(), state_service.clone());
 
-    let main_publisher = channel.publisher().unwrap();
-    let mut main_subscriber = channel.subscriber().unwrap();
-
-    let mut last_seen = esp_hal::time::Instant::now().duration_since_epoch().as_millis();
-    let mut rfid_last_seen = esp_hal::time::Instant::now().duration_since_epoch().as_millis();
+    let mut last_seen = Instant::now().duration_since_epoch().as_millis();
+    let rfid_last_seen = RefCell::new(Instant::now().duration_since_epoch().as_millis());
 
     join!(
+        async {
+            loop {
+                match wifi_status_signal.wait().await {
+                    WifiStatusSignalMessage::Connected => {
+                        loop {
+                            if let Some(ip_info) = stack.config_v4() {
+                                info!("IP ADDRESS: {:?}", ip_info.address.address());
+                                break;
+                            }
+                            Timer::after(Duration::from_millis(100)).await;
+                        }
+
+                        audio_signal.signal(AudioSignal::Play("startup.mp3".to_string()));
+
+                        push_announce().await;
+                    }
+                    WifiStatusSignalMessage::Interrupted => {}
+                    WifiStatusSignalMessage::Disconnected => {}
+                }
+            }
+        },
         async {
             loop {
                 door_service.changed_signal.wait().await;
@@ -231,53 +239,58 @@ async fn main(spawner: Spawner) {
         },
         async {
             loop {
+                match rfid_signal.wait().await {
+                    RfidSignalMessage::Ping => *rfid_last_seen.borrow_mut() = Instant::now().duration_since_epoch().as_millis(),
+                    RfidSignalMessage::CodeDetected(code) => {
+                        let mut allowed = false;
+
+                        match check_code(&code).await {
+                            Ok(result) => match result {
+                                CheckCodeResult::Valid(name) => {
+                                    info!("Welcome {}", name);
+                                    door_service.open_door("success.mp3".to_string()).await;
+                                    allowed = true;
+                                }
+                                CheckCodeResult::Invalid => audio_signal.signal(AudioSignal::Play("failure.mp3".to_string())),
+                            },
+                            Err(err) => {
+                                error!("CheckCode: {:?}", err);
+                                audio_signal.signal(AudioSignal::Play("failure.mp3".to_string()));
+                            }
+                        }
+
+                        push_code(code, allowed).await;
+                    }
+                }
+            }
+        },
+        async {
+            loop {
+                match button_signal.wait().await {
+                    ButtonSignalMessage::ButtonPressed => door_service.open_door("open.mp3".to_string()).await,
+                    ButtonSignalMessage::ButtonLongPressed => door_service.toggle_latch(),
+                }
+            }
+        },
+        async {
+            let mut main_subscriber = channel.subscriber().unwrap();
+
+            loop {
                 if let WaitResult::Message(msg) = main_subscriber.next_message().await {
-                    if msg != SystemMessage::Ping && msg != SystemMessage::RfidPing && msg != SystemMessage::Watchdog {
+                    if msg != SystemMessage::Ping && msg != SystemMessage::Watchdog {
                         info!("#### SystemMessage: {:?}", msg);
                     }
 
                     match msg {
-                        SystemMessage::ConnectionAvailable => {
-                            audio_signal.signal(AudioSignal::Play("startup.mp3".to_string()));
-
-                            push_announce().await;
-                        }
-                        SystemMessage::CodeDetected(code) => {
-                            let mut allowed = false;
-
-                            match check_code(&code).await {
-                                Ok(result) => match result {
-                                    CheckCodeResult::Valid(name) => {
-                                        info!("Welcome {}", name);
-                                        main_publisher.publish(SystemMessage::Authorised).await;
-                                        allowed = true;
-                                    }
-                                    CheckCodeResult::Invalid => {
-                                        main_publisher.publish(SystemMessage::Denied).await;
-                                    }
-                                },
-                                Err(err) => {
-                                    error!("CheckCode: {:?}", err);
-                                    main_publisher.publish(SystemMessage::Denied).await;
-                                }
-                            }
-
-                            push_code(code, allowed).await;
-                        }
-                        SystemMessage::Authorised => door_service.open_door("success.mp3".to_string()).await,
-                        SystemMessage::Denied => audio_signal.signal(AudioSignal::Play("failure.mp3".to_string())),
-                        SystemMessage::ButtonPressed => door_service.open_door("open.mp3".to_string()).await,
-                        SystemMessage::ButtonLongPressed => door_service.toggle_latch(),
-                        SystemMessage::WifiOff => wifi_signal.signal(WifiSignal::Disconnect),
-                        SystemMessage::Ping => last_seen = esp_hal::time::Instant::now().duration_since_epoch().as_millis(),
-                        SystemMessage::RfidPing => rfid_last_seen = esp_hal::time::Instant::now().duration_since_epoch().as_millis(),
+                        SystemMessage::WifiOff => wifi_command_signal.signal(WifiCommandSignalMessage::Disconnect),
+                        SystemMessage::Ping => last_seen = Instant::now().duration_since_epoch().as_millis(),
                         SystemMessage::HandleLatchFromServer(latch) => door_service.set_latch(latch),
                         SystemMessage::PlayFile(file) => audio_signal.signal(AudioSignal::Play(file)),
                         SystemMessage::Watchdog => {
-                            let now = esp_hal::time::Instant::now().duration_since_epoch().as_millis();
+                            let now = Instant::now().duration_since_epoch().as_millis();
 
                             let last_seen_ago = now - last_seen;
-                            let rfid_last_seen_ago = now - rfid_last_seen;
+                            let rfid_last_seen_ago = now - *rfid_last_seen.borrow();
 
                             // info!("Last ping: {} seconds ago", last_seen_ago / 1_000);
 
@@ -290,10 +303,10 @@ async fn main(spawner: Spawner) {
                             }
                         }
                         SystemMessage::OtaStarting => {
-                            let started = esp_hal::time::Instant::now().duration_since_epoch().as_millis();
+                            let started = Instant::now().duration_since_epoch().as_millis();
 
                             loop {
-                                let now = esp_hal::time::Instant::now().duration_since_epoch().as_millis();
+                                let now = Instant::now().duration_since_epoch().as_millis();
                                 let started_ago = now - started;
 
                                 if started_ago > 5 * 60_000 {
@@ -310,7 +323,7 @@ async fn main(spawner: Spawner) {
                     }
                 };
             }
-        }
+        },
     )
     .await;
 }
@@ -322,21 +335,8 @@ async fn net_task(mut runner: Runner<'static, WifiDevice<'static, WifiStaDevice>
 }
 
 #[embassy_executor::task]
-async fn watchdog_task(stack: Stack<'static>, publisher: MainPublisher) {
-    let mut shown_ip = false;
-
+async fn watchdog_task(publisher: MainPublisher) {
     loop {
-        // info!("{}", esp_alloc::HEAP.stats());
-
-        if !shown_ip {
-            if let Some(ip_info) = stack.config_v4() {
-                shown_ip = true;
-                info!("IP ADDRESS: {:?}", ip_info.address.address());
-
-                publisher.publish(SystemMessage::ConnectionAvailable).await;
-            }
-        }
-
         publisher.publish(SystemMessage::Watchdog).await;
 
         Timer::after(Duration::from_millis(5_000)).await;

@@ -19,6 +19,7 @@ interface Props<TSchema extends v.ObjectSchema<any, any>, TRow extends v.InferIn
   tableActions?: readonly TableAction[];
   initialData?: readonly TRow[];
   initialSort?: QuerySort;
+  initialPageSize?: number;
   onFetch: (params: FetchParameters) => Promise<{ rows: readonly TRow[]; total: number }>;
 }
 
@@ -76,7 +77,7 @@ export function MagicBrowser<TSchema extends v.ObjectSchema<any, any>, TRow exte
   });
   const [search, setSearch] = createSignal("");
   const [page, setPage] = createSignal(1);
-  const [pageSize, setPageSize] = createSignal(PageSize);
+  const [pageSize, setPageSize] = createSignal(props.initialPageSize ?? PageSize);
   const [sort, setSort] = createSignal<QuerySort | undefined>(props.initialSort);
 
   const fetch = async (page: number, pageSize: number, search: string, sort?: QuerySort, refresh?: number) => {

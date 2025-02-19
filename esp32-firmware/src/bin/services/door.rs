@@ -3,7 +3,10 @@ use crate::{make_static, tasks::audio::AudioSignal, utils::DoorPins};
 use alloc::string::{String, ToString as _};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_time::{Duration, Timer};
-use esp_hal::gpio::{self, OutputConfig};
+use esp_hal::{
+    gpio::{self, OutputConfig},
+    peripheral::Peripheral as _,
+};
 use log::{info, warn};
 
 pub struct DoorService<'a> {
@@ -14,14 +17,11 @@ pub struct DoorService<'a> {
 }
 
 impl<'a> DoorService<'a> {
-    pub fn new(
-        state: PermanentStateService<DeviceState>,
-        audio_signal: &'static Signal<CriticalSectionRawMutex, AudioSignal>,
-    ) -> DoorService<'a> {
+    pub fn new(state: PermanentStateService<DeviceState>, audio_signal: &'static Signal<CriticalSectionRawMutex, AudioSignal>) -> DoorService<'a> {
         let door = gpio::Output::new(DoorPins::new().door, gpio::Level::High, OutputConfig::default());
         let changed_signal = make_static!(Signal::<CriticalSectionRawMutex, ()>, Signal::new());
 
-        let mut door_service = DoorService {
+        let door_service = DoorService {
             state,
             audio_signal,
             door,
@@ -33,17 +33,17 @@ impl<'a> DoorService<'a> {
         door_service
     }
 
-    fn init(&mut self) {
+    fn init(&self) {
         if self.state.get_data().latch {
             self.set_latch(true);
         }
     }
 
-    pub fn get_latch(&mut self) -> bool {
+    pub fn get_latch(&self) -> bool {
         self.state.get_data().latch
     }
 
-    pub fn set_latch(&mut self, latch: bool) {
+    pub fn set_latch(&self, latch: bool) {
         self.state.get_data().latch = latch;
 
         self.update_gpio(!latch);
@@ -53,7 +53,7 @@ impl<'a> DoorService<'a> {
         self.audio_signal.signal(AudioSignal::Play(self.get_latch_sound_file_name(latch)));
     }
 
-    pub fn toggle_latch(&mut self) {
+    pub fn toggle_latch(&self) {
         let mut latch = self.state.get_data().latch;
         latch = !latch;
         self.state.get_data().latch = latch;
@@ -65,7 +65,7 @@ impl<'a> DoorService<'a> {
         self.audio_signal.signal(AudioSignal::Play(self.get_latch_sound_file_name(latch)));
     }
 
-    pub async fn open_door(&mut self, open_sound: String) {
+    pub async fn open_door(&self, open_sound: String) {
         if self.state.get_data().latch {
             return;
         }
@@ -79,17 +79,17 @@ impl<'a> DoorService<'a> {
         self.update_gpio(true);
     }
 
-    fn update_gpio(&mut self, locked: bool) {
+    fn update_gpio(&self, locked: bool) {
         if locked {
             info!("==== HIGH ====");
-            self.door.set_high();
+            unsafe { self.door.clone_unchecked().set_high() };
         } else {
             info!("==== LOW ====");
-            self.door.set_low();
+            unsafe { self.door.clone_unchecked().set_low() };
         }
     }
 
-    fn try_save(&mut self) {
+    fn try_save(&self) {
         if let Err(err) = self.state.save() {
             warn!("Error saving state: {:?}", err);
         }
@@ -97,7 +97,7 @@ impl<'a> DoorService<'a> {
         self.changed_signal.signal(());
     }
 
-    fn get_latch_sound_file_name(&mut self, latch: bool) -> String {
+    fn get_latch_sound_file_name(&self, latch: bool) -> String {
         if latch {
             "latchon.mp3".to_string()
         } else {

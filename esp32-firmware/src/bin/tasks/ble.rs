@@ -1,6 +1,6 @@
-use crate::services::{
-    common::{DeviceConfig, MainPublisher, SystemMessage},
-    state::PermanentStateService,
+use crate::{
+    services::{common::DeviceConfig, state::PermanentStateService},
+    tasks::button::ButtonSignalMessage,
 };
 use bleps::{
     ad_structure::{create_advertising_data, AdStructure, BR_EDR_NOT_SUPPORTED, LE_GENERAL_DISCOVERABLE},
@@ -20,12 +20,10 @@ use esp_println::println;
 use esp_wifi::ble::controller::BleConnector;
 use log::info;
 
+use super::button::ButtonSignal;
+
 #[embassy_executor::task]
-pub async fn ble_task(
-    connector: BleConnector<'static>,
-    config_service: PermanentStateService<DeviceConfig>,
-    publisher: MainPublisher,
-) -> ! {
+pub async fn ble_task(connector: BleConnector<'static>, config_service: PermanentStateService<DeviceConfig>, signal: &'static ButtonSignal) -> ! {
     info!("BLE Task Started");
 
     let peripherals = unsafe { Peripherals::steal() };
@@ -65,7 +63,7 @@ pub async fn ble_task(
         };
         let mut wf3 = |offset: usize, data: &[u8]| {
             println!("RECEIVED: Offset {}, data {:?}", offset, data);
-            publisher.publish_immediate(SystemMessage::ButtonPressed);
+            signal.signal(ButtonSignalMessage::ButtonPressed);
         };
 
         gatt!([service {

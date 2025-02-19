@@ -2,8 +2,10 @@ import type { ActivityLogAction, DeviceInfo } from "@door-entry-management-syste
 import { eq } from "drizzle-orm";
 import { getTableColumns } from "drizzle-orm/utils";
 import { clearInterval, setInterval } from "node:timers";
+import { WebClient } from "npm:@slack/web-api";
 import * as uuid from "npm:uuid";
 import * as v from "valibot";
+import { Config } from "../../config/index.ts";
 import { ActivityLogTable, db, DeviceTable, TagTable, UserTable } from "../../db/index.ts";
 import { DeviceEvents, DeviceResponse, type DeviceState, type LogCodeRequest } from "./common.ts";
 
@@ -101,8 +103,10 @@ export class DeviceConnection {
   public async handleCode(req: LogCodeRequest) {
     console.log("DeviceConnection.receiveCode:", req.code);
 
+    const slackClient = new WebClient(Config.DE_SLACK_API_KEY, {});
+
     const matchingTags = await db
-      .select({ id: TagTable.id, code: TagTable.code, user_id: UserTable.id })
+      .select({ id: TagTable.id, code: TagTable.code, user_id: UserTable.id, user_name: UserTable.name })
       .from(TagTable)
       .leftJoin(UserTable, eq(TagTable.user_id, UserTable.id))
       .where(eq(TagTable.code, req.code));
@@ -111,15 +115,32 @@ export class DeviceConnection {
 
     let action: ActivityLogAction;
     let user_id: string | null = null;
+    let user_name: string | null = null;
 
     if (req.allowed) {
       action = "allowed";
-      user_id = matchingTags.length > 0 ? matchingTags[0].user_id : null;
+
+      const tag = matchingTags.length > 0 ? matchingTags[0] : null;
+
+      if (tag) {
+        ({ user_id, user_name } = tag);
+      }
     } else {
       if (matchingTags.length > 0) {
         action = "denied-unassigned";
       } else {
         action = "denied-unknown-code";
+      }
+    }
+
+    if (user_name) {
+      try {
+        await slackClient.chat.postMessage({
+          channel: Config.DE_SLACK_CHANNEL,
+          text: `${user_name} has entered the hackspace`,
+        });
+      } catch (err) {
+        console.error("slackClient.chat.postMessage ERROR:", err);
       }
     }
 

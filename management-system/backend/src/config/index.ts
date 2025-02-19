@@ -18,6 +18,8 @@ export const ConfigSchema = v.object({
   DE_AUTHENTIK_CLIENT_SECRET: v.string(),
   DE_HOME_ASSISTANT_WS_URL: v.string(),
   DE_HOME_ASSISTANT_ACCESS_TOKEN: v.string(),
+  DE_SLACK_API_KEY: v.string(),
+  DE_SLACK_CHANNEL: v.string(),
 });
 
 let env = pickPrefix(process.env, "DE_");

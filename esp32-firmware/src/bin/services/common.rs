@@ -7,16 +7,9 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum SystemMessage {
-    ConnectionAvailable,
-    CodeDetected(String),
-    Authorised,
-    Denied,
-    ButtonPressed,
-    ButtonLongPressed,
     WifiOff,
     Watchdog,
     Ping,
-    RfidPing,
     OtaStarting,
     HandleLatchFromServer(bool),
     PlayFile(String),
@@ -24,7 +17,7 @@ pub enum SystemMessage {
 
 const CAP: usize = 4;
 const SUBS: usize = 1;
-const PUBS: usize = 6;
+const PUBS: usize = 2;
 
 pub type MainChannel = PubSubChannel<CriticalSectionRawMutex, SystemMessage, CAP, SUBS, PUBS>;
 

@@ -1,10 +1,11 @@
-use crate::{
-    services::common::{MainPublisher, SystemMessage},
-    utils::RfidPins,
-};
-use alloc::string::ToString;
+use crate::utils::RfidPins;
+use alloc::string::{String, ToString};
 use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
-use embassy_sync::{blocking_mutex::raw::NoopRawMutex, mutex::Mutex};
+use embassy_sync::{
+    blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex},
+    mutex::Mutex,
+    signal::Signal,
+};
 use embassy_time::{Duration, Timer};
 use esp_hal::{
     dma::{DmaRxBuf, DmaTxBuf},
@@ -29,8 +30,16 @@ use log::{error, info};
 // Blue:    3654908809
 // Yellow:  308508919
 
+#[derive(PartialEq, Debug)]
+pub enum RfidSignalMessage {
+    CodeDetected(String),
+    Ping,
+}
+
+pub type RfidSignal = Signal<CriticalSectionRawMutex, RfidSignalMessage>;
+
 #[embassy_executor::task]
-pub async fn rfid_task(publisher: MainPublisher) {
+pub async fn rfid_task(signal: &'static RfidSignal) {
     let pins = RfidPins::new();
 
     let (rx_buffer, rx_descriptors, tx_buffer, tx_descriptors) = dma_buffers!(32000);
@@ -71,7 +80,7 @@ pub async fn rfid_task(publisher: MainPublisher) {
                 let code = card.get_number();
                 info!("Card UID: {}", code);
 
-                publisher.publish(SystemMessage::CodeDetected(code.to_string())).await;
+                signal.signal(RfidSignalMessage::CodeDetected(code.to_string()));
             }
 
             mfrc522.picc_halta().await.ok();
@@ -82,7 +91,7 @@ pub async fn rfid_task(publisher: MainPublisher) {
         if loop_count % 100 == 0 {
             if let Ok(version) = mfrc522.pcd_get_version().await {
                 if version == PCDVersion::Version2_0 {
-                    publisher.publish(SystemMessage::RfidPing).await;
+                    signal.signal(RfidSignalMessage::Ping);
                 }
             }
         }
