@@ -48,7 +48,7 @@
             cp -a frontend/web    $out/lib/frontend/
 
             echo "Compiling backend..."
-            ${pkgs.deno}/bin/deno compile --cached-only --no-code-cache --allow-read --allow-net --allow-env -o $out/bin/door-entry-management-system-backend   backend/src/index.ts
+            ${pkgs.deno}/bin/deno compile --cached-only --no-code-cache --allow-read --allow-net --allow-env --allow-sys -o $out/bin/door-entry-management-system-backend   backend/src/index.ts
             echo "Compiling frontend..."
             ${pkgs.deno}/bin/deno compile --cached-only --no-code-cache --allow-read --allow-net --allow-env -o $out/bin/door-entry-management-system-frontend  frontend/server.ts
           '';
