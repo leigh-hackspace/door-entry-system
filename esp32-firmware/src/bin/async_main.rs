@@ -28,7 +28,6 @@ use esp_hal::{
         timg::{MwdtStage, TimerGroup},
     },
 };
-use esp_println::println;
 use esp_wifi::{
     ble::controller::BleConnector,
     wifi::{WifiDevice, WifiStaDevice},
@@ -40,7 +39,7 @@ use services::{
     common::{DeviceConfig, DeviceState, MainChannel, SystemMessage, DEVICE_CONFIG_FILE_NAME, DEVICE_STATE_FILE_NAME, NOTIFY_URL, VERSION},
     door::DoorService,
     http::HttpService,
-    led::set_led,
+    led::LedService,
     state::PermanentStateService,
 };
 use tasks::{
@@ -48,6 +47,7 @@ use tasks::{
     ble::ble_task,
     button::{button_task, ButtonSignal, ButtonSignalMessage},
     http::start_http,
+    led::{led_task, LedSignal},
     rfid::{rfid_task, RfidSignal, RfidSignalMessage},
     wifi::{connection_task, WifiCommandSignal, WifiCommandSignalMessage, WifiStatusSignal, WifiStatusSignalMessage},
 };
@@ -75,10 +75,12 @@ async fn main(spawner: Spawner) {
 
     esp_println::logger::init_logger_from_env();
 
-    set_led(128, 0, 0).await;
-
     let systimer = SystemTimer::new(peripherals.SYSTIMER);
     esp_hal_embassy::init(systimer.alarm0);
+
+    let mut led_service = LedService::new();
+
+    led_service.send(255, 0, 0).await;
 
     info!("Embassy initialized! Version: {VERSION}");
 
@@ -126,7 +128,9 @@ async fn main(spawner: Spawner) {
 
     let (stack, runner) = embassy_net::new(wifi_int, net_config, make_static!(StackResources<6>, StackResources::<6>::new()), seed);
 
-    set_led(0, 0, 128).await;
+    led_service.send(0, 255, 0).await;
+
+    drop(led_service);
 
     let channel = make_static!(MainChannel, MainChannel::new());
 
@@ -135,6 +139,7 @@ async fn main(spawner: Spawner) {
     let wifi_command_signal = make_static!(WifiCommandSignal, Signal::new());
     let wifi_status_signal = make_static!(WifiStatusSignal, Signal::new());
     let audio_signal = make_static!(Signal::<CriticalSectionRawMutex, AudioSignal>, Signal::new());
+    let led_signal = make_static!(Signal::<CriticalSectionRawMutex, LedSignal>, Signal::new());
 
     let connector = BleConnector::new(&wifi_init, peripherals.BT);
 
@@ -144,6 +149,7 @@ async fn main(spawner: Spawner) {
     spawner.spawn(button_task(button_signal)).ok();
     spawner.spawn(connection_task(wifi_cont, stack, wifi_command_signal, wifi_status_signal)).ok();
     spawner.spawn(audio_task(audio_signal)).ok();
+    spawner.spawn(led_task(led_signal)).ok();
 
     wifi_command_signal.signal(WifiCommandSignalMessage::Connect);
 
@@ -177,21 +183,11 @@ async fn main(spawner: Spawner) {
         }
     };
 
-    let flash_leds = async |status: u8| {
+    let flash_leds = |status: u8| {
         if status == 0 {
-            for i in 0..10 {
-                set_led(255, 0, 0).await;
-                Timer::after(Duration::from_millis(100)).await;
-                set_led(0, 0, 0).await;
-                Timer::after(Duration::from_millis(100)).await;
-            }
+            led_signal.signal(LedSignal::Flash(255, 0, 0, 5, 250));
         } else {
-            for i in 0..10 {
-                set_led(0, 255, 0).await;
-                Timer::after(Duration::from_millis(100)).await;
-                set_led(0, 0, 0).await;
-                Timer::after(Duration::from_millis(100)).await;
-            }
+            led_signal.signal(LedSignal::Flash(0, 255, 0, 5, 250));
         }
     };
 
@@ -202,12 +198,12 @@ async fn main(spawner: Spawner) {
             Ok(result) => match result {
                 CheckCodeResult::Valid(name) => {
                     info!("Welcome {}", name);
-                    // flash_leds(1).await;
+                    flash_leds(1);
                     door_service.open_door("success.mp3".to_string()).await;
                     allowed = true;
                 }
                 CheckCodeResult::Invalid => {
-                    // flash_leds(0).await;
+                    flash_leds(0);
                     audio_signal.signal(AudioSignal::Play("failure.mp3".to_string()));
                 }
             },
@@ -232,7 +228,7 @@ async fn main(spawner: Spawner) {
                 let now = Instant::now().duration_since_epoch().as_millis();
 
                 // Make sure OTA gets at least 10 minutes to complete
-                let timeout = if *ota_happening.borrow() { 10 * 60_000 } else { 5 * 60_000 };
+                let timeout = if *ota_happening.borrow() { 10 * 60_000 } else { 2 * 60_000 };
 
                 let last_seen_ago = now - *last_seen.borrow();
                 let rfid_last_seen_ago = now - *rfid_last_seen.borrow();
@@ -260,6 +256,7 @@ async fn main(spawner: Spawner) {
             loop {
                 match wifi_status_signal.wait().await {
                     WifiStatusSignalMessage::Connected(ip_address) => {
+                        led_signal.signal(LedSignal::Set(0, 0, 255));
                         audio_signal.signal(AudioSignal::Play("startup.mp3".to_string()));
                         push_announce().await;
                     }

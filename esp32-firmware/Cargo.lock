@@ -513,7 +513,6 @@ dependencies = [
  "reqwless",
  "serde",
  "serde-json-core",
- "smart-leds",
  "smoltcp",
  "static_cell",
  "ws2812-async",

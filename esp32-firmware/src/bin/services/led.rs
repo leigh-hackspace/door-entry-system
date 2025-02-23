@@ -1,56 +1,82 @@
 use esp_hal::{
-    dma::{DmaRxBuf, DmaTxBuf},
-    dma_buffers,
-    gpio::{self, InputConfig, OutputConfig},
+    gpio::Level,
     peripherals::Peripherals,
-    spi::{
-        master::{Config, Spi},
-        Mode,
-    },
+    rmt::{Channel, PulseCode, Rmt, TxChannelAsync as _, TxChannelConfig, TxChannelCreatorAsync as _},
     time::Rate,
+    Async,
 };
-use log::info;
-use smart_leds::RGB8;
-use ws2812_async::{ColorOrder, Ws2812};
 
 const NUM_LEDS: usize = 8;
 
-pub async fn set_led(r: u8, g: u8, b: u8) {
-    info!("R:{r} G:{g} B:{b}");
+const SK68XX_CODE_PERIOD: u32 = 1250; // 800kHz
+const SK68XX_T0H_NS: u32 = 400; // 300ns per SK6812 datasheet, 400 per WS2812. Some require >350ns for T0H. Others <500ns for T0H.
+const SK68XX_T0L_NS: u32 = SK68XX_CODE_PERIOD - SK68XX_T0H_NS;
+const SK68XX_T1H_NS: u32 = 850; // 900ns per SK6812 datasheet, 850 per WS2812. > 550ns is sometimes enough. Some require T1H >= 2 * T0H. Some require > 300ns T1L.
+const SK68XX_T1L_NS: u32 = SK68XX_CODE_PERIOD - SK68XX_T1H_NS;
 
-    let peripherals = unsafe { Peripherals::steal() };
+pub struct LedService {
+    channel: Channel<Async, 0>,
+    zero: u32,
+    one: u32,
+}
 
-    let (rx_buffer, rx_descriptors, tx_buffer, tx_descriptors) = dma_buffers!(128);
-    let dma_rx_buf = DmaRxBuf::new(rx_descriptors, rx_buffer).unwrap();
-    let dma_tx_buf = DmaTxBuf::new(tx_descriptors, tx_buffer).unwrap();
+impl LedService {
+    pub fn new() -> Self {
+        let peripherals = unsafe { Peripherals::steal() };
 
-    let mut spi = Spi::new(peripherals.SPI2, Config::default().with_frequency(Rate::from_khz(3_000)).with_mode(Mode::_0))
-        .unwrap()
-        .with_mosi(peripherals.GPIO8)
-        .with_dma(peripherals.DMA_CH2)
-        .with_buffers(dma_rx_buf, dma_tx_buf)
-        .into_async();
+        let freq = Rate::from_mhz(80);
 
-    let mut ws: Ws2812<_, { 12 * NUM_LEDS }> = Ws2812::new(&mut spi);
+        let rmt = Rmt::new(peripherals.RMT, freq).unwrap().into_async();
 
-    ws.set_color_order(ColorOrder::GRB);
+        let led_pin = peripherals.GPIO8;
 
-    let mut data = [RGB8::default(); NUM_LEDS];
+        let config = TxChannelConfig::default()
+            .with_clk_divider(1)
+            .with_idle_output_level(Level::Low)
+            .with_carrier_modulation(false)
+            .with_idle_output(false);
 
-    for i in 0..NUM_LEDS {
-        data[i].r = r;
-        data[i].g = g;
-        data[i].b = b;
+        let channel = rmt.channel0.configure(led_pin, config).unwrap();
+
+        let clocks = esp_hal::clock::Clocks::get();
+        let src_clock = clocks.apb_clock.as_mhz();
+
+        let zero = PulseCode::new(
+            Level::High,
+            ((SK68XX_T0H_NS * src_clock) / 1000) as u16,
+            Level::Low,
+            ((SK68XX_T0L_NS * src_clock) / 1000) as u16,
+        );
+
+        let one = PulseCode::new(
+            Level::High,
+            ((SK68XX_T1H_NS * src_clock) / 1000) as u16,
+            Level::Low,
+            ((SK68XX_T1L_NS * src_clock) / 1000) as u16,
+        );
+
+        Self { channel, zero, one }
     }
 
-    ws.write(data.iter().cloned()).await.ok();
-    ws.write(data.iter().cloned()).await.ok();
+    pub async fn send(&mut self, r: u8, g: u8, b: u8) {
+        let mut data = [0u32; 48];
 
-    // For some reason this resets the GPIO
-    gpio::Output::new(
-        unsafe { esp_hal::peripherals::Peripherals::steal() }.GPIO8,
-        gpio::Level::Low,
-        OutputConfig::default(),
-    );
-    gpio::Input::new(unsafe { esp_hal::peripherals::Peripherals::steal() }.GPIO8, InputConfig::default());
+        set_rgb_bits(&mut data, r, g, b, self.one, self.zero);
+
+        for _ in 0..NUM_LEDS {
+            self.channel.transmit(&data).await.expect("RMT Transmit Failure");
+        }
+
+        data.fill(0);
+
+        self.channel.transmit(&data).await.expect("RMT Transmit Failure");
+    }
+}
+
+fn set_rgb_bits(data: &mut [u32], r: u8, g: u8, b: u8, one: u32, zero: u32) {
+    for i in 0..8 {
+        data[i] = if (g >> (7 - i)) & 1 == 1 { one } else { zero };
+        data[8 + i] = if (r >> (7 - i)) & 1 == 1 { one } else { zero };
+        data[16 + i] = if (b >> (7 - i)) & 1 == 1 { one } else { zero };
+    }
 }
