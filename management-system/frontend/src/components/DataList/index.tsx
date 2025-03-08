@@ -11,6 +11,7 @@ interface Props<TRow> {
   sort?: QuerySort;
   onSort?: (colName: string) => void;
   onLoadMore?: () => void;
+  acquireImage?: (row: TRow) => string;
 }
 
 export interface DataListColumn<TRow> {
@@ -72,19 +73,29 @@ export function DataList<TRow>(props: Props<TRow>) {
     });
   }
 
-  let dataColumns = columns.filter((c) => !["created", "updated", "actions"].includes(c.name));
+  const dataColumns = columns.filter((c) => !["created", "updated", "actions"].includes(c.name));
 
-  let updatedColumn = columns.find((c) => c.name === "updated");
-  let createdColumn = columns.find((c) => c.name === "created");
-  let actionsColumn = columns.find((c) => c.name === "actions");
+  const updatedColumn = columns.find((c) => c.name === "updated");
+  const createdColumn = columns.find((c) => c.name === "created");
+  const actionsColumn = columns.find((c) => c.name === "actions");
 
   return (
-    <ul class="data-list list-group" ref={(_ul) => (ul = _ul)}>
+    <ul class="list-group data-list" ref={(_ul) => (ul = _ul)}>
       <For each={props.rows}>
         {(row) => (
           <li class="list-group-item data-item">
-            <div class="data-item-values">
-              <For each={dataColumns}>{(column) => <DataItemValue column={column} row={row} />}</For>
+            <div class="data-item-values-and-image">
+              <Show when={props.acquireImage}>
+                {(acquireImage) => (
+                  <div class="data-item-image">
+                    <img src={acquireImage()(row)} />
+                  </div>
+                )}
+              </Show>
+
+              <div class="data-item-values">
+                <For each={dataColumns}>{(column) => <DataItemValue column={column} row={row} />}</For>
+              </div>
             </div>
 
             <div class="data-item-meta">

@@ -43,7 +43,7 @@ export async function openDialog<
 
     // CSS animations require we don't set all the properties at once...
     requestAnimationFrame(() => {
-      dialogHost.style.display = "block";
+      dialogHost.style.display = "flex";
 
       requestAnimationFrame(() => {
         dialogHost.classList.add("show");

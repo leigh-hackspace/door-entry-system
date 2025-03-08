@@ -9,3 +9,11 @@ export function scryptAsync(password: string, salt: string) {
     });
   });
 }
+
+export async function getHexEncodedSha256(data: string) {
+  const te = new TextEncoder();
+
+  return Array.from(new Uint8Array(await globalThis.crypto.subtle.digest("SHA-256", te.encode(data))))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}

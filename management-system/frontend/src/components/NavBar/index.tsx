@@ -40,8 +40,8 @@ export function NavBar(props: Props) {
   return (
     <nav class="navbar navbar-expand-lg mb-3">
       <div class="container-fluid">
-        <a class="navbar-brand" href="#">
-          Door System (v{props.version})
+        <a class="navbar-brand" href="/">
+          Doors (v{props.version})
         </a>
 
         <button class="navbar-toggler" type="button" aria-label="Toggle navigation" on:click={onToggle}>

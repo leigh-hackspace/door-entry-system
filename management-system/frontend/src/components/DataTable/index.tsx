@@ -1,5 +1,5 @@
 import type { Colour, QuerySort } from "@frontend/lib";
-import { For, type JSXElement } from "npm:solid-js";
+import { For, Show, type JSXElement } from "npm:solid-js";
 import { Button } from "../Button/index.tsx";
 
 interface Props<TRow> {
@@ -8,6 +8,7 @@ interface Props<TRow> {
   rows: readonly TRow[];
   sort?: QuerySort;
   onSort?: (colName: string) => void;
+  acquireImage?: (row: TRow) => string;
 }
 
 export interface DataTableColumn<TRow> {
@@ -52,6 +53,9 @@ export function DataTable<TRow>(props: Props<TRow>) {
       <table class="table table-striped table-bordered mb-0">
         <thead class="table-dark">
           <tr>
+            <Show when={props.acquireImage}>
+              <th class="image-col"></th>
+            </Show>
             <For each={columns}>
               {(column) => (
                 <th
@@ -76,6 +80,13 @@ export function DataTable<TRow>(props: Props<TRow>) {
         <tbody>
           {props.rows.map((row) => (
             <tr>
+              <Show when={props.acquireImage}>
+                {(acquireImage) => (
+                  <td class="image-col">
+                    <img src={acquireImage()(row)} />
+                  </td>
+                )}
+              </Show>
               <For each={columns}>{(column) => <td>{column.render(row)}</td>}</For>
             </tr>
           ))}

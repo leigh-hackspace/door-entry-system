@@ -42,6 +42,7 @@ export function Users(props: RouteSectionProps) {
               { name: "Delete", colour: "danger", onClick: onDelete },
             ]}
             onFetch={onFetch}
+            acquireImage={(row) => row.image_url}
             renderRole={(row) => humanise(row.role)}
           />
         </Card.Body>

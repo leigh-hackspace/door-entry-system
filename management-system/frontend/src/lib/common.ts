@@ -94,7 +94,7 @@ export function getFieldInfo(formSchema: v.ObjectSchema<any, any>, fieldName: st
     (item): item is v.MetadataAction<string, FieldMetadata> => item.type === "metadata"
   )?.metadata;
 
-  let inputType: "text" | "select" | "email" | "password" | "lookup" = "text";
+  let inputType: "text" | "select" | "email" | "password" | "lookup" | "textarea" = "text";
 
   let options: SelectOption[] = [];
 
@@ -117,6 +117,10 @@ export function getFieldInfo(formSchema: v.ObjectSchema<any, any>, fieldName: st
     if (title.toLowerCase().includes("password")) {
       inputType = "password";
     }
+  }
+
+  if (metadata?.text) {
+    inputType = "textarea";
   }
 
   return { metadata, title, inputType, options, description, entityType, nullable, optional };

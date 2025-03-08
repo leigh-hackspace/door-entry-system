@@ -33,7 +33,7 @@ export function BrowserDialog(props: Props) {
         <div class="modal-body">
           <MagicBrowser
             schema={props.schema}
-            initialPageSize={5}
+            initialPageSize={10}
             rowActions={[{ name: "Select", colour: "info", onClick: onSelect }]}
             onFetch={props.onFetch}
           />

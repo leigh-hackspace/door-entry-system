@@ -7,7 +7,7 @@ import { assert } from "ts-essentials";
 import * as v from "valibot";
 import { Config } from "../config/index.ts";
 import { db, UserTable } from "../db/index.ts";
-import { scryptAsync } from "../services/index.ts";
+import { AuthentikService, AuthentikUserClient, scryptAsync } from "../services/index.ts";
 import { assertOneRecord, type TokenPayload } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 
@@ -41,6 +41,7 @@ export const AuthRouter = tRPC.router({
     url.searchParams.set("client_id", Config.DE_AUTHENTIK_CLIENT_ID);
     url.searchParams.set("response_type", "code");
     url.searchParams.set("redirect_uri", input.return_auth);
+    url.searchParams.set("scopes", "openid profile email entitlements offline_access goauthentik.io/api");
 
     return {
       url: url.toString(),
@@ -49,41 +50,16 @@ export const AuthRouter = tRPC.router({
 
   CompleteOAuth: tRPC.PublicProcedure.input(v.parser(v.object({ code: v.string(), return_auth: v.string() }))).mutation(
     async ({ input }) => {
-      const form = new URLSearchParams();
+      const authentikService = new AuthentikService();
 
-      form.set("client_id", Config.DE_AUTHENTIK_CLIENT_ID);
-      form.set("client_secret", Config.DE_AUTHENTIK_CLIENT_SECRET);
-      form.set("grant_type", "authorization_code");
-      form.set("code", input.code);
-      form.set("redirect_uri", input.return_auth);
+      const { access_token, refresh_token } = await authentikService.getTokenWithAuthenticationCode(
+        input.code,
+        input.return_auth
+      );
 
-      const res = await fetch(`https://${Config.DE_AUTHENTIK_HOST}/application/o/token/`, {
-        method: "POST",
-        headers: [["Content-Type", "application/x-www-form-urlencoded"]],
-        body: form.toString(),
-      });
+      const authentikUserClient = new AuthentikUserClient(access_token);
 
-      if (res.status !== 200) {
-        console.error("CompleteOAuth:", await res.text());
-        throw new Error("Error getting token");
-      }
-
-      const data = v.parse(TokenResponseSchema, await res.json());
-
-      const access_token = data.access_token;
-
-      const userRes = await fetch(`https://${Config.DE_AUTHENTIK_HOST}/application/o/userinfo/`, {
-        method: "POST",
-        headers: [["Authorization", `Bearer ${access_token}`]],
-        body: form.toString(),
-      });
-
-      if (userRes.status !== 200) {
-        console.error("CompleteOAuth:", await userRes.text());
-        throw new Error("Error getting user info");
-      }
-
-      const userData = v.parse(UserInfoResponseSchema, await userRes.json());
+      const userData = await authentikUserClient.getUserInfo();
 
       const shouldBeAdmin = userData.groups.includes("Infra");
 
@@ -100,13 +76,14 @@ export const AuthRouter = tRPC.router({
           name: userData.name,
           role: shouldBeAdmin ? "admin" : "user",
           password_hash: "Authentik",
+          refresh_token,
         });
       } else {
         id = matchingUsers[0].id;
 
         await db
           .update(UserTable)
-          .set({ email: userData.email, name: userData.name, role: shouldBeAdmin ? "admin" : "user" })
+          .set({ email: userData.email, name: userData.name, role: shouldBeAdmin ? "admin" : "user", refresh_token })
           .where(eq(UserTable.id, id));
       }
 
@@ -132,14 +109,4 @@ export const AuthRouter = tRPC.router({
       yield data as string;
     }
   }),
-});
-
-const TokenResponseSchema = v.object({
-  access_token: v.string(),
-});
-
-const UserInfoResponseSchema = v.object({
-  email: v.pipe(v.string(), v.email()),
-  name: v.string(),
-  groups: v.array(v.string()),
 });

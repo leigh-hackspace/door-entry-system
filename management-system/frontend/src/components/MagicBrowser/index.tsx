@@ -21,6 +21,7 @@ interface Props<TSchema extends v.ObjectSchema<any, any>, TRow extends v.InferIn
   initialSort?: QuerySort;
   initialPageSize?: number;
   onFetch: (params: FetchParameters) => Promise<{ rows: readonly TRow[]; total: number }>;
+  acquireImage?: (row: TRow) => string;
 }
 
 interface RowAction<TRow> {
@@ -197,6 +198,7 @@ export function MagicBrowser<TSchema extends v.ObjectSchema<any, any>, TRow exte
           rowActions={props.rowActions}
           sort={sort()}
           onSort={onSort}
+          acquireImage={props.acquireImage}
         />
         <TableFooter />
       </div>
@@ -217,6 +219,7 @@ export function MagicBrowser<TSchema extends v.ObjectSchema<any, any>, TRow exte
           sort={sort()}
           onSort={onSort}
           onLoadMore={onLoadMore}
+          acquireImage={props.acquireImage}
         />
       </div>
     );

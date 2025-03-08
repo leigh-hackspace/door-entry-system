@@ -42,13 +42,31 @@ header {
   vertical-align: middle;
 }
 
+.table td.image-col {
+  padding: 0;
+  width: 1%;
+}
+.table td.image-col img {
+  height: 56px;
+}
+
 .modal {
   backdrop-filter: blur(3px);
   background: rgba(0, 0, 0, 0.3);
+  display: flex;
+}
+
+.modal-dialog {
+  display: flex;
+  flex: 1;
 }
 
 .modal-content {
   box-shadow: 0 0 10px var(--bs-gray-700);
+}
+
+.modal-body {
+  overflow-y: scroll;
 }
 
 .badge {
@@ -91,9 +109,15 @@ header {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  padding: var(--bs-list-group-item-padding-y);
 }
 .data-item:nth-child(2n) {
   background: var(--bs-gray-100);
+}
+
+.data-item-values-and-image {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .data-item-values {
@@ -160,6 +184,7 @@ header {
 
   .container {
     height: 100%;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
   }

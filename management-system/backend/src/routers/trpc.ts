@@ -4,6 +4,7 @@ import { initTRPC, TRPCError } from "npm:@trpc/server@next";
 import type { CreateHTTPContextOptions } from "npm:@trpc/server@next/adapters/standalone";
 import superjson from "npm:superjson@2.2.2";
 import { db, UserTable } from "../db/index.ts";
+import { AuthentikService, AuthentikUserClient } from "../services/index.ts";
 import { assertOneRecord, verifyToken } from "./common.ts";
 
 // deno-lint-ignore no-namespace
@@ -18,8 +19,23 @@ export namespace tRPC {
 
     const session = await getSession(authorization);
 
+    const getAuthentikUserClient = async () => {
+      if (!session?.user.refresh_token) throw new Error("No refresh_token!");
+
+      const authentikService = new AuthentikService();
+
+      const { access_token, refresh_token } = await authentikService.getTokenWithRefreshToken(
+        session.user.refresh_token
+      );
+
+      await db.update(UserTable).set({ refresh_token }).where(eq(UserTable.id, session.user.id));
+
+      return new AuthentikUserClient(access_token);
+    };
+
     return {
       session,
+      getAuthentikUserClient,
     };
   };
 

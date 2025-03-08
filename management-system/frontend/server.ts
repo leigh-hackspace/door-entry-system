@@ -41,7 +41,7 @@ async function serveAsset(assetDir: string, version: string, url: URL) {
   }
 
   const assetPath = path.join(assetDir, url.pathname);
-  console.log("assetPath:", assetPath);
+  // console.log("assetPath:", assetPath);
 
   const asset = await Deno.open(assetPath);
   const stats = await asset.stat();
@@ -108,7 +108,7 @@ async function serveHtmlFile(assetDir: string, version: string, url: URL) {
 
   html = await replaceIntegrity(html, async (url) => {
     const assetPath = path.join(assetDir, url);
-    console.log("replaceIntegrity:", assetPath);
+    // console.log("replaceIntegrity:", assetPath);
     return await getSha256(assetPath);
   });
 

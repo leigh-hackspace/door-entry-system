@@ -53,29 +53,46 @@ function AdminControls() {
     return AppService.get().tRPC.Stats.SetLatch.mutate({ latch });
   };
 
+  const onSyncAuthentik = async () => {
+    const result = await AppService.get().tRPC.Stats.SyncAuthentik.mutate({});
+
+    alert(JSON.stringify(result));
+  };
+
   return (
     <Card colour="danger">
       <Card.Header text="Admin Controls" />
       <Card.Body>
-        <For each={Object.entries(deviceState)}>
-          {([name, latch]) => (
-            <p class="d-flex gap-2 align-items-center">
-              <span>
-                <b>{name}</b> Latch is currently
-              </span>
-              <span class={`badge text-bg-${latch ? "danger" : "success"}`}>{latch ? "ON" : "OFF"}</span>
-            </p>
-          )}
-        </For>
-        <p>Turning latch ON will disable the mag-lock and allow entry to all.</p>
-        <p>Turning latch OFF will re-enable security and a RFID tag will be required for entry.</p>
-        <Button colour="danger" on:click={() => onClickSetLatch(true)}>
-          Latch On
-        </Button>
-        &nbsp;
-        <Button colour="success" on:click={() => onClickSetLatch(false)}>
-          Latch Off
-        </Button>
+        <div class="d-flex gap-3 flex-column">
+          <div>
+            <For each={Object.entries(deviceState)}>
+              {([name, latch]) => (
+                <p class="d-flex gap-2 align-items-center">
+                  <span>
+                    <b>{name}</b> Latch is currently
+                  </span>
+                  <span class={`badge text-bg-${latch ? "danger" : "success"}`}>{latch ? "ON" : "OFF"}</span>
+                </p>
+              )}
+            </For>
+            <p>Turning latch ON will disable the mag-lock and allow entry to all.</p>
+            <p>Turning latch OFF will re-enable security and a RFID tag will be required for entry.</p>
+            <Button colour="danger" on:click={() => onClickSetLatch(true)}>
+              Latch On
+            </Button>
+            &nbsp;
+            <Button colour="success" on:click={() => onClickSetLatch(false)}>
+              Latch Off
+            </Button>
+          </div>
+
+          <div>
+            <p>Manually sync users from Authentik to this system.</p>
+            <Button colour="warning" on:click={() => onSyncAuthentik()}>
+              Sync Authentik
+            </Button>
+          </div>
+        </div>
       </Card.Body>
     </Card>
   );

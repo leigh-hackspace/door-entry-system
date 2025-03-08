@@ -11,6 +11,7 @@ export interface FieldMetadata {
   icon?: string;
   lookup?: EntityType;
   displayMode?: string;
+  text?: boolean;
 }
 
 export const FieldMetadata = (m: FieldMetadata) => m;

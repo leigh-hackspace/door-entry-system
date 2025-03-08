@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { pgEnum, pgTable, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { ActivityLogAction, DeviceNameLength, IpAddressLength, UserRole } from "../../../common/src/index.ts"; // Drizzle Kit bodge
 
 export type TableType = typeof UserTable | typeof TagTable | typeof ActivityLogTable | typeof DeviceTable;
@@ -17,6 +17,9 @@ export const UserTable = pgTable("user", {
   name: varchar({ length: 128 }).notNull(),
   email: varchar({ length: 128 }).notNull().unique(),
   password_hash: varchar({ length: ScryptHashLength }).notNull(),
+  refresh_token: varchar({ length: 128 }),
+  gocardless_customer_id: varchar({ length: 14 }),
+  notes: text(),
   created: timestamp({ withTimezone: false, mode: "date" }).notNull().defaultNow(),
   updated: timestamp({ withTimezone: false, mode: "date" }).notNull().defaultNow(),
 });

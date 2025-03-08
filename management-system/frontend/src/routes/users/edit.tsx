@@ -25,34 +25,73 @@ export function UserEdit(props: RouteSectionProps) {
   };
 
   return (
-    <main>
-      <Card colour="success">
-        <Card.Header text="Update User" />
-        <Card.Body>
-          <form>
+    <main class="grid gap-3">
+      <div class="g-col-12 g-col-xl-6">
+        <Card colour="success">
+          <Card.Header text="Update User" />
+          <Card.Body>
+            <form>
+              <Suspense fallback="Loading...">
+                <Show when={user()}>
+                  {(user) => (
+                    <div class="d-flex flex-column gap-3">
+                      <MagicFields
+                        schema={UserUpdateSchema}
+                        data={user()}
+                        validation={submittedCount() > 0}
+                        onChange={onChange}
+                      />
+                      <DateInfo record={user()} />
+                    </div>
+                  )}
+                </Show>
+              </Suspense>
+            </form>
+          </Card.Body>
+          <Card.Footer>
+            <Button colour="primary" type="button" on:click={onSave}>
+              Save
+            </Button>
+          </Card.Footer>
+        </Card>
+      </div>
+
+      <div class="g-col-12 g-col-xl-6">
+        <Card colour="success">
+          <Card.Header text="Stats" />
+          <Card.Body>
             <Suspense fallback="Loading...">
               <Show when={user()}>
                 {(user) => (
                   <div class="d-flex flex-column gap-3">
-                    <MagicFields
-                      schema={UserUpdateSchema}
-                      data={user()}
-                      validation={submittedCount() > 0}
-                      onChange={onChange}
-                    />
-                    <DateInfo record={user()} />
+                    <div>
+                      <label class="form-label">GoCardless Customer ID</label>
+                      <input class="form-control" readOnly value={user()?.gocardless_customer_id ?? "[Unknown]"} />
+                    </div>
+
+                    <div>
+                      <label class="form-label">GoCardless Payments</label>
+                      <ol class="list-group">
+                        {user().payments?.map((payment) => (
+                          <li class="list-group-item">
+                            <div>ID: {payment.id}</div>
+                            <div>{payment.charge_date}</div>
+                            <div>
+                              Amount: {parseInt(payment.amount, 10) / 100} {payment.currency}
+                            </div>
+                            <div>{payment.description}</div>
+                            <div>Status: {payment.status}</div>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
                   </div>
                 )}
               </Show>
             </Suspense>
-          </form>
-        </Card.Body>
-        <Card.Footer>
-          <Button colour="primary" type="button" on:click={onSave}>
-            Save
-          </Button>
-        </Card.Footer>
-      </Card>
+          </Card.Body>
+        </Card>
+      </div>
     </main>
   );
 }

@@ -56,7 +56,7 @@ export function MagicFields<
               icon={metadata?.icon}
               messages={getValidationMessages(fieldName)}
             >
-              {inputType === "text" || inputType === "email" || inputType === "password" ? (
+              {inputType === "text" || inputType === "email" || inputType === "password" || inputType === "textarea" ? (
                 <TextInput
                   type={inputType}
                   id={fieldName}

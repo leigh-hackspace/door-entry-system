@@ -27,6 +27,14 @@ export const UserCreateSchema = v.object({
   name: v.pipe(v.string(), v.minLength(2), v.title("Name"), v.metadata(FieldMetadata({ icon: "👤" }))),
   new_password: Password("New Password", "Leave blank to keep existing password"),
   confirm_password: Password("Confirm Password"),
+  notes: v.nullable(
+    v.pipe(
+      v.string(),
+      v.title("Notes"),
+      v.description("Miscellaneous notes or extra information"),
+      v.metadata(FieldMetadata({ icon: "📎", text: true }))
+    )
+  ),
 });
 
 export type UserCreate = v.InferInput<typeof UserCreateSchema>;
