@@ -21,6 +21,7 @@ export const ConfigSchema = v.object({
   DE_HOME_ASSISTANT_ACCESS_TOKEN: v.string(),
   DE_SLACK_API_KEY: v.string(),
   DE_SLACK_CHANNEL: v.string(),
+  DE_GOCARDLESS_API_TOKEN: v.string(),
 });
 
 let env = pickPrefix(process.env, "DE_");
