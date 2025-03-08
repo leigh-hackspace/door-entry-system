@@ -26,7 +26,6 @@ export class AuthentikService {
   }
 
   public async getTokenWithRefreshToken(refresh_token: string) {
-    console.log("refresh_token", refresh_token);
     const form = new URLSearchParams();
 
     form.set("client_id", Config.DE_AUTHENTIK_CLIENT_ID);
@@ -46,7 +45,6 @@ export class AuthentikService {
     }
 
     const json = await res.json();
-    console.log("json", json);
     return v.parse(TokenResponseSchema, json);
   }
 
@@ -87,7 +85,6 @@ export class AuthentikUserClient {
     }
 
     const json = await userRes.json();
-    console.log("getUserInfo:", json);
     return v.parse(UserInfoResponseSchema, json);
   }
 }
