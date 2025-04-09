@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-name    = "door-entry-firmware"
+name = "door-entry-firmware"
 version = "0.2.1"
 
 [[bin]]
@@ -8,6 +8,15 @@ name = "door-entry-firmware"
 path = "./src/bin/async_main.rs"
 
 [dependencies]
+bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5148d8ae679e021b78f53fd33afb8bb35d0b62e", features = [
+  "macros",
+  "async",
+] }
+crc = "3.2.1"
+# for more networking protocol support see https://crates.io/crates/edge-net
+critical-section = "1.2.0"
+embassy-embedded-hal = "0.3.0"
+embassy-executor = { version = "0.7.0", features = ["nightly"] }
 embassy-net = { version = "0.6.0", features = [
   "dhcpv4",
   "medium-ethernet",
@@ -15,8 +24,13 @@ embassy-net = { version = "0.6.0", features = [
   "udp",
   "dhcpv4-hostname",
 ] }
+embassy-sync = "0.6.2"
+embassy-time = { version = "0.4.0", features = ["generic-queue-8"] }
+embedded-hal-bus = "0.2.0"
 embedded-io = "0.6.1"
 embedded-io-async = "0.6.1"
+embedded-nal-async = "0.8.0"
+embedded-storage = "0.3.1"
 esp-alloc = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-alloc" }
 esp-backtrace = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-backtrace", features = [
   "esp32c6",
@@ -24,9 +38,21 @@ esp-backtrace = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-
   "panic-handler",
   "println",
 ] }
-esp-hal = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-hal", features = ["esp32c6", "unstable"] }
-esp-println = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-println", features = ["esp32c6", "log"] }
-# esp-println = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-println", default-features = false, features = ["esp32c6", "log", "jtag-serial", "critical-section", "colors"] }
+esp-hal = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-hal", features = [
+  "esp32c6",
+  "unstable",
+] }
+esp-hal-embassy = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-hal-embassy", features = [
+  "esp32c6",
+] }
+esp-hal-mfrc522 = { version = "0.2.1", features = ["embassy-time"] }
+esp-println = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-println", features = [
+  "esp32c6",
+  "log",
+] }
+esp-storage = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-storage", features = [
+  "esp32c6",
+] }
 esp-wifi = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-wifi", default-features = false, features = [
   "esp-alloc",
   "esp32c6",
@@ -34,10 +60,19 @@ esp-wifi = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-wifi"
   "utils",
   "wifi",
   "ble",
-  "coex"
+  "coex",
 ] }
+fatfs = { version = "0.4.0", default-features = false, features = [
+  "alloc",
+], git = "https://github.com/rafalh/rust-fatfs" }
 heapless = { version = "0.8.0", default-features = false }
 log = { version = "0.4.21" }
+mfrc522 = "0.8.0"
+partitions-macro = { path = "./partitions-macro" }
+picoserve = { version = "0.14.1", features = ["embassy"] }
+reqwless = { version = "0.13.0", features = ["alloc"] }
+serde = { version = "1.0.216", default-features = false, features = ["derive"] }
+serde-json-core = "0.6.0"
 smoltcp = { version = "0.12.0", default-features = false, features = [
   "medium-ethernet",
   "multicast",
@@ -50,34 +85,8 @@ smoltcp = { version = "0.12.0", default-features = false, features = [
   "socket-tcp",
   "socket-udp",
 ] }
-# for more networking protocol support see https://crates.io/crates/edge-net
-critical-section = "1.2.0"
-embassy-executor = { version = "0.7.0", features = ["nightly"] }
-embassy-time     = { version = "0.4.0", features = ["generic-queue-8"] }
-esp-hal-embassy  = { git = "https://github.com/esp-rs/esp-hal.git", package = "esp-hal-embassy", features = ["esp32c6"] }
-static_cell      = { version = "2.1.0", features = ["nightly"] }
-embassy-sync = "0.6.2"
-picoserve = { version = "0.14.1", features = ["embassy"] }
-serde = { version = "1.0.216", default-features = false, features = ["derive"] }
-embedded-storage = "0.3.1"
-esp-storage = { version = "0.4.0", features = ["esp32c6"] }
-crc = "3.2.1"
-reqwless = { version = "0.13.0", features = ["alloc"] }
-embedded-nal-async = "0.8.0"
-partitions-macro = { path = "./partitions-macro" }
-fatfs = { version = "0.4.0", default-features = false, features = [
-    "alloc",
-], git = "https://github.com/rafalh/rust-fatfs" }
-mfrc522 = "0.8.0"
-embedded-hal-bus = "0.2.0"
-serde-json-core = "0.6.0"
+static_cell = { version = "2.1.0", features = ["nightly"] }
 ws2812-async = { git = "https://github.com/kalkyl/ws2812-async.git" }
-bleps = { git = "https://github.com/bjoernQ/bleps", package = "bleps", rev = "a5148d8ae679e021b78f53fd33afb8bb35d0b62e", features = [
-    "macros",
-    "async",
-] }
-esp-hal-mfrc522 = { version ="0.2.1", features = ["embassy-time"] }
-embassy-embedded-hal = "0.3.0"
 
 [profile.dev]
 # Rust debug is too slow.
@@ -85,13 +94,13 @@ embassy-embedded-hal = "0.3.0"
 opt-level = "s"
 
 [profile.release]
-codegen-units    = 1     # LLVM can perform better optimizations using a single thread
-debug            = 2
+codegen-units = 1        # LLVM can perform better optimizations using a single thread
+debug = 2
 debug-assertions = false
-incremental      = false
-lto              = 'fat'
-opt-level        = 's'
-overflow-checks  = false
+incremental = false
+lto = 'fat'
+opt-level = 's'
+overflow-checks = false
 
 [profile.dev.package.esp-storage]
 opt-level = 3
