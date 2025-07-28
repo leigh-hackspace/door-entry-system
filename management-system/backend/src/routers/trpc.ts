@@ -1,8 +1,8 @@
 import { assertUnreachable } from "@door-entry-management-system/common";
 import { eq } from "drizzle-orm";
-import { initTRPC, TRPCError } from "npm:@trpc/server@next";
-import type { CreateHTTPContextOptions } from "npm:@trpc/server@next/adapters/standalone";
-import superjson from "npm:superjson@2.2.2";
+import { initTRPC, TRPCError } from "@trpc/server";
+import type { CreateHTTPContextOptions } from "@trpc/server/adapters/standalone";
+import superjson from "superjson";
 import { db, UserTable } from "../db/index.ts";
 import { AuthentikService, AuthentikUserClient } from "../services/index.ts";
 import { assertOneRecord, verifyToken } from "./common.ts";

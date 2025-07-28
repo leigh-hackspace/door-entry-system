@@ -10,6 +10,8 @@
   "imports": {
     "@luca/esbuild-deno-loader": "jsr:@luca/esbuild-deno-loader@^0.11.1",
     "@std/http": "jsr:@std/http@^1.0.12",
+    "@trpc/client": "npm:@trpc/client@^11.4.3",
+    "@trpc/server": "npm:@trpc/server@^11.4.3",
     "bootstrap": "npm:bootstrap@^5.3.3",
     "esbuild": "npm:esbuild@^0.24.0",
     "jsx-runtime": "npm:jsx-runtime@^1.2.0",
@@ -18,6 +20,7 @@
     "@frontend/dialogs": "./src/dialogs/index.tsx",
     "@frontend/lib": "./src/lib/index.ts",
     "@frontend/helper": "./src/helper/index.ts",
-    "common": "@door-entry-management-system/common"
+    "common": "@door-entry-management-system/common",
+    "superjson": "npm:superjson@^2.2.2"
   }
 }

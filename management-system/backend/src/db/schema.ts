@@ -4,6 +4,8 @@ import { ActivityLogAction, DeviceNameLength, IpAddressLength, UserRole } from "
 
 export type TableType = typeof UserTable | typeof TagTable | typeof ActivityLogTable | typeof DeviceTable;
 
+const UTC_NOW = sql`(NOW() AT TIME ZONE 'UTC')`;
+
 export const ScryptKeyLength = 64;
 const ScryptHashLength = 88; // Base64 length of 64 bytes
 
@@ -20,8 +22,8 @@ export const UserTable = pgTable("user", {
   refresh_token: varchar({ length: 128 }),
   gocardless_customer_id: varchar({ length: 14 }),
   notes: text(),
-  created: timestamp({ withTimezone: false, mode: "date" }).notNull().defaultNow(),
-  updated: timestamp({ withTimezone: false, mode: "date" }).notNull().defaultNow(),
+  created: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
+  updated: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
 });
 
 export const UsersRelations = relations(UserTable, ({ many }) => ({
@@ -35,8 +37,8 @@ export const TagTable = pgTable("tag", {
   user_id: uuid("user_id").references(() => UserTable.id),
   code: varchar({ length: TagCodeLength }).notNull().unique(),
   description: varchar({ length: 128 }).notNull(),
-  created: timestamp({ withTimezone: false, mode: "date" }).notNull().defaultNow(),
-  updated: timestamp({ withTimezone: false, mode: "date" }).notNull().defaultNow(),
+  created: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
+  updated: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
 });
 
 export const TagRelations = relations(TagTable, ({ one }) => ({
@@ -53,7 +55,7 @@ export const ActivityLogTable = pgTable("activity_log", {
   user_id: uuid("user_id").references(() => UserTable.id),
   action: ActivityLogActionEnum().notNull(),
   code: varchar({ length: TagCodeLength }).notNull(),
-  created: timestamp({ withTimezone: false, mode: "date" }).notNull().defaultNow(),
+  created: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
 });
 
 export const ActivityLogRelations = relations(ActivityLogTable, ({ one }) => ({
@@ -67,6 +69,6 @@ export const DeviceTable = pgTable("device", {
   id: uuid().primaryKey(),
   name: varchar({ length: DeviceNameLength }).notNull().unique(),
   ip_address: varchar({ length: IpAddressLength }).notNull().unique(),
-  created: timestamp({ withTimezone: false, mode: "date" }).notNull().defaultNow(),
-  updated: timestamp({ withTimezone: false, mode: "date" }).notNull().defaultNow(),
+  created: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
+  updated: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
 });

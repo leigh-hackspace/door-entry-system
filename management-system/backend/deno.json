@@ -7,11 +7,13 @@
     "push": "drizzle-kit push"
   },
   "imports": {
+    "@trpc/server": "npm:@trpc/server@^11.4.3",
     "@types/jsonwebtoken": "npm:@types/jsonwebtoken@^9.0.7",
     "drizzle-kit": "npm:drizzle-kit@^0.29.1",
     "gocardless-nodejs": "npm:gocardless-nodejs@^4.3.0",
     "jsonwebtoken": "npm:jsonwebtoken@^9.0.2",
     "pg": "npm:pg@^8.13.1",
+    "superjson": "npm:superjson@^2.2.2",
     "ts-essentials": "npm:ts-essentials",
     "dotenv": "npm:dotenv",
     "valibot": "npm:valibot",

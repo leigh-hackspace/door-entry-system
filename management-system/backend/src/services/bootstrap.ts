@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm/expressions";
+import { eq } from "drizzle-orm";
 import * as uuid from "npm:uuid";
 import { db } from "../db/index.ts";
 import { UserTable } from "../db/schema.ts";

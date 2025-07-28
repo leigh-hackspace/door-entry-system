@@ -1,7 +1,10 @@
 import type { AppRouter } from "@door-entry-management-system/backend";
-import { assertUnreachable, type EntityType } from "@door-entry-management-system/common";
-import type { CreateTRPCClient } from "npm:@trpc/client@next";
-import type { Unsubscribable } from "npm:@trpc/server/observable";
+import {
+  assertUnreachable,
+  type EntityType,
+} from "@door-entry-management-system/common";
+import type { TRPCClient } from "@trpc/client";
+import type { Unsubscribable } from "@trpc/server/observable";
 import { assert } from "npm:ts-essentials";
 import * as v from "npm:valibot";
 import type { FetchParameters, SessionUser } from "./common.ts";
@@ -23,7 +26,8 @@ export class AppService {
   }
 
   public tRPC = getTrpcClient({
-    getAuthorisation: () => this.sessionService.session()?.sessionUser.sessionToken,
+    getAuthorisation: () =>
+      this.sessionService.session()?.sessionUser.sessionToken,
     onSessionExpired: () => this.onSessionExpired(),
   });
 
@@ -101,7 +105,11 @@ export class AppService {
 
       this.activitySubscription = this.tRPC.Auth.Activity.subscribe(undefined, {
         onData: (data) => {
-          this.toastService.addToast({ title: "Data", message: data, life: 5000 });
+          this.toastService.addToast({
+            title: "Data",
+            message: data,
+            life: 5000,
+          });
         },
       });
     }
@@ -109,7 +117,7 @@ export class AppService {
 }
 
 class LookupService {
-  constructor(private api: CreateTRPCClient<AppRouter>) {}
+  constructor(private api: TRPCClient<AppRouter>) {}
 
   public getOne(type: EntityType, id: string): Promise<unknown> {
     if (type === "User") {
@@ -123,7 +131,7 @@ class LookupService {
 
   public getMany(
     type: EntityType,
-    fetch: FetchParameters
+    fetch: FetchParameters,
   ): Promise<{ rows: readonly { id: string }[]; total: number }> {
     if (type === "User") {
       return this.api.User.Search.query(fetch);
