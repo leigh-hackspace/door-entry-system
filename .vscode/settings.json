@@ -1,0 +1,15 @@
+{
+    "rust-analyzer.cargo.target": "riscv32imac-unknown-none-elf",
+    "rust-analyzer.cargo.allTargets": false,
+    "cSpell.words": [
+        "Cardless",
+        "dialogs",
+        "gocardless",
+        "picklist",
+        "solidjs",
+        "Unsubscribable",
+        "Vali",
+        "valibot"
+    ],
+    "editor.formatOnSave": true
+}

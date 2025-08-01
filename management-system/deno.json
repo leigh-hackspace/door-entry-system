@@ -7,7 +7,7 @@
     "./frontend"
   ],
   "tasks": {
-    "dev": "deno task -f frontend dev & deno task -f backend dev & deno task -f frontend serve",
+    "dev": "deno task -f frontend dev & deno task -f frontend sass-dev & deno task -f backend dev & deno task -f frontend serve",
     "build": "deno task -f frontend build",
     "start": "deno task -f frontend start & deno task -f backend start",
     "push": "deno task -f backend push"
@@ -22,5 +22,15 @@
       "dom.asynciterable",
       "deno.ns"
     ]
+  },
+  "fmt": {
+    "lineWidth": 140
+  },
+  "lint": {
+    "rules": {
+      "exclude": [
+        "require-await"
+      ]
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { For } from "npm:solid-js";
+import { For } from "solid-js";
 
 interface Props {
   class?: string;
@@ -20,7 +20,7 @@ export function Pagination(props: Props) {
   const pageCount = () => Math.ceil(props.count / props.pageSize);
 
   return (
-    <div class="d-flex gap-2 justify-content-md-end align-items-center">
+    <div class="d-flex gap-2 justify-content-end align-items-center">
       <div>
         Records {first()} to {last()} of {props.count}
       </div>

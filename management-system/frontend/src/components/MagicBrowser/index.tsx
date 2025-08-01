@@ -1,125 +1,93 @@
 // deno-lint-ignore-file no-explicit-any
-import { assertError, camelToPascal, includes, keys } from "@door-entry-management-system/common";
-import { AlertDialog, openDialog } from "@frontend/dialogs";
-import { type Colour, type FetchParameters, type QuerySort, getFieldInfo, normaliseError } from "@frontend/lib";
-import { format } from "npm:date-fns";
-import { enGB } from "npm:date-fns/locale";
-import { type JSXElement, createEffect, createSignal, onCleanup, onMount } from "npm:solid-js";
-import { assert } from "npm:ts-essentials";
-import type * as v from "npm:valibot";
+import { camelToPascal, includes, keys, type RowSelection } from "@door-entry-management-system/common";
+import { format } from "date-fns";
+import { enGB } from "date-fns/locale";
+import type { JSXElement } from "solid-js";
+import { assert } from "ts-essentials";
+import type * as v from "valibot";
 import { DataList } from "../DataList/index.tsx";
 import { DataTable, type DataTableColumn } from "../DataTable/index.tsx";
 import { Pagination } from "../Pagination/index.tsx";
+import { type FetchParameters, getFieldInfo, type QuerySort } from "../helper.ts";
 
-interface Props<TSchema extends v.ObjectSchema<any, any>, TRow extends v.InferInput<TSchema>> {
+const PageSize = 25;
+
+interface Props<
+  TSchema extends v.ObjectSchema<any, any>,
+  TRow extends v.InferInput<TSchema>,
+> {
   title?: string;
-  refresh?: number;
   schema: TSchema;
-  rowActions?: readonly RowAction<TRow>[];
-  tableActions?: readonly TableAction[];
   initialData?: readonly TRow[];
   initialSort?: QuerySort;
   initialPageSize?: number;
-  onFetch: (params: FetchParameters) => Promise<{ rows: readonly TRow[]; total: number }>;
+  cursor: readonly [cursor: () => Cursor, setCursor: (cursor: Cursor) => void];
+  rowData: RowData<TRow>;
+  selection: readonly [selection: () => RowSelection, setSelection: (selection: RowSelection) => void];
   acquireImage?: (row: TRow) => string;
+
+  onRowClick?: (row: TRow) => Promise<void>;
 }
 
-interface RowAction<TRow> {
-  name: string;
-  colour: Colour;
-  onClick: (row: TRow) => void | Promise<void>;
+export interface Cursor {
+  page: number;
+  pageSize: number;
+  sort?: QuerySort;
 }
 
-interface TableAction {
-  name: string;
-  onClick: () => void | Promise<void>;
-}
-
-type Overrides<TRow> = {
-  [TProp in Extract<keyof TRow, string> as `render${Capitalize<TProp>}`]?: (row: TRow) => JSXElement;
+export const CursorDefault: Cursor = {
+  page: 1,
+  pageSize: PageSize,
 };
 
-const PageSize = 10;
-
-interface MagicBrowserInstance {
-  refresh(): void;
+export interface RowData<TRow> {
+  rows: readonly TRow[];
+  total: number;
 }
 
-const Instances: MagicBrowserInstance[] = [];
+export const RowDataDefault: RowData<never> = {
+  rows: [],
+  total: 0,
+};
 
-export function refreshAllBrowsers() {
-  Instances.forEach((i) => i.refresh());
-}
+export const RowSelectionDefault: RowSelection = {
+  ids: [],
+  mode: "noneBut",
+};
 
-export function MagicBrowser<TSchema extends v.ObjectSchema<any, any>, TRow extends v.InferInput<TSchema>>(
-  props: Props<TSchema, TRow> & Overrides<TRow>
-) {
-  const instance: MagicBrowserInstance = {
-    refresh: () => {
-      fetch(page(), pageSize(), search(), sort(), props.refresh);
-    },
+type Overrides<TRow> = {
+  [TProp in Extract<keyof TRow, string> as `render${Capitalize<TProp>}`]?: (
+    row: TRow,
+  ) => JSXElement;
+};
+
+export function MagicBrowser<
+  TSchema extends v.ObjectSchema<any, any>,
+  TRow extends v.InferInput<TSchema> & { id: string },
+>(props: Props<TSchema, TRow> & Overrides<TRow>) {
+  const propSchemas = Object.entries(props.schema.entries) as readonly (readonly [string, v.SchemaWithPipe<Array<any> & [any]>])[];
+
+  const onPage = (page: number) => {
+    const cursor = props.cursor[0]();
+
+    props.cursor[1]({ ...cursor, page });
   };
 
-  onMount(() => {
-    Instances.push(instance);
-  });
-  onCleanup(() => {
-    Instances.splice(Instances.indexOf(instance), 1);
-  });
+  const onPageSize = (pageSize: number) => {
+    const cursor = props.cursor[0]();
 
-  const propSchemas = Object.entries(props.schema.entries) as readonly (readonly [
-    string,
-    v.SchemaWithPipe<Array<any> & [any]>
-  ])[];
-
-  const [rows, setRows] = createSignal<{ rows: readonly TRow[]; total: number }>({
-    rows: props.initialData ?? [],
-    total: props.initialData?.length ?? 0,
-  });
-  const [search, setSearch] = createSignal("");
-  const [page, setPage] = createSignal(1);
-  const [pageSize, setPageSize] = createSignal(props.initialPageSize ?? PageSize);
-  const [sort, setSort] = createSignal<QuerySort | undefined>(props.initialSort);
-
-  const fetch = async (page: number, pageSize: number, search: string, sort?: QuerySort, refresh?: number) => {
-    try {
-      const rows = await props.onFetch({
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        search,
-        orderBy: sort ? [[sort.sort, sort.dir]] : [],
-      });
-
-      setRows(rows);
-    } catch (_err) {
-      assertError(_err);
-      const err = normaliseError(_err);
-
-      await openDialog(AlertDialog, {
-        title: `Fetch Error: ${err.name}`,
-        message: err.message,
-      });
-    }
-  };
-
-  createEffect(() => {
-    fetch(page(), pageSize(), search(), sort(), props.refresh);
-  });
-
-  const onSearch = (search: string) => {
-    setSearch(search);
-    setPage(1);
+    props.cursor[1]({ ...cursor, pageSize });
   };
 
   const onSort = (colName: string) => {
     if (colName === "actions") return;
 
-    const _sort = sort();
+    const cursor = props.cursor[0]();
 
-    if (_sort?.sort === colName && _sort.dir === "asc") {
-      setSort({ sort: colName, dir: "desc" });
+    if (cursor.sort?.sort === colName && cursor.sort.dir === "asc") {
+      props.cursor[1]({ ...cursor, sort: { sort: colName, dir: "desc" } });
     } else {
-      setSort({ sort: colName, dir: "asc" });
+      props.cursor[1]({ ...cursor, sort: { sort: colName, dir: "asc" } });
     }
   };
 
@@ -147,56 +115,31 @@ export function MagicBrowser<TSchema extends v.ObjectSchema<any, any>, TRow exte
     });
   };
 
-  const TableActions = () => {
-    if (!props.tableActions || props.tableActions.length === 0) return null;
+  const desktop = false;
 
-    return (
-      <div class="btn-group">
-        {props.tableActions?.map((action) => (
-          <button class="btn" onClick={() => action.onClick()}>
-            {action.name}
-          </button>
-        ))}
-      </div>
-    );
-  };
-
-  const desktop = document.body.clientWidth > 576;
+  const TableHeader = () => (
+    <>
+      {props.title && <div>{props.title}</div>}
+    </>
+  );
 
   if (desktop) {
-    const TableHeader = () => (
-      <>
-        {props.title && <div>{props.title}</div>}
-        <TableActions />
-      </>
+    const TableFooter = () => (
+      <Pagination
+        page={props.cursor[0]().page}
+        pageSize={PageSize}
+        count={props.rowData.total}
+        onPage={onPage}
+      />
     );
-
-    const TableSubHeader = () => (
-      <>
-        <div class="input-group">
-          <span class="input-group-text">🔍</span>
-          <input
-            type="text"
-            class="form-control"
-            value={search()}
-            placeholder="Quick Search..."
-            on:keyup={(e) => onSearch(e.currentTarget.value)}
-          />
-        </div>
-      </>
-    );
-
-    const TableFooter = () => <Pagination page={page()} pageSize={PageSize} count={rows().total} onPage={setPage} />;
 
     return (
-      <div class="d-flex flex-column gap-3">
+      <div class="magic-browser d-flex flex-column gap-3">
         <TableHeader />
-        <TableSubHeader />
         <DataTable
           columns={getColumns()}
-          rows={rows().rows}
-          rowActions={props.rowActions}
-          sort={sort()}
+          rows={props.rowData.rows}
+          sort={props.cursor[0]().sort}
           onSort={onSort}
           acquireImage={props.acquireImage}
         />
@@ -205,20 +148,40 @@ export function MagicBrowser<TSchema extends v.ObjectSchema<any, any>, TRow exte
     );
   } else {
     const onLoadMore = () => {
-      if (pageSize() < rows().total) {
-        setPageSize(pageSize() + PageSize);
+      if (props.cursor[0]().pageSize < props.rowData.total) {
+        onPageSize(props.cursor[0]().pageSize + props.cursor[0]().pageSize);
       }
     };
 
+    const onSelectionChanged = (row: TRow) => {
+      const { ids, mode } = props.selection[0]();
+
+      if (props.selection[0]().ids.includes(row.id)) {
+        props.selection[1]({ mode, ids: ids.filter((s) => s !== row.id) });
+      } else {
+        props.selection[1]({ mode, ids: [...ids, row.id] });
+      }
+    };
+
+    const onSelectAll = () => {
+      const { ids, mode } = props.selection[0]();
+
+      props.selection[1]({ mode: mode === "allBut" ? "noneBut" : "allBut", ids });
+    };
+
     return (
-      <div class="d-flex flex-column gap-3">
+      <div class="magic-browser d-flex flex-column">
         <DataList
           columns={getColumns()}
-          rows={rows().rows}
-          rowActions={props.rowActions}
-          sort={sort()}
+          rows={props.rowData.rows}
+          sort={props.cursor[0]().sort}
+          selected={props.selection[0]().ids.map((id) => props.rowData.rows.find((r) => r.id === id)!)}
+          selectAll={props.selection[0]().mode === "allBut"}
           onSort={onSort}
           onLoadMore={onLoadMore}
+          onSelectionChanged={onSelectionChanged}
+          onSelectAll={onSelectAll}
+          onRowClick={props.onRowClick}
           acquireImage={props.acquireImage}
         />
       </div>
@@ -244,8 +207,20 @@ function renderValue(value: unknown, propName: string): JSXElement {
   }
 
   if (typeof value === "object" && value instanceof Date) {
-    return <span class="badge text-bg-secondary">{format(value, "PPp", { locale: enGB })}</span>;
+    return (
+      <span class="badge text-bg-secondary">
+        {format(value, "PPp", { locale: enGB })}
+      </span>
+    );
   }
 
   return "!! Cannot format !!";
+}
+
+export function fetchParamsFromCursor(cursor: Cursor): FetchParameters {
+  return {
+    skip: (cursor.page - 1) * cursor.pageSize,
+    take: cursor.pageSize,
+    orderBy: cursor.sort ? [[cursor.sort.sort, cursor.sort.dir]] : [],
+  };
 }

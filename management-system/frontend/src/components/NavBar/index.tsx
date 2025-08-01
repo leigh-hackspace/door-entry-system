@@ -38,7 +38,7 @@ export function NavBar(props: Props) {
   };
 
   return (
-    <nav class="navbar navbar-expand-lg mb-3">
+    <nav class="navbar navbar-expand-lg">
       <div class="container-fluid">
         <a class="navbar-brand" href="/">
           Doors (v{props.version})

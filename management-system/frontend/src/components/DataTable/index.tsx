@@ -1,6 +1,6 @@
-import type { Colour, QuerySort } from "@frontend/lib";
-import { For, Show, type JSXElement } from "npm:solid-js";
+import { For, type JSXElement, Show } from "solid-js";
 import { Button } from "../Button/index.tsx";
+import type { Colour, QuerySort } from "../helper.ts";
 
 interface Props<TRow> {
   columns: readonly DataTableColumn<TRow>[];
@@ -34,7 +34,7 @@ export function DataTable<TRow>(props: Props<TRow>) {
       label: "",
       render: (row) => {
         return (
-          <div class="d-md-flex gap-2 justify-content-md-end align-items-center text-nowrap">
+          <div class="d-md-flex gap-2 justify-content-end align-items-center text-nowrap">
             <For each={props.rowActions}>
               {(action) => (
                 <Button colour={action.colour} on:click={(e) => action.onClick(row)}>
@@ -66,11 +66,7 @@ export function DataTable<TRow>(props: Props<TRow>) {
                   <div class="d-md-flex gap-2 align-items-center text-nowrap">
                     {column.label ?? column.name}
                     {props.sort?.sort === column.name &&
-                      (props.sort?.dir === "asc" ? (
-                        <span>&nbsp;↑</span>
-                      ) : props.sort?.dir === "desc" ? (
-                        <span>&nbsp;↓</span>
-                      ) : undefined)}
+                      (props.sort?.dir === "asc" ? <span>&nbsp;↑</span> : props.sort?.dir === "desc" ? <span>&nbsp;↓</span> : undefined)}
                   </div>
                 </th>
               )}

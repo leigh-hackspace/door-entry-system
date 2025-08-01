@@ -1,10 +1,22 @@
-import { FieldMetadata, humanise } from "@door-entry-management-system/common";
-import { Card, LinkButton, MagicBrowser, refreshAllBrowsers } from "@frontend/components";
-import { openConfirm } from "@frontend/dialogs";
+import { assertError, FieldMetadata, humanise } from "@door-entry-management-system/common";
+import {
+  Button,
+  Card,
+  CursorDefault,
+  fetchParamsFromCursor,
+  LinkButton,
+  MagicBrowser,
+  type RowData,
+  RowDataDefault,
+  RowSelectionDefault,
+  SearchBar,
+} from "@frontend/components";
+import { openAlert, openConfirm } from "@frontend/dialogs";
 import { beginPage } from "@frontend/helper";
-import type { FetchParameters, UserSearchRecord } from "@frontend/lib";
-import type { RouteSectionProps } from "npm:@solidjs/router";
-import * as v from "npm:valibot";
+import type { UserSearchRecord } from "@frontend/lib";
+import type { RouteSectionProps } from "@solidjs/router";
+import { createEffect, createSignal, Show } from "solid-js";
+import * as v from "valibot";
 
 const UserTableSchema = v.object({
   role: v.pipe(v.string(), v.title("Role"), v.metadata(FieldMetadata({ icon: "🏅" }))),
@@ -17,16 +29,43 @@ const UserTableSchema = v.object({
 export function Users(props: RouteSectionProps) {
   const { navigate, tRPC } = beginPage("admin");
 
-  const onFetch = async (params: FetchParameters) => {
-    return tRPC.User.Search.query(params);
+  const [rows, setRows] = createSignal<RowData<UserSearchRecord>>(RowDataDefault);
+
+  const cursorSignal = createSignal(CursorDefault);
+  const searchSignal = createSignal("");
+  const selectionSignal = createSignal(RowSelectionDefault);
+
+  const fetchRows = async () => {
+    const cursor = cursorSignal[0]();
+    const params = fetchParamsFromCursor(cursor);
+
+    try {
+      setRows(await tRPC.User.Search.query({ ...params, search: searchSignal[0]() }));
+    } catch (err) {
+      assertError(err);
+      await openAlert(`Fetch Error: ${err.name}`, err.message);
+    }
   };
 
-  const onDelete = async (row: UserSearchRecord) => {
-    const res = await openConfirm("Delete user", `Are you sure you wish to delete "${row.name}"`);
+  createEffect(fetchRows);
+
+  const onRowClick = async (row: UserSearchRecord) => {
+    navigate(`/users/${row.id}`);
+  };
+
+  const onDelete = async () => {
+    const { total } = rows();
+    const { ids, mode } = selectionSignal[0]();
+
+    const deleteCount = mode === "noneBut" ? ids.length : total - ids.length;
+    if (deleteCount === 0) return;
+
+    const res = await openConfirm("Delete user", `Are you sure you wish to delete ${deleteCount} users`);
 
     if (res === "yes") {
-      await tRPC.User.Delete.mutate(row.id);
-      refreshAllBrowsers();
+      await tRPC.User.Delete.mutate({ ids, mode });
+
+      await fetchRows();
     }
   };
 
@@ -34,19 +73,26 @@ export function Users(props: RouteSectionProps) {
     <main>
       <Card colour="success">
         <Card.Header text="👤 Users" />
-        <Card.Body>
+        <Card.Body pad={0}>
+          <div class="p-2">
+            <SearchBar search={searchSignal} />
+          </div>
           <MagicBrowser
             schema={UserTableSchema}
-            rowActions={[
-              { name: "Edit", colour: "info", onClick: (row) => navigate(`/users/${row.id}`) },
-              { name: "Delete", colour: "danger", onClick: onDelete },
-            ]}
-            onFetch={onFetch}
+            rowData={rows()}
+            cursor={cursorSignal}
+            selection={selectionSignal}
             acquireImage={(row) => row.image_url}
             renderRole={(row) => humanise(row.role)}
+            onRowClick={onRowClick}
           />
         </Card.Body>
         <Card.Footer>
+          <Show when={selectionSignal[0]().ids.length > 0}>
+            <Button colour="danger" on:click={() => onDelete()}>
+              Delete
+            </Button>
+          </Show>
           <LinkButton colour="info" href="/users/new">
             New
           </LinkButton>

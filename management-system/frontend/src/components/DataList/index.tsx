@@ -1,17 +1,19 @@
-import { debounce, getScrollingAncestor } from "@frontend/helper";
-import type { Colour, QuerySort } from "@frontend/lib";
-import { For, Show, type JSXElement } from "npm:solid-js";
-import { onMount } from "solid-js";
-import { Button } from "../Button/index.tsx";
+import { For, type JSXElement, onMount, Show } from "solid-js";
+import { type Colour, debounce, handleAsyncClick, type QuerySort } from "../helper.ts";
 
 interface Props<TRow> {
   columns: readonly DataListColumn<TRow>[];
-  rowActions?: readonly RowAction<TRow>[];
   rows: readonly TRow[];
   sort?: QuerySort;
+  selected?: readonly TRow[];
+  selectAll?: boolean;
+  acquireImage?: (row: TRow) => string;
+
   onSort?: (colName: string) => void;
   onLoadMore?: () => void;
-  acquireImage?: (row: TRow) => string;
+  onSelectionChanged?: (row: TRow) => void;
+  onSelectAll?: () => void;
+  onRowClick?: (row: TRow) => Promise<void>;
 }
 
 export interface DataListColumn<TRow> {
@@ -20,6 +22,7 @@ export interface DataListColumn<TRow> {
   displayMode?: string;
   icon?: string;
   render: (row: TRow) => JSXElement;
+  renderHeader?: () => JSXElement;
 }
 
 interface RowAction<TRow> {
@@ -38,10 +41,10 @@ export function DataList<TRow>(props: Props<TRow>) {
 
   const onLoadMoreDebounced = debounce(() => {
     if (isNearBottom()) props.onLoadMore?.();
-  }, 100);
+  }, 500);
 
   onMount(() => {
-    scroller = getScrollingAncestor(ul);
+    scroller = ul; //getScrollingAncestor(ul);
 
     if (scroller) {
       scroller.addEventListener("scroll", (e) => {
@@ -52,65 +55,180 @@ export function DataList<TRow>(props: Props<TRow>) {
 
   const columns = props.columns.slice(0);
 
-  if (props.rowActions?.length ?? 0 > 0) {
+  if (props.selected !== undefined && props.onSelectionChanged) {
     columns.push({
-      name: "actions",
-      label: "Actions",
+      name: "select",
+      label: "Select",
       displayMode: "raw",
-      render: (row) => {
-        return (
-          <div class="d-md-flex gap-2 justify-content-md-end align-items-center text-nowrap">
-            <For each={props.rowActions}>
-              {(action) => (
-                <Button colour={action.colour} on:click={(e) => action.onClick(row)}>
-                  {action.name}
-                </Button>
-              )}
-            </For>
-          </div>
-        );
-      },
+      renderHeader: () => (
+        props.selectAll !== undefined && props.onSelectAll && (
+          <input
+            type="checkbox"
+            checked={props.selectAll}
+            on:click={(e) => {
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+              props.onSelectAll!();
+            }}
+          />
+        )
+      ),
+      render: (row) => (
+        <input
+          type="checkbox"
+          checked={props.selected!.includes(row) !== (props.selectAll ?? false)}
+          on:click={(e) => {
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            props.onSelectionChanged!(row);
+          }}
+        />
+      ),
     });
   }
 
-  const dataColumns = columns.filter((c) => !["created", "updated", "actions"].includes(c.name));
+  const dataColumns = columns.filter((c) => !["actions"].includes(c.name));
 
-  const updatedColumn = columns.find((c) => c.name === "updated");
-  const createdColumn = columns.find((c) => c.name === "created");
-  const actionsColumn = columns.find((c) => c.name === "actions");
+  const onClick = (row: TRow) =>
+    handleAsyncClick(async () => {
+      if (props.selected && props.selected.length > 0 && props.onSelectionChanged) {
+        props.onSelectionChanged(row);
+      } else {
+        return props.onRowClick && props.onRowClick(row);
+      }
+    }, () => {});
+
+  const createLongPressHandler = (row: TRow) => {
+    let timer: number | null = null;
+    let startPos: { x: number; y: number } | null = null;
+    let isLongPress = false;
+    let hasMoved = false;
+
+    const cleanup = () => {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      startPos = null;
+      isLongPress = false;
+      hasMoved = false;
+    };
+
+    const triggerHaptic = () => {
+      if ("vibrate" in navigator) {
+        navigator.vibrate(50);
+      }
+    };
+
+    return {
+      onTouchStart: {
+        handleEvent: (e: TouchEvent) => {
+          const touch = e.touches[0];
+          startPos = { x: touch.clientX, y: touch.clientY };
+          isLongPress = false;
+          hasMoved = false;
+
+          timer = setTimeout(() => {
+            if (props.onSelectionChanged && timer && !hasMoved) {
+              isLongPress = true;
+              triggerHaptic();
+              props.onSelectionChanged(row);
+            }
+            cleanup();
+          }, 500);
+        },
+        passive: true,
+      },
+
+      onTouchMove: {
+        handleEvent: (e: TouchEvent) => {
+          if (!startPos || !timer) return;
+
+          const touch = e.touches[0];
+          const distance = Math.sqrt(
+            Math.pow(touch.clientX - startPos.x, 2) + Math.pow(touch.clientY - startPos.y, 2),
+          );
+
+          if (distance > 10) {
+            hasMoved = true;
+            cleanup();
+          }
+        },
+        passive: true,
+      },
+
+      onTouchEnd: (e: TouchEvent) => {
+        // Only prevent default for short taps (not scrolls)
+        if (timer && !hasMoved) {
+          e.preventDefault(); // Prevent text selection only for actual taps
+
+          if (!isLongPress) {
+            onClick(row)(e);
+          }
+        }
+        cleanup();
+      },
+
+      onTouchCancel: cleanup,
+    };
+  };
 
   return (
-    <ul class="list-group data-list" ref={(_ul) => (ul = _ul)}>
-      <For each={props.rows}>
-        {(row) => (
-          <li class="list-group-item data-item">
-            <div class="data-item-values-and-image">
-              <Show when={props.acquireImage}>
-                {(acquireImage) => (
-                  <div class="data-item-image">
-                    <img src={acquireImage()(row)} />
-                  </div>
-                )}
-              </Show>
+    <div class="data-list" ref={(div) => div.style.setProperty("--data-list-columns", props.columns.length.toString())}>
+      <ul class="data-list-header">
+        <li class="data-item">
+          <Show when={props.acquireImage}>
+            <div class="data-item-image" />
+          </Show>
+          <div class="data-item-values">
+            <For each={dataColumns}>
+              {(column) => (
+                <div
+                  style={{ cursor: props.onSort ? "pointer" : undefined }}
+                  onclick={() => column.name !== "select" && props.onSort?.(column.name)}
+                >
+                  {column.renderHeader ? column.renderHeader() : column.label ?? column.name}
+                  {props.sort?.sort === column.name &&
+                    (props.sort?.dir === "asc" ? <span>&nbsp;↓</span> : props.sort?.dir === "desc" ? <span>&nbsp;↑</span> : undefined)}
+                </div>
+              )}
+            </For>
+          </div>
+        </li>
+      </ul>
+      <ul class="scrollable" ref={(_ul) => (ul = _ul)}>
+        <For each={props.rows}>
+          {(row) => {
+            const { onTouchStart, onTouchMove, onTouchEnd, onTouchCancel } = createLongPressHandler(row);
 
-              <div class="data-item-values">
-                <For each={dataColumns}>{(column) => <DataItemValue column={column} row={row} />}</For>
-              </div>
-            </div>
+            return (
+              <li
+                classList={{ "data-item": true, "selected": props.selected!.includes(row) !== (props.selectAll ?? false) }}
+                on:click={onClick(row)}
+                on:touchstart={onTouchStart}
+                on:touchmove={onTouchMove}
+                on:touchend={onTouchEnd}
+                on:touchcancel={onTouchCancel}
+              >
+                <Show when={props.acquireImage}>
+                  {(acquireImage) => (
+                    <div class="data-item-image">
+                      <img src={acquireImage()(row)} />
+                    </div>
+                  )}
+                </Show>
 
-            <div class="data-item-meta">
-              <div class="data-item-meta-dates">
-                <Show when={updatedColumn}>{(column) => <DataItemValue column={column()} row={row} />}</Show>
-                <Show when={createdColumn}>{(column) => <DataItemValue column={column()} row={row} />}</Show>
-              </div>
-              <div class="data-item-meta-actions">
-                <Show when={actionsColumn}>{(column) => <DataItemValue column={column()} row={row} />}</Show>
-              </div>
-            </div>
-          </li>
-        )}
-      </For>
-    </ul>
+                <div class="data-item-values">
+                  <For each={dataColumns}>
+                    {(column) => <DataItemValue column={column} row={row} />}
+                  </For>
+                </div>
+              </li>
+            );
+          }}
+        </For>
+      </ul>
+    </div>
   );
 }
 
@@ -121,11 +239,21 @@ interface PLVProps<TRow> {
 
 function DataItemValue<TRow>(props: PLVProps<TRow>) {
   return (
-    <div classList={{ "data-item-value": true, [props.column.displayMode ?? "default-mode"]: true }}>
-      <div class="data-item-value-label">{props.column.icon ?? props.column.label ?? props.column.name}</div>
-      {/* <Show when={props.column.icon}>
+    <div
+      classList={{
+        "data-item-value": true,
+        [`column-${props.column.name}`]: true,
+        [props.column.displayMode ?? "default-mode"]: true,
+      }}
+    >
+      <div class="data-item-value-label">
+        {props.column.icon ?? props.column.label ?? props.column.name}
+      </div>
+      {
+        /* <Show when={props.column.icon}>
         <div class="data-item-value-icon">{props.column.icon}</div>
-      </Show> */}
+      </Show> */
+      }
       <div class="data-item-value-value">{props.column.render(props.row)}</div>
     </div>
   );

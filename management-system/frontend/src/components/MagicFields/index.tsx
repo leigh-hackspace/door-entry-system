@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { getFieldInfo } from "@frontend/lib";
-import { For } from "npm:solid-js";
-import * as v from "npm:valibot";
+import { For } from "solid-js";
+import * as v from "valibot";
 import { FormFields } from "../FormFields/index.tsx";
 import { LookupInput } from "../LookupInput/index.tsx";
 import { Select } from "../Select/index.tsx";
 import { TextInput } from "../TextInput/index.tsx";
+import { getFieldInfo } from "../helper.ts";
 
 interface Props<TSchema extends v.ObjectSchema<any, any>, TData extends v.InferInput<TSchema>> {
   schema: TSchema;
@@ -17,7 +17,7 @@ interface Props<TSchema extends v.ObjectSchema<any, any>, TData extends v.InferI
 
 export function MagicFields<
   TSchema extends v.ObjectSchema<any, any>,
-  TData extends v.InferInput<v.SchemaWithPartial<TSchema, undefined>>
+  TData extends v.InferInput<v.SchemaWithPartial<TSchema, undefined>>,
 >(props: Props<TSchema, TData>) {
   const fieldsNames = Object.keys(props.schema.entries) as unknown as readonly Extract<keyof TData, string>[];
 
@@ -43,7 +43,7 @@ export function MagicFields<
         {(fieldName) => {
           const { metadata, title, inputType, options, description, entityType } = getFieldInfo(
             props.schema,
-            fieldName
+            fieldName,
           );
 
           const value = () => props.data[fieldName];
@@ -56,37 +56,41 @@ export function MagicFields<
               icon={metadata?.icon}
               messages={getValidationMessages(fieldName)}
             >
-              {inputType === "text" || inputType === "email" || inputType === "password" || inputType === "textarea" ? (
-                <TextInput
-                  type={inputType}
-                  id={fieldName}
-                  isInvalid={getValidationMessages(fieldName).length > 0}
-                  placeholder={title}
-                  value={typeof value() === "string" ? value() : undefined}
-                  onChange={(v) => onFieldChange(fieldName, v)}
-                />
-              ) : inputType === "select" ? (
-                <Select
-                  id={fieldName}
-                  isInvalid={getValidationMessages(fieldName).length > 0}
-                  placeholder={title}
-                  value={value()}
-                  options={options}
-                  allowNull={true}
-                  onChange={(v) => onFieldChange(fieldName, v)}
-                />
-              ) : inputType === "lookup" ? (
-                <LookupInput
-                  id={fieldName}
-                  isInvalid={getValidationMessages(fieldName).length > 0}
-                  placeholder={title}
-                  entityType={entityType!}
-                  value={typeof value() === "string" ? value() : undefined}
-                  onChange={(v) => onFieldChange(fieldName, v)}
-                />
-              ) : (
-                inputType
-              )}
+              {inputType === "text" || inputType === "email" || inputType === "password" || inputType === "textarea"
+                ? (
+                  <TextInput
+                    type={inputType}
+                    id={fieldName}
+                    isInvalid={getValidationMessages(fieldName).length > 0}
+                    placeholder={title}
+                    value={typeof value() === "string" ? value() : undefined}
+                    onChange={(v) => onFieldChange(fieldName, v)}
+                  />
+                )
+                : inputType === "select"
+                ? (
+                  <Select
+                    id={fieldName}
+                    isInvalid={getValidationMessages(fieldName).length > 0}
+                    placeholder={title}
+                    value={value()}
+                    options={options}
+                    allowNull={true}
+                    onChange={(v) => onFieldChange(fieldName, v)}
+                  />
+                )
+                : inputType === "lookup"
+                ? (
+                  <LookupInput
+                    id={fieldName}
+                    isInvalid={getValidationMessages(fieldName).length > 0}
+                    placeholder={title}
+                    entityType={entityType!}
+                    value={typeof value() === "string" ? value() : undefined}
+                    onChange={(v) => onFieldChange(fieldName, v)}
+                  />
+                )
+                : inputType}
             </FormFields.Field>
           );
         }}

@@ -1,6 +1,6 @@
-import { Colour } from "@frontend/lib";
-import { children, createMemo, JSX, Show } from "npm:solid-js";
-import { assert } from "npm:ts-essentials";
+import { children, createMemo, type JSX, Show } from "solid-js";
+import { assert } from "ts-essentials";
+import type { Colour } from "../helper.ts";
 
 interface Props {
   colour?: Colour;
@@ -34,24 +34,37 @@ export function Card(props: Props) {
     return [hp, bp, fp] as const;
   });
 
-  const whiteText =
-    props.colour === "primary" ||
+  const whiteText = props.colour === "primary" ||
     props.colour === "secondary" ||
     props.colour === "success" ||
     props.colour === "danger";
 
+  const parts = evalParts();
+
   return (
     <div class="card">
-      <div class="card-header" classList={{ [`bg-${props.colour}`]: true, "text-white": whiteText }}>
-        {evalParts()[0].text}
+      <div
+        class="card-header"
+        classList={{ [`bg-${props.colour}`]: true, "text-white": whiteText }}
+      >
+        {parts[0].text}
       </div>
 
-      <div class="card-body">{evalParts()[1].children}</div>
+      <div
+        class="card-body"
+        style={{
+          padding: parts[1].pad !== undefined ? `${parts[1].pad}rem` : undefined,
+        }}
+      >
+        {parts[1].children}
+      </div>
 
-      <Show when={evalParts()[2]}>
+      <Show when={parts[2]}>
         {(footer) => (
           <div class="card-footer">
-            <div class="d-flex gap-2 justify-content-md-end">{footer().children}</div>
+            <div class="d-flex gap-2 justify-content-end">
+              {footer().children}
+            </div>
           </div>
         )}
       </Show>
@@ -69,6 +82,7 @@ Card.Header = (props: HeaderProps) => {
 
 interface BodyProps {
   children: JSX.Element;
+  pad?: number;
 }
 
 Card.Body = (props: BodyProps) => {

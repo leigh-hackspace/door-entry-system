@@ -9,20 +9,18 @@ import { GlobalDeviceCollection } from "../services/index.ts";
 import { assertOneRecord, PaginationSchema, toDrizzleOrderBy, UUID, withId } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 
-const TagSearchSchema = v.intersect([PaginationSchema]);
+const TagSearchSchema = v.intersect([PaginationSchema, v.object({ user_id: v.optional(UUID) })]);
 
 export const TagRouter = tRPC.router({
   Search: tRPC.ProtectedProcedure.input(v.parser(TagSearchSchema)).query(
-    async ({ ctx, input: { take, skip, orderBy, search } }) => {
+    async ({ ctx, input: { take, skip, orderBy, search, user_id } }) => {
       const quickSearchCondition = search
         ? or(
-            ilike(TagTable.code, `%${search}%`),
-            ilike(TagTable.description, `%${search}%`),
-            ilike(UserTable.name, `%${search}%`)
-          )
+          ilike(TagTable.code, `%${search}%`),
+          ilike(TagTable.description, `%${search}%`),
+          ilike(UserTable.name, `%${search}%`),
+        )
         : and();
-
-      let user_id: string | undefined;
 
       // Normal users can only see tags belonging to them
       if (ctx.session.user.role !== "admin") {
@@ -49,7 +47,7 @@ export const TagRouter = tRPC.router({
         .where(condition);
 
       return { rows, total } as const;
-    }
+    },
   ),
 
   One: tRPC.ProtectedProcedure.input(v.parser(UUID)).query(async ({ input }) => {
@@ -88,11 +86,12 @@ export const TagRouter = tRPC.router({
       });
 
       await GlobalDeviceCollection.pushValidCodes();
-    }
+    },
   ),
 
   Delete: tRPC.ProtectedProcedure.input(v.parser(UUID)).mutation(async ({ ctx, input }) => {
     const tag = assertOneRecord(await db.select().from(TagTable).where(eq(TagTable.id, input)));
+
     // Admins can delete all, users can only delete own
     assert(ctx.session.user.role === "admin" || tag.user_id === ctx.session.user.id, "No permission");
 

@@ -16,7 +16,7 @@
     "superjson": "npm:superjson@^2.2.2",
     "ts-essentials": "npm:ts-essentials",
     "dotenv": "npm:dotenv",
-    "valibot": "npm:valibot",
+    "valibot": "npm:valibot@^1.1.0",
     "drizzle-orm": "npm:drizzle-orm"
   }
 }

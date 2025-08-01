@@ -20,7 +20,7 @@ export const EmailAddress = v.pipe(
   v.string(),
   v.email("Not a valid email address"),
   v.title("Email Address"),
-  v.metadata(FieldMetadata({ icon: "📧" }))
+  v.metadata(FieldMetadata({ icon: "📧" })),
 );
 
 export const Password = (title: string, desc = "") =>
@@ -65,10 +65,12 @@ export function assertConditions(condition: Condition): { success: boolean; mess
 
     return {
       success: !ands.some((c) => !c.success),
-      message: `(Must be all of: ${ands
-        .filter((c) => !c.success)
-        .map((c) => `${c.message}`)
-        .join(" AND ")})`,
+      message: `(Must be all of: ${
+        ands
+          .filter((c) => !c.success)
+          .map((c) => `${c.message}`)
+          .join(" AND ")
+      })`,
     };
   } else if ("or" in condition) {
     if (condition.or.length === 0) {
@@ -79,12 +81,21 @@ export function assertConditions(condition: Condition): { success: boolean; mess
 
     return {
       success: ors.some((c) => c.success),
-      message: `(Must be either: ${ors
-        .filter((c) => !c.success)
-        .map((c) => `${c.message}`)
-        .join(" OR ")})`,
+      message: `(Must be either: ${
+        ors
+          .filter((c) => !c.success)
+          .map((c) => `${c.message}`)
+          .join(" OR ")
+      })`,
     };
   }
 
   throw new Error("Invalid condition format");
 }
+
+export const RowSelection = v.object({
+  ids: v.array(v.string()),
+  mode: v.picklist(["noneBut", "allBut"]),
+});
+
+export type RowSelection = v.InferOutput<typeof RowSelection>;

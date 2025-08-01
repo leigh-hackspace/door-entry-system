@@ -1,5 +1,5 @@
-import { UserCreateSchema, UserUpdateSchema } from "@door-entry-management-system/common";
-import { and, eq, ilike, or } from "drizzle-orm";
+import { RowSelection, UserCreateSchema, UserUpdateSchema } from "@door-entry-management-system/common";
+import { and, eq, ilike, inArray, notInArray, or } from "drizzle-orm";
 import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import * as uuid from "npm:uuid";
 import { assert } from "ts-essentials";
@@ -15,9 +15,7 @@ const UserSearchSchema = v.intersect([PaginationSchema]);
 export const UserRouter = tRPC.router({
   Search: tRPC.ProtectedProcedure.input(v.parser(UserSearchSchema)).query(
     async ({ input: { take, skip, orderBy, search } }) => {
-      const quickSearchCondition = search
-        ? or(ilike(UserTable.email, `%${search}%`), ilike(UserTable.name, `%${search}%`))
-        : and();
+      const quickSearchCondition = search ? or(ilike(UserTable.email, `%${search}%`), ilike(UserTable.name, `%${search}%`)) : and();
 
       const condition = and(quickSearchCondition);
 
@@ -36,11 +34,11 @@ export const UserRouter = tRPC.router({
         db_rows.map(async (user) => ({
           ...user,
           image_url: "https://gravatar.com/avatar/" + (await getHexEncodedSha256(user.email)),
-        }))
+        })),
       );
 
       return { rows, total } as const;
-    }
+    },
   ),
 
   One: tRPC.ProtectedProcedure.input(v.parser(UUID)).query(async ({ input }) => {
@@ -48,9 +46,7 @@ export const UserRouter = tRPC.router({
 
     const goCardlessService = new GoCardlessService();
 
-    const payments = user.gocardless_customer_id
-      ? await goCardlessService.getPayments(user.gocardless_customer_id)
-      : null;
+    const payments = user.gocardless_customer_id ? await goCardlessService.getPayments(user.gocardless_customer_id) : null;
 
     return {
       ...user,
@@ -112,12 +108,14 @@ export const UserRouter = tRPC.router({
       }
 
       await db.update(UserTable).set(update).where(eq(UserTable.id, id));
-    }
+    },
   ),
 
-  Delete: tRPC.ProtectedProcedure.input(v.parser(UUID)).mutation(async ({ ctx, input }) => {
+  Delete: tRPC.ProtectedProcedure.input(RowSelection).mutation(async ({ ctx, input: { ids, mode } }) => {
     assertRole(ctx, "admin");
 
-    await db.delete(UserTable).where(eq(UserTable.id, input));
+    const where = mode === "noneBut" ? inArray(UserTable.id, ids) : notInArray(UserTable.id, ids.slice());
+
+    await db.delete(UserTable).where(where);
   }),
 });

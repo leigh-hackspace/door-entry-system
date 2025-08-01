@@ -3,6 +3,6 @@
   "exports": "./src/index.ts",
   "imports": {
     "ts-essentials": "npm:ts-essentials",
-    "valibot": "npm:valibot"
+    "valibot": "npm:valibot@^1.1.0"
   }
 }

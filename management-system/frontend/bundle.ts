@@ -1,33 +1,36 @@
-import { denoPlugins } from "jsr:@luca/esbuild-deno-loader@0.11.1";
+import { assertUnreachable } from "@door-entry-management-system/common";
+import * as esbuild from "esbuild";
+import { solidPlugin } from "esbuild-plugin-solid";
+import { denoLoader, denoResolver } from "jsr:@duesabati/esbuild-deno-plugin@0.2.6";
 import path from "node:path";
-import * as esbuild from "npm:esbuild";
-import { solidPlugin } from "npm:esbuild-plugin-solid";
-import * as v from "npm:valibot";
-import { assertUnreachable } from "../common/src/index.ts";
+import * as v from "valibot";
 
 const mode = v.parse(v.picklist(["--watch", "--build"]), Deno.args[0]);
-
-const [denoResolver, denoLoader] = [...denoPlugins({})];
 
 const denoJsonPath = path.resolve("../deno.json");
 const version = JSON.parse(Deno.readTextFileSync(denoJsonPath)).version;
 
 const ctx = await esbuild.context({
   plugins: [
-    denoResolver,
+    denoResolver({
+      configPath: denoJsonPath,
+    }),
 
     // Solid handles the JSX, so it needs to be sandwiched between the deno plugins
     solidPlugin({
       solid: {
         moduleName: "npm:solid-js/web",
       },
-    }) as esbuild.Plugin,
+    }),
 
-    denoLoader,
+    denoLoader({
+      configPath: denoJsonPath,
+    }),
   ],
 
   define: { "process.env.VERSION": JSON.stringify(version) },
 
+  absWorkingDir: import.meta.dirname,
   entryPoints: ["src/app.tsx"],
   outdir: "web/js/",
   bundle: true,

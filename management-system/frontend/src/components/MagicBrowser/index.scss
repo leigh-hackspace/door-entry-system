@@ -1,0 +1,7 @@
+.magic-browser {
+  min-height: 0;
+
+  & > .search {
+    padding: 0.5rem 0.5rem 0 0.5rem;
+  }
+}

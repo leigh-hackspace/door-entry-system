@@ -2,18 +2,23 @@
   "name": "@door-entry-management-system/frontend",
   "exports": "./src/app.tsx",
   "tasks": {
-    "dev": "deno run --allow-read --allow-write --allow-env --allow-net --allow-run --cached-only bundle.ts --watch",
-    "build": "deno run --allow-read --allow-write --allow-env --allow-net --allow-run --cached-only bundle.ts --build",
+    "dev": "deno run --allow-read --allow-write --allow-env --allow-net --allow-run --allow-ffi --cached-only bundle.ts --watch",
+    "build": "deno run --allow-read --allow-write --allow-env --allow-net --allow-run --allow-ffi --cached-only bundle.ts --build",
     "serve": "deno run --env-file=../.env --allow-read --allow-net --allow-env --cached-only server.ts",
-    "sass": "sass sass/bootstrap.scss web/css/bootstrap.css"
+    "sass-dev": "sass --watch sass/bootstrap.scss:web/css/bootstrap.css src/index.scss:web/css/index.css",
+    "sass-build": "sass sass/bootstrap.scss:web/css/bootstrap.css src/index.scss:web/css/index.css"
   },
   "imports": {
     "@luca/esbuild-deno-loader": "jsr:@luca/esbuild-deno-loader@^0.11.1",
+    "@solidjs/router": "npm:@solidjs/router@^0.15.3",
     "@std/http": "jsr:@std/http@^1.0.12",
     "@trpc/client": "npm:@trpc/client@^11.4.3",
     "@trpc/server": "npm:@trpc/server@^11.4.3",
     "bootstrap": "npm:bootstrap@^5.3.3",
-    "esbuild": "npm:esbuild@^0.24.0",
+    "date-fns": "npm:date-fns@^4.1.0",
+    "esbuild": "npm:esbuild@^0.25.8",
+    "esbuild-css-modules-plugin": "npm:esbuild-css-modules-plugin@^3.1.5",
+    "esbuild-plugin-solid": "npm:esbuild-plugin-solid@^0.6.0",
     "jsx-runtime": "npm:jsx-runtime@^1.2.0",
     "solid-js": "npm:solid-js@^1.9.3",
     "@frontend/components": "./src/components/index.ts",
@@ -21,6 +26,8 @@
     "@frontend/lib": "./src/lib/index.ts",
     "@frontend/helper": "./src/helper/index.ts",
     "common": "@door-entry-management-system/common",
-    "superjson": "npm:superjson@^2.2.2"
+    "superjson": "npm:superjson@^2.2.2",
+    "ts-essentials": "npm:ts-essentials@^10.1.1",
+    "valibot": "npm:valibot@^1.1.0"
   }
 }

@@ -1,10 +1,21 @@
-import { FieldMetadata } from "@door-entry-management-system/common";
-import { Card, LinkButton, MagicBrowser, refreshAllBrowsers } from "@frontend/components";
-import { openConfirm } from "@frontend/dialogs";
+import { assertError, FieldMetadata } from "@door-entry-management-system/common";
+import {
+  Button,
+  Card,
+  CursorDefault,
+  fetchParamsFromCursor,
+  LinkButton,
+  MagicBrowser,
+  type RowData,
+  RowDataDefault,
+  RowSelectionDefault,
+} from "@frontend/components";
+import { openAlert, openConfirm } from "@frontend/dialogs";
 import { beginPage } from "@frontend/helper";
-import type { DeviceSearchRecord, FetchParameters } from "@frontend/lib";
+import type { DeviceSearchRecord } from "@frontend/lib";
 import type { RouteSectionProps } from "npm:@solidjs/router";
-import * as v from "npm:valibot";
+import { createEffect, createSignal, Show } from "solid-js";
+import * as v from "valibot";
 
 const DeviceTableSchema = v.object({
   name: v.pipe(v.string(), v.title("Name"), v.metadata(FieldMetadata({ icon: "N" }))),
@@ -16,18 +27,41 @@ const DeviceTableSchema = v.object({
 export function Devices(props: RouteSectionProps) {
   const { navigate, tRPC } = beginPage(["admin", "user"]);
 
-  const onFetch = async (params: FetchParameters) => {
-    return tRPC.Device.Search.query(params);
-  };
+  const [rows, setRows] = createSignal<RowData<DeviceSearchRecord>>(RowDataDefault);
 
-  const onDelete = async (row: DeviceSearchRecord) => {
-    const res = await openConfirm("Delete device", `Are you sure you wish to delete "${row.name}"`);
+  const cursorSignal = createSignal(CursorDefault);
+  const searchSignal = createSignal("");
+  const selectionSignal = createSignal(RowSelectionDefault);
 
-    if (res === "yes") {
-      await tRPC.Device.Delete.mutate(row.id);
-      refreshAllBrowsers();
+  const fetchRows = async () => {
+    const cursor = cursorSignal[0]();
+    const params = fetchParamsFromCursor(cursor);
+
+    try {
+      setRows(await tRPC.Device.Search.query({ ...params, search: searchSignal[0]() }));
+    } catch (err) {
+      assertError(err);
+      await openAlert(`Fetch Error: ${err.name}`, err.message);
     }
   };
+
+  const onDelete = async () => {
+    const { total } = rows();
+    const { ids, mode } = selectionSignal[0]();
+
+    const deleteCount = mode === "noneBut" ? ids.length : total - ids.length;
+    if (deleteCount === 0) return;
+
+    const res = await openConfirm("Delete user", `Are you sure you wish to delete ${deleteCount} devices`);
+
+    if (res === "yes") {
+      await tRPC.User.Delete.mutate({ ids, mode });
+
+      await fetchRows();
+    }
+  };
+
+  createEffect(fetchRows);
 
   return (
     <main>
@@ -36,14 +70,17 @@ export function Devices(props: RouteSectionProps) {
         <Card.Body>
           <MagicBrowser
             schema={DeviceTableSchema}
-            rowActions={[
-              { name: "Edit", colour: "info", onClick: (row) => navigate(`/devices/${row.id}`) },
-              { name: "Delete", colour: "danger", onClick: onDelete },
-            ]}
-            onFetch={onFetch}
+            rowData={rows()}
+            cursor={cursorSignal}
+            selection={selectionSignal}
           />
         </Card.Body>
         <Card.Footer>
+          <Show when={selectionSignal[0]().ids.length > 0}>
+            <Button colour="danger" on:click={() => onDelete()}>
+              Delete
+            </Button>
+          </Show>{" "}
           <LinkButton colour="info" href="/devices/new">
             New
           </LinkButton>

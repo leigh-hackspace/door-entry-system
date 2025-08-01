@@ -1,13 +1,11 @@
 import type { AppRouter } from "@door-entry-management-system/backend";
-import {
-  assertUnreachable,
-  type EntityType,
-} from "@door-entry-management-system/common";
+import { assertUnreachable, type EntityType } from "@door-entry-management-system/common";
+import type { FetchParameters } from "@frontend/components";
 import type { TRPCClient } from "@trpc/client";
 import type { Unsubscribable } from "@trpc/server/observable";
-import { assert } from "npm:ts-essentials";
-import * as v from "npm:valibot";
-import type { FetchParameters, SessionUser } from "./common.ts";
+import { assert } from "ts-essentials";
+import * as v from "valibot";
+import type { SessionUser } from "./common.ts";
 import { SessionService } from "./session.ts";
 import { ToastService } from "./toast.ts";
 import { getTrpcClient } from "./trpc.ts";
@@ -26,8 +24,7 @@ export class AppService {
   }
 
   public tRPC = getTrpcClient({
-    getAuthorisation: () =>
-      this.sessionService.session()?.sessionUser.sessionToken,
+    getAuthorisation: () => this.sessionService.session()?.sessionUser.sessionToken,
     onSessionExpired: () => this.onSessionExpired(),
   });
 
@@ -129,10 +126,7 @@ class LookupService {
     }
   }
 
-  public getMany(
-    type: EntityType,
-    fetch: FetchParameters,
-  ): Promise<{ rows: readonly { id: string }[]; total: number }> {
+  public getMany(type: EntityType, fetch: FetchParameters): Promise<{ rows: readonly { id: string }[]; total: number }> {
     if (type === "User") {
       return this.api.User.Search.query(fetch);
     } else if (type === "Tag") {
