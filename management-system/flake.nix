@@ -1,5 +1,5 @@
 {
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
   outputs = { self, nixpkgs, flake-utils, ... }:
@@ -11,12 +11,7 @@
           buildInputs = with pkgs; [ git deno gnused sass nixpkgs-fmt ];
         };
 
-        packages.default = let
-          hashes = {
-            aarch64-darwin = "sha256-N4GxH/ItKUSatEq7NiMqgzvIS5bIZ8u9itKoVdhTz6g=";
-            x86_64-linux = "sha256-UoI6pGTHhayzru9wzZMFo8I0YP9hAQ8D3G5yb+wO5J0=";
-          };
-        in pkgs.stdenv.mkDerivation {
+        packages.default = pkgs.stdenv.mkDerivation {
           pname = "door-entry-management-system";
           version = (builtins.fromJSON (builtins.readFile ./deno.json)).version;
 
@@ -27,9 +22,7 @@
           dontFixup = true;
           dontPatchShebangs = true;
 
-          outputHashAlgo = "sha256";
-          outputHashMode = "recursive";
-          outputHash = hashes.${system};
+          __noChroot = true;
 
           installPhase = ''
             shopt -s extglob
@@ -37,6 +30,7 @@
             export HOME="$(mktemp -d)"
 
             ${pkgs.deno}/bin/deno i
+            ${pkgs.deno}/bin/deno cache frontend/bundle.ts
             ${pkgs.deno}/bin/deno cache frontend/server.ts
 
             ${pkgs.deno}/bin/deno task build

@@ -48,7 +48,7 @@ export class DeviceConnection {
     try {
       const res = await this.doRequest("", "GET");
 
-      if (!res) {
+      if (!res || !this.device.id) {
         console.log("Device NOT OK!");
         return;
       }
