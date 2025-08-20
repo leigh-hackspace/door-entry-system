@@ -1,5 +1,5 @@
-import { format, formatDistanceToNow } from "npm:date-fns";
-import { enGB } from "npm:date-fns/locale";
+import { format, formatDistanceToNow } from "date-fns";
+import { enGB } from "date-fns/locale";
 
 interface Props {
   record: { created: Date; updated: Date };

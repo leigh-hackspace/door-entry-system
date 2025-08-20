@@ -1,4 +1,4 @@
-import { children, createMemo, For, type JSXElement } from "npm:solid-js";
+import { children, createMemo, For, type JSXElement } from "solid-js";
 
 interface Props {
   children: JSXElement;
@@ -23,9 +23,7 @@ export function FormFields(props: Props) {
             <div classList={{ "input-group": true, "has-validation": field.messages.length > 0 }}>
               {field.icon && <span class="input-group-text">{field.icon}</span>}
               {field.children}
-              {field.messages.map((m) => (
-                <div class="invalid-feedback">{m}</div>
-              ))}
+              {field.messages.map((m) => <div class="invalid-feedback">{m}</div>)}
             </div>
             {field.description && <div class="form-text">{field.description}</div>}
           </div>

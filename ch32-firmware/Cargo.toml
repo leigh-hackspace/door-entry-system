@@ -1,0 +1,23 @@
+[package]
+name = "ch32-firmware"
+version = "0.1.0"
+edition = "2021"
+resolver = "3"
+
+[dependencies]
+qingke = "*"
+qingke-rt = { version = "*", features = ["highcode"] }
+panic-halt = "1.0"
+ch32-hal = { git = "https://github.com/cjdell/ch32-hal.git", default-features = false, features = [
+    # "ch32v003j4m6",
+    "ch32v003f4p6",
+    "memory-x"
+] }
+mfrc522 = { version = "0.8.0", default-features = false }
+embedded-hal = "1.0.0"
+critical-section = "1.2.0"
+
+[profile.release]
+strip = false   # symbols are not flashed to the microcontroller, so don't strip them.
+lto = true
+opt-level = "z" # Optimize for size.

@@ -1,0 +1,18 @@
+[package]
+name = "rpi-firmware"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+async-trait = "0.1.88"
+bytes = "1.10.1"
+ezsockets = { version = "0.7.0", features = ["client"] }
+futures = "0.3.31"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.142"
+serialport = "4.7.2"
+tokio = { version = "1.47.1", features = ["full"] }
+tokio-serial = { version = "5.4.5", features = ["codec"] }
+tokio-util = { version = "0.7.16", features = ["codec"] }
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"

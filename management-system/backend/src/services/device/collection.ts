@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import * as uuid from "npm:uuid";
+import * as uuid from "uuid";
 import { db, DeviceTable } from "../../db/index.ts";
 import type { DeviceState, LogCodeRequest } from "./common.ts";
 import { DeviceConnection } from "./connection.ts";
@@ -8,7 +8,7 @@ export class DeviceCollection {
   private devices: Record<string, DeviceConnection> = {};
 
   constructor() {
-    void this.reloadDevices();
+    // void this.reloadDevices();
   }
 
   public async reloadDevices() {
@@ -73,7 +73,7 @@ export class DeviceCollection {
     return Promise.all(
       Object.values(this.devices).map((device) => {
         device.pushLatchState(latch);
-      })
+      }),
     );
   }
 

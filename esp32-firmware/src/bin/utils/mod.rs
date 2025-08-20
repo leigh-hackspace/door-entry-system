@@ -91,3 +91,16 @@ impl DoorPins {
         Self { door: peripherals.GPIO2 }
     }
 }
+
+pub struct HardResetPins {
+    pub reset: GpioPin<3>,
+}
+
+impl HardResetPins {
+    pub fn new() -> Self {
+        let peripherals = unsafe { Peripherals::steal() };
+
+        Self { reset: peripherals.GPIO3 }
+    }
+}
+

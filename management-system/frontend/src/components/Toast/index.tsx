@@ -1,5 +1,5 @@
-import { formatDistanceToNow } from "npm:date-fns";
-import { createSignal } from "npm:solid-js";
+import { formatDistanceToNow } from "date-fns";
+import { createSignal } from "solid-js";
 
 interface Props {
   id: number;

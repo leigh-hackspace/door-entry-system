@@ -4,7 +4,7 @@ import { FieldMetadata, IpAddressLength } from "./common.ts";
 export const DeviceNameLength = 16;
 
 export interface DeviceInfo {
-  id: string;
+  id?: string;
   name: string;
   ip_address: string;
   created?: Date;
@@ -17,14 +17,14 @@ export const DeviceCreateSchema = v.object({
     v.minLength(2),
     v.maxLength(DeviceNameLength),
     v.title("Name"),
-    v.metadata(FieldMetadata({ icon: "📟" }))
+    v.metadata(FieldMetadata({ icon: "📟" })),
   ),
   ip_address: v.pipe(
     v.string(),
     v.minLength(7),
     v.maxLength(IpAddressLength),
     v.title("IP Address"),
-    v.metadata(FieldMetadata({ icon: "📡" }))
+    v.metadata(FieldMetadata({ icon: "📡" })),
   ),
 });
 

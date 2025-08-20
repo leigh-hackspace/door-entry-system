@@ -1,9 +1,9 @@
 import type { ActivityLogAction, DeviceInfo } from "@door-entry-management-system/common";
+import { WebClient } from "@slack/web-api";
 import { eq } from "drizzle-orm";
 import { getTableColumns } from "drizzle-orm/utils";
 import { clearInterval, setInterval } from "node:timers";
-import { WebClient } from "npm:@slack/web-api";
-import * as uuid from "npm:uuid";
+import * as uuid from "uuid";
 import * as v from "valibot";
 import { Config } from "../../config/index.ts";
 import { ActivityLogTable, db, DeviceTable, TagTable, UserTable } from "../../db/index.ts";

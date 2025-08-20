@@ -7,16 +7,22 @@
     "push": "drizzle-kit push"
   },
   "imports": {
+    "@slack/web-api": "npm:@slack/web-api@^7.9.3",
     "@trpc/server": "npm:@trpc/server@^11.4.3",
     "@types/jsonwebtoken": "npm:@types/jsonwebtoken@^9.0.7",
+    "@types/node": "npm:@types/node@^24.2.0",
+    "cors": "npm:cors@^2.8.5",
     "drizzle-kit": "npm:drizzle-kit@^0.29.1",
+    "express": "npm:express@^5.1.0",
     "gocardless-nodejs": "npm:gocardless-nodejs@^4.3.0",
     "jsonwebtoken": "npm:jsonwebtoken@^9.0.2",
     "pg": "npm:pg@^8.13.1",
     "superjson": "npm:superjson@^2.2.2",
     "ts-essentials": "npm:ts-essentials",
     "dotenv": "npm:dotenv",
+    "uuid": "npm:uuid@^11.1.0",
     "valibot": "npm:valibot@^1.1.0",
-    "drizzle-orm": "npm:drizzle-orm"
+    "drizzle-orm": "npm:drizzle-orm",
+    "websocket-express": "npm:websocket-express@^4.0.1"
   }
 }

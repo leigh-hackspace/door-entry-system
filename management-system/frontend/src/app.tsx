@@ -1,8 +1,8 @@
 import { NavBar, ToastContainer } from "@frontend/components";
 import { beginPageNoRole } from "@frontend/helper";
-import { Route, Router, type RouteSectionProps } from "npm:@solidjs/router";
-import { type Component, Suspense } from "npm:solid-js";
-import { render } from "npm:solid-js/web";
+import { Route, Router, type RouteSectionProps } from "@solidjs/router";
+import { type Component, Suspense } from "solid-js";
+import { render } from "solid-js/web";
 import { ActivityLogs } from "./routes/activity-log/index.tsx";
 import { AuthReturn } from "./routes/auth-return.tsx";
 import { DeviceEdit } from "./routes/devices/edit.tsx";

@@ -29,10 +29,10 @@ ESP32 C6 SuperMini
               | RX           GND |
               | 0            3V3 |
       BUTTON  | 1             20 |
-      MAGLOCK | 2             19 |  MISO
-              | 3             18 |  MOSI
-              | 4             15 |  SCLK
-       LRC/WS | 5             14 |  CS/SDA
+      MAGLOCK | 2             19 |  MISO       (blue)
+              | 3             18 |  MOSI       (blue white)
+              | 4             15 |  SCLK       (green)
+       LRC/WS | 5             14 |  CS/SDA     (green white)
          BCLK | 6              9 |  Boot DON'T USE
          DOUT | 7              8 |  Built-in LED
               ====================

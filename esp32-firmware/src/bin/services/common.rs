@@ -16,6 +16,7 @@ pub enum SystemMessage {
     OtaComplete,
     HandleLatchFromServer(bool),
     PlayFile(String),
+    HardReset,
 }
 
 const CAP: usize = 4;

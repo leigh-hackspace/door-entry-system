@@ -1,0 +1,3 @@
+{
+    "rust-analyzer.cargo.target": "riscv32ec-unknown-none-elf"
+}

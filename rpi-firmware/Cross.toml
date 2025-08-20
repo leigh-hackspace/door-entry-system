@@ -1,0 +1,5 @@
+# [build]
+# default-target = "arm-unknown-linux-gnueabihf"
+
+# [target.arm-unknown-linux-gnueabihf]
+# image = "ghcr.io/cross-rs/cross:arm-unknown-linux-gnueabihf"

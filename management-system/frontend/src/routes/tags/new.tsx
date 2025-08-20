@@ -1,9 +1,9 @@
 import { type TagCreate, TagCreateSchema } from "@door-entry-management-system/common";
 import { Button, Card, MagicFields } from "@frontend/components";
 import { beginPage } from "@frontend/helper";
-import type { RouteSectionProps } from "npm:@solidjs/router";
-import { createSignal } from "npm:solid-js";
-import * as v from "npm:valibot";
+import type { RouteSectionProps } from "@solidjs/router";
+import { createSignal } from "solid-js";
+import * as v from "valibot";
 
 export function TagNew(props: RouteSectionProps) {
   const { navigate, tRPC, toastService, user } = beginPage(["admin", "user"]);

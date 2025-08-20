@@ -1,4 +1,4 @@
-import { createSignal, For } from "npm:solid-js";
+import { createSignal, For } from "solid-js";
 import { Toast } from "../Toast/index.tsx";
 
 export interface ToastInfo {

@@ -7,6 +7,7 @@ import { ActivityLogTable, db, TagTable, UserTable } from "../db/index.ts";
 import { AuthentikService, DeviceEvents, GlobalDeviceCollection } from "../services/index.ts";
 import { assertRole } from "./common.ts";
 import { tRPC } from "./trpc.ts";
+import { GlobalDeviceCollectionWs } from "../services/device.ws/index.ts";
 
 export const StatsRouter = tRPC.router({
   AdminStats: tRPC.ProtectedProcedure.input(v.parser(v.object({}))).query(async ({ ctx }) => {
@@ -29,15 +30,18 @@ export const StatsRouter = tRPC.router({
   SetLatch: tRPC.ProtectedProcedure.input(v.parser(v.object({ latch: v.boolean() }))).mutation(
     async ({ ctx, input }) => {
       await GlobalDeviceCollection.pushLatchStateAll(input.latch);
-    }
+      await GlobalDeviceCollectionWs.pushLatchStateAll(input.latch);
+    },
   ),
 
   DeviceState: tRPC.ProtectedProcedure.subscription(async function* (opts) {
     const eventName = "update";
 
-    for await (const [data] of on(DeviceEvents, eventName, {
-      signal: opts.signal,
-    })) {
+    for await (
+      const [data] of on(DeviceEvents, eventName, {
+        signal: opts.signal,
+      })
+    ) {
       yield data as ElementOf<DeviceEvents[typeof eventName]>;
     }
   }),

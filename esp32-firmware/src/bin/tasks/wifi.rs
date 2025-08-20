@@ -21,6 +21,7 @@ pub enum WifiStatusSignalMessage {
     Connected(Ipv4Addr),
     Interrupted,
     Disconnected,
+    Reset,
 }
 
 pub type WifiStatusSignal = Signal<CriticalSectionRawMutex, WifiStatusSignalMessage>;
@@ -89,6 +90,7 @@ pub async fn connection_task(
                 if let Err(err) = controller.connect_async().await {
                     println!("Failed to connect to wifi: {err:?}");
                     Timer::after(Duration::from_millis(5000)).await;
+                    status_signal.signal(WifiStatusSignalMessage::Reset);
                     continue;
                 }
 

@@ -1,4 +1,4 @@
-import { DOMParser, type DocumentType, type Element } from "jsr:@b-fuze/deno-dom";
+import { type DocumentType, DOMParser, type Element } from "jsr:@b-fuze/deno-dom";
 import * as Mime from "jsr:@geacko/deno-mimetypes";
 import * as base64 from "jsr:@quentinadam/base64";
 import { crypto } from "jsr:@std/crypto";
@@ -35,6 +35,14 @@ async function serveAsset(assetDir: string, version: string, url: URL) {
 
   if (requestVersion && version !== requestVersion) {
     return new Response(`${version} !== ${requestVersion}`, {
+      ...BASE_HEADERS,
+      headers: { "Content-Type": "text/plain" },
+    });
+  }
+
+  if (url.pathname.endsWith("com.chrome.devtools.json")) {
+    return new Response(`Not found`, {
+      status: 404,
       ...BASE_HEADERS,
       headers: { "Content-Type": "text/plain" },
     });

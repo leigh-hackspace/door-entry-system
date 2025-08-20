@@ -84,6 +84,12 @@ impl AppBuilder for AppProps {
                 }),
             )
             .route(
+                "/reset",
+                get(|| async {
+                    publisher.publish(SystemMessage::HardReset).await;
+                }),
+            )
+            .route(
                 "/stats",
                 get(|| async {
                     let mut flash = FlashStorage::new();

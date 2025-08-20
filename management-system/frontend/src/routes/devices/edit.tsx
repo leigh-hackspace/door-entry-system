@@ -1,8 +1,8 @@
 import { type DeviceUpdate, DeviceUpdateSchema, humanise } from "@door-entry-management-system/common";
 import { Button, Card, DateInfo, MagicFields } from "@frontend/components";
 import { beginPage } from "@frontend/helper";
-import type { RouteSectionProps } from "npm:@solidjs/router";
-import { createResource, For, Show, Suspense } from "npm:solid-js";
+import type { RouteSectionProps } from "@solidjs/router";
+import { createResource, For, Show, Suspense } from "solid-js";
 
 export function DeviceEdit(props: RouteSectionProps) {
   const { tRPC, toastService, user } = beginPage(["admin", "user"]);

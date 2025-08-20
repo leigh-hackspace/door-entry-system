@@ -32,8 +32,8 @@ export const UserCreateSchema = v.object({
       v.string(),
       v.title("Notes"),
       v.description("Miscellaneous notes or extra information"),
-      v.metadata(FieldMetadata({ icon: "📎", text: true }))
-    )
+      v.metadata(FieldMetadata({ icon: "📎", text: true })),
+    ),
   ),
 });
 

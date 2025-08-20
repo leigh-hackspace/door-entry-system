@@ -5,7 +5,7 @@ import { assert } from "ts-essentials";
 import * as v from "valibot";
 import { db, TagTable } from "../db/index.ts";
 import { UserTable } from "../db/schema.ts";
-import { GlobalDeviceCollection } from "../services/index.ts";
+import { GlobalDeviceCollection, GlobalDeviceCollectionWs } from "../services/index.ts";
 import { assertOneRecord, PaginationSchema, toDrizzleOrderBy, UUID, withId } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 
@@ -66,6 +66,7 @@ export const TagRouter = tRPC.router({
     await db.insert(TagTable).values({ id, ...input, user_id });
 
     await GlobalDeviceCollection.pushValidCodes();
+    await GlobalDeviceCollectionWs.pushValidCodes();
 
     return id;
   }),
@@ -86,6 +87,7 @@ export const TagRouter = tRPC.router({
       });
 
       await GlobalDeviceCollection.pushValidCodes();
+      await GlobalDeviceCollectionWs.pushValidCodes();
     },
   ),
 

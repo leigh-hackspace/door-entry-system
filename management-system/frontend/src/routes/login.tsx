@@ -1,10 +1,10 @@
-import { assertUnreachable, LoginDataSchema, type LoginData } from "@door-entry-management-system/common";
+import { assertUnreachable, type LoginData, LoginDataSchema } from "@door-entry-management-system/common";
 import { Button, Card, MagicFields } from "@frontend/components";
 import { AlertDialog, openDialog } from "@frontend/dialogs";
 import { getLogoutReason } from "@frontend/helper";
 import { AppService, getAuthReturnUrl } from "@frontend/lib";
-import { useNavigate, type RouteSectionProps } from "npm:@solidjs/router";
-import { createSignal, onMount, Show } from "npm:solid-js";
+import { type RouteSectionProps, useNavigate } from "@solidjs/router";
+import { createSignal, onMount, Show } from "solid-js";
 
 export function Login(props: RouteSectionProps) {
   const navigate = useNavigate();

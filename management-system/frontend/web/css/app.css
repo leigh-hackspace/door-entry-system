@@ -127,12 +127,12 @@ main {
 
   .navbar-collapse {
     position: absolute;
-    left: 0;
-    right: 0;
-    top: calc(100% + 1rem);
-    z-index: 1;
+    left: 0.5rem;
+    right: 0.5rem;
+    top: calc(100% + 0.5rem);
+    z-index: 5;
     background: white;
-    box-shadow: 0 0 200px var(--bs-gray-500);
+    box-shadow: 0 0 200px var(--bs-gray-700);
     padding: 1rem;
     border-radius: 0.25rem;
   }

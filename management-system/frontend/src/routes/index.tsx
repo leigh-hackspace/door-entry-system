@@ -1,15 +1,15 @@
 import { Button, Card, Tile } from "@frontend/components";
 import { beginPage } from "@frontend/helper";
 import { AppService } from "@frontend/lib";
-import type { Unsubscribable } from "npm:@trpc/server/observable";
-import { createResource, For, Match, onCleanup, onMount, Show, Switch } from "npm:solid-js";
-import { createStore } from "npm:solid-js/store";
+import type { Unsubscribable } from "@trpc/server/observable";
+import { createResource, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
+import { createStore } from "solid-js/store";
 
 export function Home() {
   const { user } = beginPage(["admin", "user"]);
 
   return (
-    <main class="grid gap-3">
+    <main class="grid gap-3" style={{ "--grid-rows": "2" }}>
       <div class="g-col-12 g-col-xl-6">
         <Switch>
           <Match when={user()?.role === "admin"}>

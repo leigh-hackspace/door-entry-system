@@ -1,6 +1,6 @@
 import { AppService } from "@frontend/lib";
-import { useNavigate } from "npm:@solidjs/router";
-import { createSignal, Show } from "npm:solid-js";
+import { useNavigate } from "@solidjs/router";
+import { createSignal, Show } from "solid-js";
 import { onCleanup, onMount } from "solid-js";
 import { Button } from "../Button/index.tsx";
 

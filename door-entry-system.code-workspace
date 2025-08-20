@@ -11,6 +11,12 @@
     },
     {
       "path": "bluetooth-web-app"
+    },
+    {
+      "path": "rpi-firmware"
+    },
+    {
+      "path": "ch32-firmware"
     }
   ],
   "settings": {

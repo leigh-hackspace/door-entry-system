@@ -1,0 +1,8 @@
+# [target.arm-unknown-linux-gnueabihf]
+# linker = "/opt/homebrew/Cellar/arm-linux-gnueabihf-binutils/2.45/bin/arm-linux-gnueabihf-ld"
+
+# [build]
+# target = "arm-unknown-linux-gnueabihf"
+
+[target.arm-unknown-linux-gnueabihf]
+linker = "/opt/homebrew/Cellar/arm-unknown-linux-gnueabihf/13.3.0/bin/arm-linux-gnueabihf-gcc"

@@ -28,6 +28,10 @@ use esp_hal::{
         timg::{MwdtStage, TimerGroup},
     },
 };
+use esp_hal::{
+    gpio::{self, OutputConfig},
+    peripheral::Peripheral as _,
+};
 use esp_wifi::{
     ble::controller::BleConnector,
     wifi::{WifiDevice, WifiStaDevice},
@@ -51,6 +55,8 @@ use tasks::{
     rfid::{rfid_task, RfidSignal, RfidSignalMessage},
     wifi::{connection_task, WifiCommandSignal, WifiCommandSignalMessage, WifiStatusSignal, WifiStatusSignalMessage},
 };
+
+use crate::utils::HardResetPins;
 
 extern crate alloc;
 
@@ -104,6 +110,9 @@ async fn main(spawner: Spawner) {
     if let Err(err) = state_service.init() {
         error!("State Service failed to initialised! {err:?}");
     }
+
+    let mut reset = gpio::Output::new(HardResetPins::new().reset, gpio::Level::High, OutputConfig::default());
+    reset.set_high();
 
     info!("Config initialized!");
 
@@ -224,6 +233,8 @@ async fn main(spawner: Spawner) {
 
     join!(
         async {
+            let mut reset = unsafe { reset.clone_unchecked() };
+
             loop {
                 let now = Instant::now().duration_since_epoch().as_millis();
 
@@ -241,6 +252,7 @@ async fn main(spawner: Spawner) {
                 } else {
                     // Let the watchdog restart the system by NOT feeding it...
                     error!("Not been pinged in over 5 minutes. Restarting!!!");
+                    reset.set_low();
                 }
 
                 Timer::after(Duration::from_millis(5_000)).await;
@@ -253,6 +265,8 @@ async fn main(spawner: Spawner) {
             }
         },
         async {
+            let mut reset = unsafe { reset.clone_unchecked() };
+
             loop {
                 match wifi_status_signal.wait().await {
                     WifiStatusSignalMessage::Connected(ip_address) => {
@@ -262,6 +276,10 @@ async fn main(spawner: Spawner) {
                     }
                     WifiStatusSignalMessage::Interrupted => {}
                     WifiStatusSignalMessage::Disconnected => {}
+                    WifiStatusSignalMessage::Reset => {
+                        info!("==== HARD RESET ====");
+                        reset.set_low();
+                    }
                 }
             }
         },
@@ -282,6 +300,7 @@ async fn main(spawner: Spawner) {
             }
         },
         async {
+            let mut reset = unsafe { reset.clone_unchecked() };
             let mut main_subscriber = channel.subscriber().unwrap();
 
             loop {
@@ -298,8 +317,14 @@ async fn main(spawner: Spawner) {
                         SystemMessage::OtaStarting => *ota_happening.borrow_mut() = true,
                         SystemMessage::OtaComplete => {
                             warn!("Restarting...");
+                            reset.set_low();
+
                             Timer::after(Duration::from_secs(5)).await;
                             esp_hal::system::software_reset()
+                        }
+                        SystemMessage::HardReset => {
+                            warn!("Restarting...");
+                            reset.set_low();
                         }
                     }
                 };

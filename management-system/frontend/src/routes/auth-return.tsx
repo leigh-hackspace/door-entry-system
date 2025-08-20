@@ -1,7 +1,7 @@
 import { Card } from "@frontend/components";
 import { AppService, getAuthReturnUrl } from "@frontend/lib";
-import { useNavigate, type RouteSectionProps } from "npm:@solidjs/router";
-import { onMount } from "npm:solid-js";
+import { type RouteSectionProps, useNavigate } from "@solidjs/router";
+import { onMount } from "solid-js";
 
 export function AuthReturn(props: RouteSectionProps) {
   const navigate = useNavigate();

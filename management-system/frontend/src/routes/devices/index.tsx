@@ -13,7 +13,7 @@ import {
 import { openAlert, openConfirm } from "@frontend/dialogs";
 import { beginPage } from "@frontend/helper";
 import type { DeviceSearchRecord } from "@frontend/lib";
-import type { RouteSectionProps } from "npm:@solidjs/router";
+import type { RouteSectionProps } from "@solidjs/router";
 import { createEffect, createSignal, Show } from "solid-js";
 import * as v from "valibot";
 
