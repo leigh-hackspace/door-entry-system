@@ -1,10 +1,10 @@
+import { assertUnreachable } from "@door-entry-management-system/common";
+import { assert } from "ts-essentials";
 import * as v from "valibot";
 import { Router } from "websocket-express";
 import { GlobalDeviceCollectionWs } from "./collection.ts";
 import { DeviceIncoming } from "./common.ts";
-import { assertUnreachable } from "@door-entry-management-system/common";
 import type { DeviceConnection } from "./connection.ts";
-import { assert } from "ts-essentials";
 
 export * from "./collection.ts";
 
@@ -34,6 +34,10 @@ export function getWebSocketRouter() {
             break;
           case "status_update":
             console.log("status_update", deviceIncoming.status, deviceIncoming.message);
+            break;
+          case "tag_scanned":
+            assert(connection, "No connection!");
+            connection.handleIncomingTag(deviceIncoming);
             break;
           case "latch_changed":
             assert(connection, "No connection!");

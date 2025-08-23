@@ -127,13 +127,14 @@ impl DoorAccessApp {
                 AppEvent::TagScanned(code) => {
                     tracing::info!("Checking tag: {}", code);
 
-                    // Send telemetry to server
-                    ws_cmd_tx.send(WebSocketOutgoing::TagScan {
-                        code: code.to_string(),
-                        timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs(),
-                    });
-
                     if tag_service.check_tag(&code).await {
+                        // Send telemetry to server
+                        ws_cmd_tx.send(WebSocketOutgoing::TagScanned {
+                            allowed: true,
+                            code: code.to_string(),
+                            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs(),
+                        });
+
                         if let Some(tag) = tag_service.get_tag(&code).await {
                             tracing::info!("Access granted for {} ({})", tag.member_name, tag.tag_name);
                             door_service.open_door().await;
@@ -145,6 +146,13 @@ impl DoorAccessApp {
                         }
                     } else {
                         tracing::warn!("Access denied for unknown tag: {}", code);
+
+                        // Send telemetry to server
+                        ws_cmd_tx.send(WebSocketOutgoing::TagScanned {
+                            allowed: false,
+                            code: code.to_string(),
+                            timestamp: std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs(),
+                        });
 
                         ws_cmd_tx.send(WebSocketOutgoing::StatusUpdate {
                             status: "access_denied".to_string(),

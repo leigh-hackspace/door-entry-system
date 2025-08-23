@@ -21,7 +21,14 @@ export const IncomingLatchChanged = v.object({
 });
 export type IncomingLatchChanged = v.InferInput<typeof IncomingLatchChanged>;
 
-export const DeviceIncoming = v.variant("type", [IncomingAnnounce, IncomingStatusUpdate, IncomingLatchChanged]);
+export const IncomingTagScanned = v.object({
+  type: v.literal("tag_scanned"),
+  allowed: v.boolean(),
+  code: v.string(),
+});
+export type IncomingTagScanned = v.InferInput<typeof IncomingTagScanned>;
+
+export const DeviceIncoming = v.variant("type", [IncomingAnnounce, IncomingStatusUpdate, IncomingLatchChanged, IncomingTagScanned]);
 export type DeviceIncoming = v.InferInput<typeof DeviceIncoming>;
 
 // ==== Commands ====

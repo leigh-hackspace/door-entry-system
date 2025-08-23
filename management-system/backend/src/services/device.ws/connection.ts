@@ -1,10 +1,12 @@
-import type { DeviceInfo } from "@door-entry-management-system/common";
+import type { ActivityLogAction, DeviceInfo } from "@door-entry-management-system/common";
+import { WebClient } from "@slack/web-api";
 import { eq, getTableColumns } from "drizzle-orm";
 import { setInterval } from "node:timers";
 import * as uuid from "uuid";
-import { db, DeviceTable, TagTable, UserTable } from "../../db/index.ts";
+import { Config } from "../../config/index.ts";
+import { ActivityLogTable, db, DeviceTable, TagTable, UserTable } from "../../db/index.ts";
 import { DeviceEvents } from "../device/index.ts";
-import type { DeviceOutgoingFn, IncomingLatchChanged } from "./common.ts";
+import type { DeviceOutgoingFn, IncomingLatchChanged, IncomingTagScanned } from "./common.ts";
 
 export class DeviceConnection {
   private interval: NodeJS.Timeout;
@@ -62,6 +64,53 @@ export class DeviceConnection {
     console.log("DeviceConnection.handleLatchChanged:", incoming);
 
     DeviceEvents.emit("update", { name: this.device.name, latch: incoming.latch_state });
+  }
+
+  public async handleIncomingTag(req: IncomingTagScanned) {
+    console.log("DeviceConnection.receiveCode:", req.code);
+
+    const slackClient = new WebClient(Config.DE_SLACK_API_KEY, {});
+
+    const matchingTags = await db
+      .select({ id: TagTable.id, code: TagTable.code, user_id: UserTable.id, user_name: UserTable.name })
+      .from(TagTable)
+      .leftJoin(UserTable, eq(TagTable.user_id, UserTable.id))
+      .where(eq(TagTable.code, req.code));
+
+    const id = uuid.v4();
+
+    let action: ActivityLogAction;
+    let user_id: string | null = null;
+    let user_name: string | null = null;
+
+    if (req.allowed) {
+      action = "allowed";
+
+      const tag = matchingTags.length > 0 ? matchingTags[0] : null;
+
+      if (tag) {
+        ({ user_id, user_name } = tag);
+      }
+    } else {
+      if (matchingTags.length > 0) {
+        action = "denied-unassigned";
+      } else {
+        action = "denied-unknown-code";
+      }
+    }
+
+    if (user_name) {
+      try {
+        await slackClient.chat.postMessage({
+          channel: Config.DE_SLACK_CHANNEL,
+          text: `${user_name} has entered the hackspace`,
+        });
+      } catch (err) {
+        console.error("slackClient.chat.postMessage ERROR:", err);
+      }
+    }
+
+    await db.insert(ActivityLogTable).values({ id, user_id, code: req.code, action });
   }
 
   public destroy() {

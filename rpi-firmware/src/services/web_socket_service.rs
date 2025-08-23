@@ -17,8 +17,8 @@ pub enum WebSocketOutgoing {
     #[serde(rename = "announce")]
     Announce { name: String },
 
-    #[serde(rename = "tag_scan")]
-    TagScan { code: String, timestamp: u64 },
+    #[serde(rename = "tag_scanned")]
+    TagScanned { allowed: bool, code: String, timestamp: u64 },
 
     #[serde(rename = "latch_changed")]
     LatchChanged { latch_state: bool },
@@ -98,7 +98,8 @@ impl WebSocketService {
         evt_tx: mpsc::UnboundedSender<WebSocketIncoming>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         // let config = ClientConfig::new("ws://10.47.49.69:3000/ws");
-        let config = ClientConfig::new("ws://10.3.2.138:3000/ws");
+        // let config = ClientConfig::new("ws://10.3.2.138:3000/ws");
+        let config = ClientConfig::new("ws://10.3.1.20:8472/ws");
 
         let (handle, future) = ezsockets::connect(move |_client| MyClient { evt_tx }, config).await;
 
