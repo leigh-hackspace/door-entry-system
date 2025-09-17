@@ -7,6 +7,10 @@
     "push": "drizzle-kit push"
   },
   "imports": {
+    "@/config": "./src/config/index.ts",
+    "@/db": "./src/db/index.ts",
+    "@/services": "./src/services/index.ts",
+    "@/routers": "./src/routers/index.ts",
     "@slack/web-api": "npm:@slack/web-api@^7.9.3",
     "@trpc/server": "npm:@trpc/server@^11.4.3",
     "@types/jsonwebtoken": "npm:@types/jsonwebtoken@^9.0.7",

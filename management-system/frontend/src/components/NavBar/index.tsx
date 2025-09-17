@@ -1,4 +1,4 @@
-import { AppService } from "@frontend/lib";
+import { AppService } from "@frontend/services";
 import { useNavigate } from "@solidjs/router";
 import { createSignal, Show } from "solid-js";
 import { onCleanup, onMount } from "solid-js";

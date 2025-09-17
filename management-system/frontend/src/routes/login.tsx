@@ -2,7 +2,7 @@ import { assertUnreachable, type LoginData, LoginDataSchema } from "@door-entry-
 import { Button, Card, MagicFields } from "@frontend/components";
 import { AlertDialog, openDialog } from "@frontend/dialogs";
 import { getLogoutReason } from "@frontend/helper";
-import { AppService, getAuthReturnUrl } from "@frontend/lib";
+import { AppService, getAuthReturnUrl } from "@frontend/services";
 import { type RouteSectionProps, useNavigate } from "@solidjs/router";
 import { createSignal, onMount, Show } from "solid-js";
 

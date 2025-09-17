@@ -12,7 +12,7 @@ import {
 } from "@frontend/components";
 import { openAlert, openConfirm } from "@frontend/dialogs";
 import { beginPage } from "@frontend/helper";
-import type { DeviceSearchRecord } from "@frontend/lib";
+import type { DeviceSearchRecord } from "@frontend/services";
 import type { RouteSectionProps } from "@solidjs/router";
 import { createEffect, createSignal, Show } from "solid-js";
 import * as v from "valibot";
@@ -45,6 +45,10 @@ export function Devices(props: RouteSectionProps) {
     }
   };
 
+  const onRowClick = async (row: DeviceSearchRecord) => {
+    navigate(`/devices/${row.id}`);
+  };
+
   const onDelete = async () => {
     const { total } = rows();
     const { ids, mode } = selectionSignal[0]();
@@ -73,6 +77,7 @@ export function Devices(props: RouteSectionProps) {
             rowData={rows()}
             cursor={cursorSignal}
             selection={selectionSignal}
+            onRowClick={onRowClick}
           />
         </Card.Body>
         <Card.Footer>

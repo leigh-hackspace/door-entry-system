@@ -62,13 +62,6 @@ export function debounce<
 }
 
 export function normaliseError(err: Error) {
-  // if (err instanceof AxiosError) {
-  //   if (err.response?.data.message) {
-  //     const newErr = new Error(err.response?.data.message);
-  //     return newErr;
-  //   }
-  // }
-
   return err;
 }
 

@@ -5,7 +5,7 @@ import type { PgColumn } from "npm:drizzle-orm/pg-core";
 import jwt from "jsonwebtoken";
 import { assert } from "npm:ts-essentials";
 import * as v from "npm:valibot";
-import { Config } from "../config/index.ts";
+import { Config } from "@/config";
 import type * as dbSchema from "../db/schema.ts";
 import type { tRPC } from "./trpc.ts";
 
@@ -61,7 +61,7 @@ export function assertOneRecord<T>(records: readonly T[]): T {
 export function toDrizzleOrderBy(
   table: dbSchema.TableType,
   orderBy: Pagination["orderBy"],
-  joinColumns: Record<string, PgColumn> = {}
+  joinColumns: Record<string, PgColumn> = {},
 ) {
   let orderByClause = asc(table.created);
 

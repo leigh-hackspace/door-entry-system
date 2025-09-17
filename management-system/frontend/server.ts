@@ -35,6 +35,7 @@ async function serveAsset(assetDir: string, version: string, url: URL) {
 
   if (requestVersion && version !== requestVersion) {
     return new Response(`${version} !== ${requestVersion}`, {
+      status: 404,
       ...BASE_HEADERS,
       headers: { "Content-Type": "text/plain" },
     });

@@ -1,7 +1,7 @@
 import type { PaymentSummary } from "@door-entry-management-system/common";
 import { GoCardlessClient } from "npm:gocardless-nodejs/client.js";
 import { Environments } from "npm:gocardless-nodejs/constants.js";
-import { Config } from "../config/index.ts";
+import { Config } from "@/config";
 
 export class GoCardlessService {
   #client: GoCardlessClient;

@@ -3,8 +3,8 @@ import { eq } from "drizzle-orm";
 import { initTRPC, TRPCError } from "@trpc/server";
 import type { CreateHTTPContextOptions } from "@trpc/server/adapters/standalone";
 import superjson from "superjson";
-import { db, UserTable } from "../db/index.ts";
-import { AuthentikService, AuthentikUserClient } from "../services/index.ts";
+import { db, UserTable } from "@/db";
+import { AuthentikService, AuthentikUserClient } from "@/services";
 import { assertOneRecord, verifyToken } from "./common.ts";
 
 // deno-lint-ignore no-namespace
@@ -25,7 +25,7 @@ export namespace tRPC {
       const authentikService = new AuthentikService();
 
       const { access_token, refresh_token } = await authentikService.getTokenWithRefreshToken(
-        session.user.refresh_token
+        session.user.refresh_token,
       );
 
       await db.update(UserTable).set({ refresh_token }).where(eq(UserTable.id, session.user.id));

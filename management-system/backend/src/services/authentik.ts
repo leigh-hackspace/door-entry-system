@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { Config } from "../config/index.ts";
+import { Config } from "@/config";
 
 export class AuthentikService {
   public async getTokenWithAuthenticationCode(code: string, return_auth: string) {
@@ -155,7 +155,7 @@ const UserCoreResponseSchema = v.object({
   attributes: v.partial(
     v.object({
       "leighhack.org/gocardless-customer-id": v.string(),
-    })
+    }),
   ),
   uid: v.string(), // Same as "sub"
   path: v.string(),

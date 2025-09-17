@@ -1,6 +1,6 @@
 import type { EntityType } from "@door-entry-management-system/common";
 import { openBrowser } from "@frontend/dialogs";
-import { AppService } from "@frontend/lib";
+import { AppService } from "@frontend/services";
 import { createEffect, createResource } from "solid-js";
 import { assert } from "ts-essentials";
 

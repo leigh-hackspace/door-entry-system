@@ -1,6 +1,6 @@
 import { Button, Card, Tile } from "@frontend/components";
 import { beginPage } from "@frontend/helper";
-import { AppService } from "@frontend/lib";
+import { AppService } from "@frontend/services";
 import type { Unsubscribable } from "@trpc/server/observable";
 import { createResource, For, Match, onCleanup, onMount, Show, Switch } from "solid-js";
 import { createStore } from "solid-js/store";

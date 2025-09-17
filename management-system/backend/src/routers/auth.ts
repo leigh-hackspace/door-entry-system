@@ -1,26 +1,21 @@
+import { Config } from "@/config";
+import { db, UserTable } from "@/db";
+import { AuthentikService, AuthentikUserClient, scryptAsync } from "@/services";
 import { LoginDataSchema } from "@door-entry-management-system/common";
 import { eq } from "drizzle-orm";
-import EventEmitter, { on } from "node:events";
+import { on } from "node:events";
 import jwt from "npm:jsonwebtoken";
 import * as uuid from "npm:uuid";
 import { assert } from "ts-essentials";
 import * as v from "valibot";
-import { Config } from "../config/index.ts";
-import { db, UserTable } from "../db/index.ts";
-import { AuthentikService, AuthentikUserClient, scryptAsync } from "../services/index.ts";
 import { assertOneRecord, type TokenPayload } from "./common.ts";
 import { tRPC } from "./trpc.ts";
-
-interface LoginActivity {
-  loggedIn: string[];
-}
-
-const loginEvents = new EventEmitter<LoginActivity>();
+import { SessionEvents } from "./events.ts";
 
 export const AuthRouter = tRPC.router({
   Login: tRPC.PublicProcedure.input(v.parser(LoginDataSchema)).mutation(async ({ input }) => {
     const user = assertOneRecord(
-      await db.select().from(UserTable).where(eq(UserTable.email, input.email.toLowerCase()))
+      await db.select().from(UserTable).where(eq(UserTable.email, input.email.toLowerCase())),
     );
 
     const result = (await scryptAsync(input.password, user.id)) === user.password_hash;
@@ -30,7 +25,7 @@ export const AuthRouter = tRPC.router({
 
     const token = jwt.sign(payload, Config.DE_SECRET_KEY, { expiresIn: "1h" }); // Expires in 1 hour
 
-    loginEvents.emit("loggedIn", `User "${user.name}" just logged in`);
+    SessionEvents.emit("loggedIn", `User "${user.name}" just logged in`);
 
     return { user, token };
   }),
@@ -54,7 +49,7 @@ export const AuthRouter = tRPC.router({
 
       const { access_token, refresh_token } = await authentikService.getTokenWithAuthenticationCode(
         input.code,
-        input.return_auth
+        input.return_auth,
       );
 
       const authentikUserClient = new AuthentikUserClient(access_token);
@@ -93,19 +88,21 @@ export const AuthRouter = tRPC.router({
 
       const token = jwt.sign(payload, Config.DE_SECRET_KEY, { expiresIn: "1h" }); // Expires in 1 hour
 
-      loginEvents.emit("loggedIn", `User "${user.name}" just logged in`);
+      SessionEvents.emit("loggedIn", `User "${user.name}" just logged in`);
 
       return {
         token,
         user,
       };
-    }
+    },
   ),
 
   Activity: tRPC.ProtectedProcedure.subscription(async function* (opts) {
-    for await (const [data] of on(loginEvents, "loggedIn", {
-      signal: opts.signal,
-    })) {
+    for await (
+      const [data] of on(SessionEvents, "loggedIn", {
+        signal: opts.signal,
+      })
+    ) {
       yield data as string;
     }
   }),

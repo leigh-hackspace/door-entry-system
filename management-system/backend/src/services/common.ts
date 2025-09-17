@@ -1,5 +1,5 @@
 import { scrypt } from "node:crypto";
-import { ScryptKeyLength } from "../db/index.ts";
+import { ScryptKeyLength } from "@/db";
 
 export function scryptAsync(password: string, salt: string) {
   return new Promise<string>((resolve, reject) => {

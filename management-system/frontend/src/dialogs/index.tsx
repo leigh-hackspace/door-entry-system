@@ -1,5 +1,5 @@
 // deno-lint-ignore-file no-explicit-any
-import type { FetchResult } from "@frontend/lib";
+import type { FetchResult } from "@frontend/services";
 import type { JSX } from "solid-js";
 import type * as v from "valibot";
 import type { FetchParameters } from "../components/helper.ts";

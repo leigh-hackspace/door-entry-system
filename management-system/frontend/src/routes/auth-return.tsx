@@ -1,5 +1,5 @@
 import { Card } from "@frontend/components";
-import { AppService, getAuthReturnUrl } from "@frontend/lib";
+import { AppService, getAuthReturnUrl } from "@frontend/services";
 import { type RouteSectionProps, useNavigate } from "@solidjs/router";
 import { onMount } from "solid-js";
 

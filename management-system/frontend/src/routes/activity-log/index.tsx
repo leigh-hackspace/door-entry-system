@@ -11,7 +11,7 @@ import {
 } from "@frontend/components";
 import { openAlert } from "@frontend/dialogs";
 import { beginPage } from "@frontend/helper";
-import type { ActivityLogSearchRecord } from "@frontend/lib";
+import type { ActivityLogSearchRecord } from "@frontend/services";
 import type { RouteSectionProps } from "@solidjs/router";
 import { createEffect, createSignal } from "solid-js";
 import * as v from "valibot";

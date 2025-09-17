@@ -1,6 +1,6 @@
 import type { AppRouter } from "@door-entry-management-system/backend";
 import { includes } from "@door-entry-management-system/common";
-import { AppService, type InferReturn } from "@frontend/lib";
+import { AppService, type InferReturn } from "@frontend/services";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { assert } from "ts-essentials";
 

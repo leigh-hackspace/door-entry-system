@@ -17,6 +17,10 @@ async function start() {
 
   app.use(cors());
 
+  // app.use((req) => {
+  //   console.log(req.socket.remoteAddress);
+  // });
+
   app.use(getWebSocketRouter());
   app.set("shutdown timeout", 1000);
 

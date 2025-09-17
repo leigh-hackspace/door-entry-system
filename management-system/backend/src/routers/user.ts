@@ -4,9 +4,8 @@ import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import * as uuid from "npm:uuid";
 import { assert } from "ts-essentials";
 import * as v from "valibot";
-import { db, UserTable } from "../db/index.ts";
-import { getHexEncodedSha256 } from "../services/common.ts";
-import { GoCardlessService, scryptAsync } from "../services/index.ts";
+import { db, UserTable } from "@/db";
+import { getHexEncodedSha256, GoCardlessService, scryptAsync } from "@/services";
 import { assertOneRecord, assertRole, PaginationSchema, toDrizzleOrderBy, UUID, withId } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 

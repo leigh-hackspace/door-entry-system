@@ -68,7 +68,7 @@ export const ActivityLogRelations = relations(ActivityLogTable, ({ one }) => ({
 export const DeviceTable = pgTable("device", {
   id: uuid().primaryKey(),
   name: varchar({ length: DeviceNameLength }).notNull().unique(),
-  ip_address: varchar({ length: IpAddressLength }).notNull().unique(),
+  ip_address: varchar({ length: IpAddressLength }).notNull(),
   created: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
   updated: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
 });

@@ -1,6 +1,6 @@
 import { and, count, eq, getTableColumns, ilike, or } from "drizzle-orm";
 import * as v from "valibot";
-import { ActivityLogTable, db, UserTable } from "../db/index.ts";
+import { ActivityLogTable, db, UserTable } from "@/db";
 import { PaginationSchema, toDrizzleOrderBy } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 
@@ -9,9 +9,7 @@ const ActivityLogSearchSchema = v.intersect([PaginationSchema]);
 export const ActivityLogRouter = tRPC.router({
   Search: tRPC.ProtectedProcedure.input(v.parser(ActivityLogSearchSchema)).query(
     async ({ ctx, input: { take, skip, orderBy, search } }) => {
-      const quickSearchCondition = search
-        ? or(ilike(ActivityLogTable.code, `%${search}%`), ilike(UserTable.name, `%${search}%`))
-        : and();
+      const quickSearchCondition = search ? or(ilike(ActivityLogTable.code, `%${search}%`), ilike(UserTable.name, `%${search}%`)) : and();
 
       let user_id: string | undefined;
 
@@ -40,6 +38,6 @@ export const ActivityLogRouter = tRPC.router({
         .where(condition);
 
       return { rows, total } as const;
-    }
+    },
   ),
 });

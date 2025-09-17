@@ -13,7 +13,7 @@ import {
 } from "@frontend/components";
 import { openAlert, openConfirm } from "@frontend/dialogs";
 import { beginPage } from "@frontend/helper";
-import type { UserSearchRecord } from "@frontend/lib";
+import type { UserSearchRecord } from "@frontend/services";
 import type { RouteSectionProps } from "@solidjs/router";
 import { createEffect, createSignal, Show } from "solid-js";
 import * as v from "valibot";

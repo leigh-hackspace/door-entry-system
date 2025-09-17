@@ -3,9 +3,9 @@ import { and, count, eq, getTableColumns, ilike, or } from "drizzle-orm";
 import * as uuid from "npm:uuid";
 import { assert } from "ts-essentials";
 import * as v from "valibot";
-import { db, TagTable } from "../db/index.ts";
+import { db, TagTable } from "@/db";
 import { UserTable } from "../db/schema.ts";
-import { GlobalDeviceCollection, GlobalDeviceCollectionWs } from "../services/index.ts";
+import { GlobalDeviceCollection, GlobalDeviceCollectionWs } from "@/services";
 import { assertOneRecord, PaginationSchema, toDrizzleOrderBy, UUID, withId } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 

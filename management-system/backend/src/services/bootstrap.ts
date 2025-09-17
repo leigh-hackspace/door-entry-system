@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import * as uuid from "npm:uuid";
-import { db } from "../db/index.ts";
+import { db } from "@/db";
 import { UserTable } from "../db/schema.ts";
 import { scryptAsync } from "./common.ts";
 

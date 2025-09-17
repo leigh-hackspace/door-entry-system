@@ -1,11 +1,12 @@
-import { type DeviceUpdate, DeviceUpdateSchema, humanise } from "@door-entry-management-system/common";
+import { type DeviceUpdate, DeviceUpdateSchema } from "@door-entry-management-system/common";
 import { Button, Card, DateInfo, MagicFields } from "@frontend/components";
 import { beginPage } from "@frontend/helper";
 import type { RouteSectionProps } from "@solidjs/router";
 import { createResource, For, Show, Suspense } from "solid-js";
+import { downloadFile, uploadFile } from "@frontend/utils";
 
 export function DeviceEdit(props: RouteSectionProps) {
-  const { tRPC, toastService, user } = beginPage(["admin", "user"]);
+  const { tRPC } = beginPage(["admin"]);
 
   const id = () => props.params.id;
 
@@ -19,6 +20,27 @@ export function DeviceEdit(props: RouteSectionProps) {
   const onRefresh = async () => {
     refetch();
   };
+
+  async function onClickUpload() {
+    const [file_name, file_data] = await uploadFile();
+    await tRPC.Device.UploadFile.mutate({ device_id: id(), file_name, file_data });
+    refetch();
+  }
+
+  async function onClickDownload(file_name: string) {
+    const data = await tRPC.Device.DownloadFile.query({ device_id: id(), file_name });
+    if (!data) return;
+    downloadFile(file_name, data.file_data);
+  }
+
+  async function onClickDelete(file_name: string) {
+    await tRPC.Device.DeleteFile.mutate({ device_id: id(), file_name });
+    refetch();
+  }
+
+  async function onClickPlay(file_name: string) {
+    await tRPC.Device.PlayFile.query({ device_id: id(), file_name });
+  }
 
   return (
     <main class="grid gap-3">
@@ -49,24 +71,37 @@ export function DeviceEdit(props: RouteSectionProps) {
 
       <div class="g-col-12 g-col-xl-6">
         <Card colour="warning">
-          <Card.Header text="Stats" />
+          <Card.Header text="Files" />
           <Card.Body>
-            {/* <pre style={{ "margin-bottom": 0 }}>{JSON.stringify(stats())}</pre> */}
             <Show when={stats()}>
               {(stats) => (
                 <table class="table" style={{ "margin-bottom": 0 }}>
-                  <For each={Object.entries(stats())}>
-                    {([key, value]) => (
-                      <tr>
-                        <th>{humanise(key)}</th>
-                        <td>{String(value)}</td>
-                      </tr>
-                    )}
-                  </For>
+                  <tbody>
+                    <For each={stats().file_list}>
+                      {({ name, size }) => (
+                        <tr>
+                          <th>{name}</th>
+                          <td>{String(size)} bytes</td>
+                          <td>
+                            <Button colour="info" on:click={() => onClickDownload(name)}>Download</Button>
+                            <Button colour="danger" on:click={() => onClickDelete(name)}>Delete</Button>
+                            <Show when={name.toLowerCase().includes(".mp3")}>
+                              <Button colour="success" on:click={() => onClickPlay(name)}>Play</Button>
+                            </Show>
+                          </td>
+                        </tr>
+                      )}
+                    </For>
+                  </tbody>
                 </table>
               )}
             </Show>
           </Card.Body>
+          <Card.Footer>
+            <Button colour="warning" type="button" on:click={onClickUpload}>
+              Upload
+            </Button>
+          </Card.Footer>
         </Card>
       </div>
     </main>
