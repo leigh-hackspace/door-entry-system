@@ -1,0 +1,135 @@
+[package]
+edition = "2024"
+name = "pico-firmware"
+version = "0.1.0"
+authors = ["Chris Dell <cjdell@gmail.com>"]
+resolver = "2"
+
+[[bin]]
+name = "pico-firmware"
+test = false
+bench = false
+
+[dependencies]
+defmt = "1.0.1"
+defmt-rtt = "1.0.0"
+panic-probe = { version = "1.0.0", features = ["print-defmt"] }
+static_cell = "2.1.1"
+rand_core = "0.6.4"
+heapless = "0.8.0"
+smoltcp = { version = "0.12.0", default-features = false }
+serde_json = { version = "1.0.143", default-features = false, features = [
+    "alloc",
+] }
+serde = { version = "1.0.219", default-features = false, features = [
+    "derive",
+    "alloc",
+] }
+serde-json-core = "0.6.0"
+esp-hal-mfrc522 = "0.3.0"
+fatfs = { version = "0.4.0", default-features = false, features = [
+    "alloc",
+], git = "https://github.com/rafalh/rust-fatfs" }
+anyhow = { version = "1.0.99", default-features = false }
+embedded-alloc = { path = "embedded-alloc" }
+num-traits = { version = "0.2.19", default-features = false, features = [
+    "libm",
+] }
+cyw43 = { path = "embassy/cyw43", features = ["defmt"] }
+cyw43-pio = { path = "embassy/cyw43-pio", features = ["defmt"] }
+critical-section = "1.2.0"
+smart-leds = "0.4.0"
+
+edge-http = { path = "edge-net/edge-http" }
+edge-nal = { path = "edge-net/edge-nal" }
+edge-ws = { path = "edge-net/edge-ws" }
+edge-nal-embassy = { path = "edge-net/edge-nal-embassy" }
+
+embedded-hal = "1.0.0"
+embedded-hal-async = "1.0.0"
+embedded-io = "0.6.1"
+embedded-io-async = "0.6.1"
+embedded-storage = "0.3.1"
+embedded-hal-bus = { version = "0.3.0", features = ["async"] }
+
+cortex-m-rt = "0.7.5"
+cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
+
+embassy-executor = { path = "embassy/embassy-executor", features = [
+    "arch-cortex-m",
+    "executor-thread",
+    "defmt",
+    "executor-interrupt",
+] }
+embassy-sync = { path = "embassy/embassy-sync" }
+embassy-time = { path = "embassy/embassy-time", features = [
+    "defmt",
+    "defmt-timestamp-uptime",
+] }
+embassy-rp = { path = "embassy/embassy-rp", features = [
+    "defmt",
+    "unstable-pac",
+    "time-driver",
+    # "critical-section-impl",
+    "rp235xa",
+    "binary-info",
+] }
+embassy-net-wiznet = { path = "embassy/embassy-net-wiznet", features = [
+    "defmt",
+] }
+embassy-futures = { path = "embassy/embassy-futures" }
+embassy-net = { path = "embassy/embassy-net", features = [
+    "defmt",
+    "icmp",
+    "tcp",
+    "udp",
+    "raw",
+    "dhcpv4",
+    "medium-ethernet",
+    "dns",
+] }
+embassy-embedded-hal = { path = "embassy/embassy-embedded-hal" }
+
+# embassy-executor = { version = "*", features = [
+#     "arch-cortex-m",
+#     "executor-thread",
+#     "defmt",
+#     "executor-interrupt",
+# ] }
+# embassy-sync = { version = "*" }
+# embassy-time = { version = "*", features = [
+#     "defmt",
+#     "defmt-timestamp-uptime",
+# ] }
+# embassy-rp = { version = "*", features = [
+#     "defmt",
+#     "unstable-pac",
+#     "time-driver",
+#     "critical-section-impl",
+#     "rp235xa",
+#     "binary-info",
+# ] }
+# embassy-net-wiznet = { version = "*", features = [
+#     "defmt",
+# ] }
+# embassy-futures = { version = "*" }
+# embassy-net = { version = "*", features = [
+#     "defmt",
+#     "icmp",
+#     "tcp",
+#     "udp",
+#     "raw",
+#     "dhcpv4",
+#     "medium-ethernet",
+#     "dns",
+# ] }
+
+[profile.release]
+debug = 2
+lto = true
+opt-level = 'z'
+
+[profile.dev]
+debug = 2
+# lto = true
+# opt-level = "z"

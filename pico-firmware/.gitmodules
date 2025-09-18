@@ -1,0 +1,9 @@
+[submodule "edge-net"]
+	path = edge-net
+	url = git@github.com:cjdell/edge-net.git
+[submodule "embedded-alloc"]
+	path = embedded-alloc
+	url = git@github.com:rust-embedded/embedded-alloc.git
+[submodule "embassy"]
+	path = embassy
+	url = git@github.com:cjdell/embassy.git

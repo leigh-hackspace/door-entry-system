@@ -1,0 +1,9 @@
+[submodule "pico-firmware/edge-net"]
+	path = pico-firmware/edge-net
+	url = git@github.com:cjdell/edge-net.git
+[submodule "pico-firmware/embedded-alloc"]
+	path = pico-firmware/embedded-alloc
+	url = git@github.com:rust-embedded/embedded-alloc.git
+[submodule "pico-firmware/embassy"]
+	path = pico-firmware/embassy
+	url = git@github.com:cjdell/embassy.git

@@ -1,4 +1,4 @@
-import { type ActivityLogAction, type DeviceInfo, sleep } from "@door-entry-management-system/common";
+import type { ActivityLogAction, DeviceInfo } from "@door-entry-management-system/common";
 import { WebClient } from "@slack/web-api";
 import { eq, getTableColumns } from "drizzle-orm";
 import { clearInterval, clearTimeout, setInterval, setTimeout } from "node:timers";

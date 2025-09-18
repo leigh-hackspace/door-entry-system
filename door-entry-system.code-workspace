@@ -1,9 +1,6 @@
 {
   "folders": [
     {
-      "path": "esp32-firmware"
-    },
-    {
       "path": "management-system"
     },
     {
@@ -13,10 +10,7 @@
       "path": "bluetooth-web-app"
     },
     {
-      "path": "rpi-firmware"
-    },
-    {
-      "path": "ch32-firmware"
+      "path": "pico-firmware"
     }
   ],
   "settings": {

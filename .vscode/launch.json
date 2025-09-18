@@ -20,6 +20,24 @@
         "--allow-all"
       ],
       "attachSimplePort": 9229
+    },
+    {
+      "name": "Debug Pico Firmware",
+      // "preLaunchTask": "rust: cargo build",
+      "type": "probe-rs-debug",
+      "request": "launch",
+      "flashingConfig": {
+        "flashingEnabled": true,
+      },
+      "chip": "RP235x",
+      "cwd": "${workspaceFolder}/pico-firmware",
+      "coreConfigs": [
+        {
+          "rttEnabled": true,
+          "programBinary": "${workspaceFolder}/pico-firmware/target/thumbv8m.main-none-eabihf/release/pico-2-embassy-test"
+        }
+      ],
+      "consoleLogLevel": "Console",
     }
   ]
 }
