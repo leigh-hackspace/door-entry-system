@@ -1,10 +1,11 @@
 const CACHE_NAME = 'door-entry-management-system-[VERSION]';
 const ASSETS = [
   '/',
-  '/login',
+  '/favicon.ico',
   '/js/app.js?v=[VERSION]',
-  '/css/app.css?v=[VERSION]',
   '/css/bootstrap.css?v=[VERSION]',
+  '/css/index.css?v=[VERSION]',
+  '/css/app.css?v=[VERSION]',
 ];
 
 // Install event: caching assets
@@ -19,34 +20,32 @@ self.addEventListener('install', event => {
 
 // Fetch event: serve assets from cache
 self.addEventListener('fetch', event => {
-  let request = event.request;
+  const url = new URL(event.request.url);
 
-  // const url = new URL(request.url);
-  // const version = url.searchParams.get('v');
+  // Check if it's a navigation request for your domain without file extension
+  if (event.request.mode === 'navigate' && url.origin === location.origin && !url.pathname.includes('.')) {
+    console.log('Cached page response:', event.request.url);
 
-  // const [path] = request.url.split('?');
+    return event.respondWith(
+      caches.match('/').then(response => {
+        if (!response) {
+          throw new Error('Could not retrieve cached paged!');
+        }
 
-  // // All pages are the same. No "." means it's not an asset
-  // if (!path.includes('.')) {
-  //   const url = path.split('/').slice(0, -1).join('/') + '/' + (version ? '?v=' + version : '')
-
-  //   request = new Request(url, {
-  //     method: request.method,
-  //     headers: request.headers,
-  //     integrity: request.integrity,
-  //   });
-  // }
+        return response;
+      })
+    );
+  }
 
   event.respondWith(
-    caches.match(request).then(response => {
+    caches.match(event.request).then(response => {
       if (response) {
-        console.log('Cached response:', request.url);
+        console.log('Cached response:', event.request.url);
         return response
       } else {
-        console.log('Fetching...:', request.url);
-        return fetch(request);
-      }
-      // return response || fetch(request);
+        console.log('Fetching...:', event.request.url);
+        return fetch(event.request);
+      };
     })
   );
 });
