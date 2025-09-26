@@ -1,6 +1,7 @@
 import { assertError, FieldMetadata } from "@door-entry-management-system/common";
 import {
   Card,
+  type Cursor,
   CursorDefault,
   fetchParamsFromCursor,
   MagicBrowser,
@@ -28,7 +29,10 @@ export function ActivityLogs(props: RouteSectionProps) {
 
   const [rows, setRows] = createSignal<RowData<ActivityLogSearchRecord>>(RowDataDefault);
 
-  const cursorSignal = createSignal(CursorDefault);
+  // Start with created date descending (most useful)
+  const initialCursor: Cursor = { ...CursorDefault, sort: { sort: "created", dir: "desc" } };
+
+  const cursorSignal = createSignal(initialCursor);
   const searchSignal = createSignal("");
   const selectionSignal = createSignal(RowSelectionDefault);
 

@@ -35,7 +35,11 @@ async function start() {
   const server = http.createServer();
   app.attach(server);
 
-  await bootstrap();
+  try {
+    await bootstrap();
+  } catch (err) {
+    console.error("Bootstrap Error:", err);
+  }
 
   const homeAssistantService = new HomeAssistantService(
     Config.DE_HOME_ASSISTANT_WS_URL,

@@ -35,10 +35,10 @@ export interface Cursor {
   sort?: QuerySort;
 }
 
-export const CursorDefault: Cursor = {
+export const CursorDefault: Cursor = Object.freeze({
   page: 1,
   pageSize: PageSize,
-};
+});
 
 export interface RowData<TRow> {
   rows: readonly TRow[];

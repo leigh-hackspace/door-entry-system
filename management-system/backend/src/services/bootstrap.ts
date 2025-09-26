@@ -18,5 +18,7 @@ export async function bootstrap() {
     await db
       .insert(UserTable)
       .values({ id, role: "admin", email: "admin@example.com", name: "Default Admin", password_hash });
+  } else {
+    console.log("Admin already exists");
   }
 }
