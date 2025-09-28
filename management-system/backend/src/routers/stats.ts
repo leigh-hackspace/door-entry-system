@@ -4,10 +4,9 @@ import * as uuid from "npm:uuid";
 import type { ElementOf } from "ts-essentials";
 import * as v from "valibot";
 import { ActivityLogTable, db, TagTable, UserTable } from "@/db";
-import { AuthentikService, DeviceEvents, GlobalDeviceCollection } from "@/services";
+import { AuthentikService, DeviceEvents, GlobalDeviceCollectionWs } from "@/services";
 import { assertRole } from "./common.ts";
 import { tRPC } from "./trpc.ts";
-import { GlobalDeviceCollectionWs } from "../services/device.ws/index.ts";
 
 export const StatsRouter = tRPC.router({
   AdminStats: tRPC.ProtectedProcedure.input(v.parser(v.object({}))).query(async ({ ctx }) => {
@@ -29,7 +28,6 @@ export const StatsRouter = tRPC.router({
 
   SetLatch: tRPC.ProtectedProcedure.input(v.parser(v.object({ latch: v.boolean() }))).mutation(
     async ({ ctx, input }) => {
-      await GlobalDeviceCollection.pushLatchStateAll(input.latch);
       await GlobalDeviceCollectionWs.pushLatchStateAll(input.latch);
     },
   ),

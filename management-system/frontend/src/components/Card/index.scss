@@ -9,3 +9,11 @@
   flex-direction: column;
   min-height: 0;
 }
+
+.card-footer {
+  // Only show footer when it contains children...
+  display: none;
+  &:has(.card-footer-inner > *) {
+    display: block;
+  }
+}

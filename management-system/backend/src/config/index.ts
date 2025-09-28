@@ -6,12 +6,13 @@ import * as v from "valibot";
 import { pickPrefix } from "../../../common/src/index.ts"; // Drizzle Kit bodge
 
 export const ConfigSchema = v.object({
+  DE_MODE: v.picklist(["development", "production"]),
   DE_DATABASE_URL: v.pipe(v.string(), v.startsWith("postgresql://")),
   DE_SECRET_KEY: v.pipe(v.string(), v.minLength(16)),
   DE_BACKEND_PORT: v.pipe(
     v.string(),
     v.decimal(),
-    v.transform((s) => parseInt(s, 10))
+    v.transform((s) => parseInt(s, 10)),
   ),
   DE_AUTHENTIK_HOST: v.string(),
   DE_AUTHENTIK_CLIENT_ID: v.string(),

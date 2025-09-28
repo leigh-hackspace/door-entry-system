@@ -1,12 +1,11 @@
 /// <reference types='@types/node' />
+import { bootstrap, getWebSocketRouter, GlobalDeviceCollectionWs, HomeAssistantService } from "@/services";
 import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import cors from "cors";
 import http from "node:http";
 import { WebSocketExpress } from "websocket-express";
-import { Config } from "./config/index.ts";
-import { AppRouter, tRPC } from "./routers/index.ts";
-import { getWebSocketRouter, GlobalDeviceCollectionWs } from "./services/device.ws/index.ts";
-import { bootstrap, GlobalDeviceCollection, handleDeviceNotification, HomeAssistantService } from "./services/index.ts";
+import { Config } from "@/config";
+import { AppRouter, tRPC } from "@/routers";
 
 const Port = Config.DE_BACKEND_PORT;
 
@@ -30,7 +29,6 @@ async function start() {
   });
 
   app.use(trpcHandler);
-  app.use(handleDeviceNotification);
 
   const server = http.createServer();
   app.attach(server);
@@ -53,7 +51,6 @@ async function start() {
     if (entityId === "input_boolean.hackspace_open") {
       console.log("hackspace_status:", newState);
 
-      GlobalDeviceCollection.pushLatchStateAll(newState.state === "on");
       GlobalDeviceCollectionWs.pushLatchStateAll(newState.state === "on");
     }
   };

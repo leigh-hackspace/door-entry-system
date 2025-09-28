@@ -2,6 +2,7 @@ import { assertError, FieldMetadata } from "@door-entry-management-system/common
 import {
   Button,
   Card,
+  type Cursor,
   CursorDefault,
   fetchParamsFromCursor,
   LinkButton,
@@ -33,7 +34,10 @@ export function Tags(props: RouteSectionProps) {
 
   const [rows, setRows] = createSignal<RowData<TagSearchRecord>>(RowDataDefault);
 
-  const cursorSignal = createSignal(CursorDefault);
+  // Start with created date descending (most useful)
+  const initialCursor: Cursor = { ...CursorDefault, sort: { sort: "created", dir: "desc" } };
+
+  const cursorSignal = createSignal(initialCursor);
   const searchSignal = createSignal("");
   const selectionSignal = createSignal(RowSelectionDefault);
 
@@ -60,12 +64,14 @@ export function Tags(props: RouteSectionProps) {
     const { ids, mode } = selectionSignal[0]();
 
     const deleteCount = mode === "noneBut" ? ids.length : total - ids.length;
-    if (deleteCount !== 1) return;
+    if (deleteCount !== 1 || mode === "allBut") return;
 
     const res = await openConfirm("Delete tag", `Are you sure you wish to delete ${deleteCount} tags`);
 
     if (res === "yes") {
       await tRPC.Tag.Delete.mutate(ids[0]);
+
+      selectionSignal[1](RowSelectionDefault);
 
       await fetchRows();
     }
@@ -78,7 +84,7 @@ export function Tags(props: RouteSectionProps) {
         <Card.Body pad={0}>
           <div class="p-2">
             <SearchBar search={searchSignal} />
-          </div>{" "}
+          </div>
           <MagicBrowser
             schema={TagTableSchema}
             rowData={rows()}

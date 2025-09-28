@@ -62,7 +62,7 @@ export function Card(props: Props) {
       <Show when={parts[2]}>
         {(footer) => (
           <div class="card-footer">
-            <div class="d-flex gap-2 justify-content-end">
+            <div class="card-footer-inner d-flex gap-2 justify-content-end">
               {footer().children}
             </div>
           </div>

@@ -7,6 +7,7 @@ import { DeviceIncoming, type DeviceOutgoingFn } from "./common.ts";
 import type { DeviceConnection } from "./connection.ts";
 
 export * from "./collection.ts";
+export * from "./common.ts";
 
 export function getWebSocketRouter() {
   const router = new Router();

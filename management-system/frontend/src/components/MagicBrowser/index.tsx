@@ -180,7 +180,7 @@ export function MagicBrowser<
           onSort={onSort}
           onLoadMore={onLoadMore}
           onSelectionChanged={onSelectionChanged}
-          onSelectAll={onSelectAll}
+          // onSelectAll={onSelectAll}
           onRowClick={props.onRowClick}
           acquireImage={props.acquireImage}
         />

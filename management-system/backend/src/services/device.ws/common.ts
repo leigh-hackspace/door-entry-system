@@ -1,4 +1,21 @@
 import * as v from "valibot";
+import EventEmitter from "node:events";
+import { type ScanEvent, sleep } from "@door-entry-management-system/common";
+
+// ==== Events ====
+
+export interface DeviceEvents {
+  update: DeviceStateAndConfig[];
+  fileProgress: string[];
+  unknownScans: ScanEvent[];
+}
+
+export interface DeviceStateAndConfig {
+  name: string;
+  latch: boolean;
+}
+
+export const DeviceEvents = new EventEmitter<DeviceEvents>();
 
 // ==== Requests ====
 
@@ -121,7 +138,7 @@ export interface PublicDeviceInterface {
   pushValidCodes(): Promise<void>;
   pushLatchState(latch: boolean): Promise<void>;
   getBinaryFile(request_file_name: string): Promise<Uint8Array>;
-  pushBinaryFile(file_name: string, data: Uint8Array, on_progress: (progress: number) => void): Promise<void>;
+  pushBinaryFile(file_name: string, data: Uint8Array): Promise<void>;
   deleteFile(file_name: string): Promise<void>;
   playFile(file_name: string): Promise<void>;
   listFiles(): Promise<IncomingFileList["list"]>;
@@ -138,14 +155,13 @@ export class FakeDeviceConnection implements PublicDeviceInterface {
     return new Uint8Array([48, 49, 50, 0x0d, 0x0a]);
   }
 
-  async pushBinaryFile(file_name: string, data: Uint8Array, on_progress: (progress: number) => void): Promise<void> {
-    on_progress(0);
-    on_progress(1);
-    on_progress(2);
-    on_progress(3);
-    on_progress(4);
-
+  async pushBinaryFile(file_name: string, data: Uint8Array): Promise<void> {
     console.log("pushBinaryFile:", file_name, data);
+
+    for (let i = 0; i < 5; i += 1) {
+      await sleep(1_000);
+      DeviceEvents.emit("fileProgress", `File progress: ${i * 4096} bytes`);
+    }
   }
 
   async deleteFile(file_name: string) {

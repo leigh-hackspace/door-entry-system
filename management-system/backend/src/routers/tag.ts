@@ -5,11 +5,13 @@ import { assert } from "ts-essentials";
 import * as v from "valibot";
 import { db, TagTable } from "@/db";
 import { UserTable } from "../db/schema.ts";
-import { GlobalDeviceCollection, GlobalDeviceCollectionWs } from "@/services";
+import { GlobalDeviceCollectionWs } from "@/services";
 import { assertOneRecord, PaginationSchema, toDrizzleOrderBy, UUID, withId } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 
 const TagSearchSchema = v.intersect([PaginationSchema, v.object({ user_id: v.optional(UUID) })]);
+
+const AddCodeToUserReq = v.object({ code: v.string(), user_id: UUID });
 
 export const TagRouter = tRPC.router({
   Search: tRPC.ProtectedProcedure.input(v.parser(TagSearchSchema)).query(
@@ -65,7 +67,6 @@ export const TagRouter = tRPC.router({
 
     await db.insert(TagTable).values({ id, ...input, user_id });
 
-    await GlobalDeviceCollection.pushValidCodes();
     await GlobalDeviceCollectionWs.pushValidCodes();
 
     return id;
@@ -86,7 +87,6 @@ export const TagRouter = tRPC.router({
           .where(eq(TagTable.id, id));
       });
 
-      await GlobalDeviceCollection.pushValidCodes();
       await GlobalDeviceCollectionWs.pushValidCodes();
     },
   ),
@@ -99,6 +99,37 @@ export const TagRouter = tRPC.router({
 
     await db.delete(TagTable).where(eq(TagTable.id, input));
 
-    await GlobalDeviceCollection.pushValidCodes();
+    await GlobalDeviceCollectionWs.pushValidCodes();
+  }),
+
+  AddCodeToUser: tRPC.ProtectedProcedure.input(v.parser(AddCodeToUserReq)).mutation(async ({ ctx, input }) => {
+    assert(ctx.session.user.role === "admin");
+
+    const userToAddTag = assertOneRecord(await db.select().from(UserTable).where(eq(UserTable.id, input.user_id)));
+
+    const [existingTag] = await db.select().from(TagTable).where(eq(TagTable.code, input.code));
+
+    if (existingTag) {
+      if (existingTag.user_id) {
+        // Tag is already owned
+        const [user] = await db.select().from(UserTable).where(eq(UserTable.id, existingTag.user_id));
+        assert(user, "Tag assigned to non-existent user!");
+
+        throw new Error(`Tag already exists and is assigned to "${user.email}"`);
+      } else {
+        // Update the existing tag (recycling this tag for a new owner)
+        await db.update(TagTable).set({ user_id: input.user_id }).where(eq(TagTable.id, existingTag.id));
+      }
+    } else {
+      const id = uuid.v4();
+
+      // Create a new tag (never seen this tag before)
+      await db.insert(TagTable).values({
+        id,
+        user_id: input.user_id,
+        code: input.code,
+        description: `Auto-generated tag for user "${userToAddTag.email}"`,
+      });
+    }
   }),
 });

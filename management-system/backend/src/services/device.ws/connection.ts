@@ -3,19 +3,19 @@ import { WebClient } from "@slack/web-api";
 import { eq, getTableColumns } from "drizzle-orm";
 import { clearInterval, clearTimeout, setInterval, setTimeout } from "node:timers";
 import * as uuid from "uuid";
-import { Config } from "../../config/index.ts";
-import { ActivityLogTable, db, DeviceTable, TagTable, UserTable } from "../../db/index.ts";
-import { DeviceEvents } from "../device/index.ts";
-import type {
-  DeviceOutgoingFn,
-  IncomingFileList,
-  IncomingFileStart,
-  IncomingLatchChanged,
-  IncomingStatusUpdate,
-  IncomingTagScanned,
-  PublicDeviceInterface,
+import { ActivityLogTable, db, DeviceTable, TagTable, UserTable } from "@/db";
+import {
+  DeviceEvents,
+  type DeviceOutgoingFn,
+  type IncomingFileList,
+  type IncomingFileStart,
+  type IncomingLatchChanged,
+  type IncomingStatusUpdate,
+  type IncomingTagScanned,
+  type PublicDeviceInterface,
 } from "./common.ts";
 import { assert } from "ts-essentials";
+import { Config } from "@/config";
 
 const CHUNK_SIZE = 4 * 1024;
 const WRITE_TIMEOUT = 10_000;
@@ -75,7 +75,7 @@ export class DeviceConnection implements PublicDeviceInterface {
     this.commander(["message", { type: "latch_change", latch_state: latch }]);
   }
 
-  async pushBinaryFile(file_name: string, data: Uint8Array, on_progress: (progress: number) => void): Promise<void> {
+  public async pushBinaryFile(file_name: string, data: Uint8Array): Promise<void> {
     return new Promise((resolve, reject) => {
       void this.commander(["message", {
         type: "file_start",
@@ -107,7 +107,7 @@ export class DeviceConnection implements PublicDeviceInterface {
           // await sleep(1_000);
           await this.commander(["binary", chunk]);
 
-          on_progress(chunk_index * CHUNK_SIZE);
+          DeviceEvents.emit("fileProgress", `File progress: ${chunk_index * CHUNK_SIZE} bytes`);
 
           chunk_index += 1;
 
@@ -297,6 +297,11 @@ export class DeviceConnection implements PublicDeviceInterface {
       } else {
         action = "denied-unknown-code";
       }
+
+      DeviceEvents.emit("unknownScans", {
+        code: req.code,
+        time: new Date(),
+      });
     }
 
     if (user_name) {

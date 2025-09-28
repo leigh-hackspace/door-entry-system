@@ -54,12 +54,14 @@ export function Devices(props: RouteSectionProps) {
     const { ids, mode } = selectionSignal[0]();
 
     const deleteCount = mode === "noneBut" ? ids.length : total - ids.length;
-    if (deleteCount === 0) return;
+    if (deleteCount === 0 || mode === "allBut") return;
 
     const res = await openConfirm("Delete user", `Are you sure you wish to delete ${deleteCount} devices`);
 
     if (res === "yes") {
       await tRPC.User.Delete.mutate({ ids, mode });
+
+      selectionSignal[1](RowSelectionDefault);
 
       await fetchRows();
     }

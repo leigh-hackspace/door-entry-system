@@ -1,10 +1,10 @@
-import { and, count, eq, getTableColumns, ilike, or } from "drizzle-orm";
-import * as v from "valibot";
 import { db, DeviceTable, UserTable } from "@/db";
-import { GlobalDeviceCollection, GlobalDeviceCollectionWs } from "@/services";
+import { DeviceEvents, GlobalDeviceCollectionWs } from "@/services";
+import { and, count, eq, getTableColumns, ilike, or } from "drizzle-orm";
+import { on } from "node:events";
+import * as v from "valibot";
 import { assertOneRecord, PaginationSchema, toDrizzleOrderBy, UUID } from "./common.ts";
 import { tRPC } from "./trpc.ts";
-import { SessionEvents } from "./events.ts";
 
 const DeviceSearchSchema = v.intersect([PaginationSchema]);
 
@@ -66,9 +66,7 @@ export const DeviceRouter = tRPC.router({
       const connection = GlobalDeviceCollectionWs.getDeviceConnection(input.device_id);
       if (!connection) return null;
 
-      await connection.pushBinaryFile(input.file_name, input.file_data, (progress) => {
-        SessionEvents.emit("loggedIn", `File progress: ${progress} bytes`);
-      });
+      await connection.pushBinaryFile(input.file_name, input.file_data);
     },
   ),
 
@@ -94,7 +92,15 @@ export const DeviceRouter = tRPC.router({
     if (ctx.session.user.role !== "admin") throw new Error("No access");
 
     await db.delete(DeviceTable).where(eq(DeviceTable.id, input));
+  }),
 
-    await GlobalDeviceCollection.reloadDevices();
+  Progress: tRPC.ProtectedProcedure.subscription(async function* (opts) {
+    for await (
+      const [data] of on(DeviceEvents, "fileProgress", {
+        signal: opts.signal,
+      })
+    ) {
+      yield data as string;
+    }
   }),
 });

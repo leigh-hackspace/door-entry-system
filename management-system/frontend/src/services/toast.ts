@@ -33,6 +33,11 @@ export class ToastService {
     if (this.listener) this.listener(this.toasts);
   }
 
+  public addToastAtTime(toast: Omit<ToastInfo, "id">) {
+    this.toasts = [...this.toasts, { id: this.lastId++, ...toast }];
+    if (this.listener) this.listener(this.toasts);
+  }
+
   public removeToast(id: number) {
     this.toasts = this.toasts.filter((t) => t.id !== id);
     if (this.listener) this.listener(this.toasts);

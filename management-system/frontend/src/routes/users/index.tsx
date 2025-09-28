@@ -2,6 +2,7 @@ import { assertError, FieldMetadata, humanise } from "@door-entry-management-sys
 import {
   Button,
   Card,
+  type Cursor,
   CursorDefault,
   fetchParamsFromCursor,
   LinkButton,
@@ -31,7 +32,10 @@ export function Users(props: RouteSectionProps) {
 
   const [rows, setRows] = createSignal<RowData<UserSearchRecord>>(RowDataDefault);
 
-  const cursorSignal = createSignal(CursorDefault);
+  // Start with created date descending (most useful)
+  const initialCursor: Cursor = { ...CursorDefault, sort: { sort: "created", dir: "desc" } };
+
+  const cursorSignal = createSignal(initialCursor);
   const searchSignal = createSignal("");
   const selectionSignal = createSignal(RowSelectionDefault);
 
@@ -58,12 +62,14 @@ export function Users(props: RouteSectionProps) {
     const { ids, mode } = selectionSignal[0]();
 
     const deleteCount = mode === "noneBut" ? ids.length : total - ids.length;
-    if (deleteCount === 0) return;
+    if (deleteCount === 0 || mode === "allBut") return;
 
     const res = await openConfirm("Delete user", `Are you sure you wish to delete ${deleteCount} users`);
 
     if (res === "yes") {
       await tRPC.User.Delete.mutate({ ids, mode });
+
+      selectionSignal[1](RowSelectionDefault);
 
       await fetchRows();
     }

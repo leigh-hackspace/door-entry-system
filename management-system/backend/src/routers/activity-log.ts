@@ -1,6 +1,10 @@
-import { and, count, eq, getTableColumns, ilike, or } from "drizzle-orm";
-import * as v from "valibot";
+import { Config } from "@/config";
 import { ActivityLogTable, db, UserTable } from "@/db";
+import { DeviceEvents } from "@/services";
+import type { ScanEvent } from "@door-entry-management-system/common";
+import { and, count, desc, eq, getTableColumns, ilike, inArray, or } from "drizzle-orm";
+import { on } from "node:events";
+import * as v from "valibot";
 import { PaginationSchema, toDrizzleOrderBy } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 
@@ -40,4 +44,36 @@ export const ActivityLogRouter = tRPC.router({
       return { rows, total } as const;
     },
   ),
+
+  UnknownScans: tRPC.ProtectedProcedure.subscription(async function* (opts) {
+    const results = await db
+      .select()
+      .from(ActivityLogTable)
+      .where(inArray(ActivityLogTable.action, ["denied-unassigned", "denied-unknown-code"]))
+      .orderBy(desc(ActivityLogTable.created))
+      .limit(1);
+
+    if (results.length > 0) {
+      const lastScan = results[0];
+
+      yield { code: lastScan.code, time: lastScan.created } satisfies ScanEvent;
+    }
+
+    for await (
+      const [data] of on(DeviceEvents, "unknownScans", {
+        signal: opts.signal,
+      })
+    ) {
+      yield data as ScanEvent;
+    }
+  }),
 });
+
+if (Config.DE_MODE === "development") {
+  setInterval(() => {
+    DeviceEvents.emit("unknownScans", {
+      code: Math.random().toString(),
+      time: new Date(),
+    });
+  }, 10_000);
+}

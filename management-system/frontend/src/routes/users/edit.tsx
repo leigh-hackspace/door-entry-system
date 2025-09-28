@@ -1,4 +1,4 @@
-import { assertError, FieldMetadata, type UserUpdate, UserUpdateSchema } from "@door-entry-management-system/common";
+import { assertError, FieldMetadata, ScanEvent, type UserUpdate, UserUpdateSchema } from "@door-entry-management-system/common";
 import {
   Button,
   Card,
@@ -15,8 +15,12 @@ import { beginPage } from "@frontend/helper";
 import type { RouteSectionProps } from "@solidjs/router";
 import { createEffect, createResource, createSignal, Show, Suspense } from "solid-js";
 import * as v from "valibot";
-import type { TagSearchRecord } from "../../lib/types.ts";
-import { openAlert } from "@frontend/dialogs";
+import { openAlert, openConfirm } from "@frontend/dialogs";
+import type { TagSearchRecord } from "@frontend/services";
+import { onCleanup } from "solid-js";
+import { differenceInSeconds, format, formatDistanceToNow } from "date-fns";
+import { enGB } from "date-fns/locale";
+import { sourceMapsEnabled } from "node:process";
 
 const TagTableSchema = v.object({
   code: v.pipe(v.string(), v.title("Code"), v.metadata(FieldMetadata({ icon: "🔑" }))),
@@ -32,12 +36,32 @@ export function UserEdit(props: RouteSectionProps) {
 
   const [user, { mutate }] = createResource(() => tRPC.User.One.query(id()));
   const [submittedCount, setSubmittedCount] = createSignal(0);
+  const [lastScan, setLastScan] = createSignal<ScanEvent>();
 
   const [rows, setRows] = createSignal<RowData<TagSearchRecord>>(RowDataDefault);
 
   const cursorSignal = createSignal(CursorDefault);
   const searchSignal = createSignal("");
   const selectionSignal = createSignal(RowSelectionDefault);
+
+  const scanSubscription = tRPC.ActivityLog.UnknownScans.subscribe(undefined, {
+    onData: (scan) => {
+      if (differenceInSeconds(Date.now(), scan.time) < 5 * 60) {
+        setLastScan(scan);
+
+        console.log("Code detected:", scan.code, formatDistanceToNow(scan.time, { addSuffix: true }));
+
+        toastService.addToastAtTime({
+          title: "Scan Detected",
+          message: `Code = ${scan.code}`,
+          time: scan.time.getTime(),
+          life: 5000,
+        });
+      }
+    },
+  });
+
+  onCleanup(() => scanSubscription.unsubscribe());
 
   const onChange = (data: UserUpdate) => mutate({ ...user()!, ...data });
 
@@ -50,7 +74,34 @@ export function UserEdit(props: RouteSectionProps) {
     toastService.addToast({ title: "Save", message: "Save successful", life: 5000 });
   };
 
-  const fetchRows = async () => {
+  const onAddLastScan = async () => {
+    await tRPC.Tag.AddCodeToUser.mutate({ code: lastScan()!.code, user_id: id() });
+    setLastScan(undefined);
+
+    await fetchUserTags();
+
+    toastService.addToast({ title: "Added Tag", message: "Tag added successfully", life: 5000 });
+  };
+
+  const onDeleteTag = async () => {
+    const { total } = rows();
+    const { ids, mode } = selectionSignal[0]();
+
+    const deleteCount = mode === "noneBut" ? ids.length : total - ids.length;
+    if (deleteCount === 0 || mode === "allBut") return;
+
+    const res = await openConfirm("Delete tag", `Are you sure you wish to delete ${deleteCount} tags`);
+
+    if (res === "yes") {
+      await tRPC.Tag.Delete.mutate(ids[0]);
+
+      selectionSignal[1](RowSelectionDefault);
+
+      await fetchUserTags();
+    }
+  };
+
+  const fetchUserTags = async () => {
     const cursor = cursorSignal[0]();
     const params = fetchParamsFromCursor(cursor);
 
@@ -62,7 +113,7 @@ export function UserEdit(props: RouteSectionProps) {
     }
   };
 
-  createEffect(fetchRows);
+  createEffect(fetchUserTags);
 
   return (
     <main class="grid gap-3" ref={(main) => main.style.setProperty("--grid-rows", main.children.length.toString())}>
@@ -109,6 +160,20 @@ export function UserEdit(props: RouteSectionProps) {
               />
             </Show>
           </Card.Body>
+          <Card.Footer>
+            <Show when={lastScan()}>
+              {(lastScan) => (
+                <Button colour="warning" on:click={onAddLastScan}>
+                  Add code "{lastScan().code}" detected {formatDistanceToNow(lastScan().time, { addSuffix: true })}
+                </Button>
+              )}
+            </Show>
+            <Show when={selectionSignal[0]().ids.length === 1}>
+              <Button colour="danger" on:click={() => onDeleteTag()}>
+                Delete
+              </Button>
+            </Show>
+          </Card.Footer>
         </Card>
       </div>
 

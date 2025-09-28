@@ -2,16 +2,28 @@ import { type DeviceUpdate, DeviceUpdateSchema } from "@door-entry-management-sy
 import { Button, Card, DateInfo, MagicFields } from "@frontend/components";
 import { beginPage } from "@frontend/helper";
 import type { RouteSectionProps } from "@solidjs/router";
-import { createResource, For, Show, Suspense } from "solid-js";
+import { createResource, For, onCleanup, Show, Suspense } from "solid-js";
 import { downloadFile, uploadFile } from "@frontend/utils";
 
 export function DeviceEdit(props: RouteSectionProps) {
-  const { tRPC } = beginPage(["admin"]);
+  const { tRPC, toastService } = beginPage(["admin"]);
 
   const id = () => props.params.id;
 
   const [device, { mutate }] = createResource(() => tRPC.Device.One.query(props.params.id));
   const [stats, { refetch }] = createResource(() => tRPC.Device.Stats.query(props.params.id));
+
+  const progressSubscription = tRPC.Device.Progress.subscribe(undefined, {
+    onData: (progress) => {
+      toastService.addToast({
+        title: "Progress",
+        message: `${progress}`,
+        life: 5000,
+      });
+    },
+  });
+
+  onCleanup(() => progressSubscription.unsubscribe());
 
   const formSchema = DeviceUpdateSchema;
 
