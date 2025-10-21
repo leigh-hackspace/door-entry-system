@@ -25,9 +25,7 @@ use num_traits::real::Real;
 
 #[derive(Debug)]
 pub enum AudioError {
-    OpenError(String),
     ReadError(String),
-    PlayError(String),
 }
 
 const BUFFER_SIZE: usize = 2048;

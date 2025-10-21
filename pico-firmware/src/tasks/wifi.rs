@@ -1,40 +1,31 @@
 use crate::make_static;
-use core::net::Ipv6Addr;
-use cyw43::JoinOptions;
+use crate::tasks::common::{EthernetSignal, EthernetSignalMessage};
+use cyw43::{Control, JoinOptions};
 use cyw43_pio::{DEFAULT_CLOCK_DIVIDER, PioSpi};
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_futures::yield_now;
 use embassy_net::{Stack, StackResources};
-use embassy_rp::bind_interrupts;
-use embassy_rp::pio::InterruptHandler;
 use embassy_rp::{
-    Peri,
+    Peri, bind_interrupts,
     clocks::RoscRng,
     gpio::{Level, Output},
-    peripherals::{DMA_CH6, PIN_23, PIN_24, PIN_25, PIN_29, PIO1},
-    pio::Pio,
+    peripherals::{DMA_CH6, PIN_23, PIN_24, PIN_25, PIN_29, PIO2},
+    pio::{InterruptHandler, Pio},
 };
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
+use embassy_sync::signal::Signal;
 use static_cell::StaticCell;
 
 bind_interrupts!(struct Irqs {
-    PIO1_IRQ_0 => InterruptHandler<PIO1>;
+    PIO2_IRQ_0 => InterruptHandler<PIO2>;
 });
 
 const WIFI_NETWORK: &str = env!("WIFI_NETWORK");
 const WIFI_PASSWORD: &str = env!("WIFI_PASSWORD");
 
-#[derive(Debug)]
-pub enum EthernetSignalMessage {
-    Connected,
-}
-
-pub type EthernetSignal = Signal<CriticalSectionRawMutex, EthernetSignalMessage>;
-
 pub async fn init_wifi(
     spawner: Spawner,
-    pio: Peri<'static, PIO1>,
+    pio: Peri<'static, PIO2>,
     dio: Peri<'static, PIN_24>,
     clk: Peri<'static, PIN_29>,
     cs: Peri<'static, PIN_25>,
@@ -59,7 +50,7 @@ pub async fn init_wifi(
     let state = STATE.init(cyw43::State::new());
     let (net_device, mut control, runner) = cyw43::new(state, pwr, spi, fw).await;
 
-    spawner.spawn((cyw43_task(runner).unwrap()));
+    spawner.spawn(cyw43_task(runner).unwrap());
     info!("WiFi task started");
 
     control.init(clm).await;
@@ -78,14 +69,14 @@ pub async fn init_wifi(
     spawner.spawn(net_task(runner).unwrap());
     info!("Network task started");
 
-    spawner.spawn(ethernet_dhcp_task(ethernet_signal, stack).unwrap());
+    spawner.spawn(ethernet_dhcp_task(ethernet_signal, stack, control).unwrap());
     info!("DHCP task started");
 
     (ethernet_signal, stack)
 }
 
 #[embassy_executor::task]
-async fn cyw43_task(runner: cyw43::Runner<'static, Output<'static>, PioSpi<'static, PIO1, 0, DMA_CH6>>) -> ! {
+async fn cyw43_task(runner: cyw43::Runner<'static, Output<'static>, PioSpi<'static, PIO2, 0, DMA_CH6>>) -> ! {
     runner.run().await
 }
 
@@ -95,7 +86,12 @@ async fn net_task(mut runner: embassy_net::Runner<'static, cyw43::NetDriver<'sta
 }
 
 #[embassy_executor::task]
-pub async fn ethernet_dhcp_task(signal: &'static EthernetSignal, stack: Stack<'static>) {
+pub async fn ethernet_dhcp_task(signal: &'static EthernetSignal, stack: Stack<'static>, mut control: Control<'static>) {
+    info!("Joining WiFi network...");
+    while let Err(err) = control.join(WIFI_NETWORK, JoinOptions::new(WIFI_PASSWORD.as_bytes())).await {
+        info!("join failed with status={}", err.status);
+    }
+
     info!("Waiting for DHCP...");
     let cfg = wait_for_config(stack).await;
     let local_addr = cfg.address.address();

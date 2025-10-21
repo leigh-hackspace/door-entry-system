@@ -12,64 +12,52 @@ mod services;
 mod tasks;
 mod utils;
 
-use crate::services::audio::play_mp3;
-use crate::services::{auth::check_code, common::DeviceState};
-use crate::tasks::audio::{AudioCommand, AudioCommandSignal, audio_task};
-use crate::tasks::button::{ButtonSignal, ButtonSignalMessage, button_task};
-use crate::tasks::ethernet::init_ethernet;
-use crate::tasks::file::{FileCommand, FileCommandChannel, FileMessage, FileMessageChannel, file_task};
-use crate::tasks::rfid::{RfidSignal, RfidSignalMessage, rfid_task};
-use crate::tasks::websocket::{WebSocketIncomingChannel, WebSocketOutgoingChannel, WebSocketOutgoingReceiver};
-use crate::tasks::ws2812::{Ws2812Message, Ws2812Signal, ws2812_task};
-use crate::utils::flash_stream::FlashStream;
-use crate::utils::local_fs::{self, LocalFs};
 use crate::{
-    services::state::PermanentStateService,
-    tasks::door::{DoorSignal, DoorSignalMessage, door_task},
+    services::{auth::check_code, common::DeviceState, state::PermanentStateService},
+    tasks::{
+        audio::{AudioCommand, AudioCommandSignal, audio_task},
+        button::{ButtonSignal, ButtonSignalMessage, button_task},
+        door::{DoorSignal, DoorSignalMessage, door_task},
+        file::{FileCommand, FileCommandChannel, FileMessage, FileMessageChannel, file_task},
+        rfid::{RfidSignal, RfidSignalMessage, rfid_task},
+        websocket::{WebSocketIncoming, WebSocketIncomingChannel, WebSocketOutgoing, WebSocketOutgoingChannel, websocket_task},
+    },
+    utils::{
+        common::{Flash, SharedFs},
+        local_fs::LocalFs,
+    },
 };
-use crate::{
-    tasks::websocket::{WebSocketIncoming, WebSocketOutgoing, websocket_task},
-    utils::common::{Flash, SharedFs},
+use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc};
+use core::{
+    cell::UnsafeCell,
+    sync::atomic::{AtomicU32, Ordering},
 };
-use alloc::borrow::ToOwned;
-use alloc::boxed::Box;
-use alloc::format;
-use alloc::string::ToString;
-use alloc::sync::Arc;
-use alloc::vec::Vec;
-use core::cell::UnsafeCell;
-use core::sync::atomic::{AtomicU32, Ordering};
 use defmt::*;
 use embassy_executor::Spawner;
-use embassy_futures::select::{Either, Either3, Either4, select, select3, select4};
-use embassy_futures::yield_now;
-use embassy_rp::flash::ERASE_SIZE;
-use embassy_rp::gpio::{Level, Output};
-use embassy_rp::watchdog::Watchdog;
-use embassy_sync::channel::Channel;
-use embassy_sync::signal::Signal;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, rwlock::RwLock};
+use embassy_futures::{
+    select::{Either, Either3, Either4, select, select3, select4},
+    yield_now,
+};
+use embassy_rp::{
+    flash::ERASE_SIZE,
+    gpio::{Level, Output},
+    watchdog::Watchdog,
+};
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel, rwlock::RwLock, signal::Signal};
 use embassy_time::{Duration, Instant, Timer};
 use embedded_alloc::LlffHeap as Heap;
 use fatfs::{File, LossyOemCpConverter, NullTimeProvider, Write};
 use {defmt_rtt as _, panic_probe as _};
 
+#[cfg(feature = "wired")]
+use crate::tasks::ws2812::{Ws2812Message, Ws2812Signal, ws2812_task};
+#[cfg(feature = "wifi")]
+use crate::tasks::ws2812_asm::{Ws2812Message, Ws2812Signal, ws2812_asm_task};
+
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
 
-// embassy_rp::bind_interrupts!(struct Irqs {
-//     PIO0_IRQ_0 => embassy_rp::pio::InterruptHandler<embassy_rp::peripherals::PIO0>;
-// });
-
 const DEVICE_NAME: &str = env!("DEVICE_NAME");
-
-// const SAMPLE_RATE: u32 = 22_050;
-// const BIT_DEPTH: u32 = 16;
-
-// #[cortex_m_rt::entry]
-// fn main() -> ! {
-//     loop {}
-// }
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -79,16 +67,35 @@ async fn main(spawner: Spawner) {
     }
 
     let p = embassy_rp::init(Default::default());
+
+    #[cfg(feature = "wired")]
     let mut led = Output::new(p.PIN_25, Level::Low);
 
     let watchdog = Arc::new(RwLock::<CriticalSectionRawMutex, _>::new(Watchdog::new(p.WATCHDOG)));
 
     watchdog.write().await.start(Duration::from_secs(15));
 
-    let (ethernet_signal, stack) = init_ethernet(
+    let ws2812_signal = make_static!(Ws2812Signal, Signal::new());
+
+    #[cfg(feature = "wired")]
+    spawner.spawn(ws2812_task(ws2812_signal, p.PIO2, p.DMA_CH6, p.PIN_9).unwrap());
+
+    #[cfg(feature = "wifi")]
+    spawner.spawn(ws2812_asm_task(ws2812_signal, p.PIN_9).unwrap());
+
+    // Flash red
+    ws2812_signal.signal(Ws2812Message::Flash(50, 5, 127, 0, 0));
+
+    Timer::after_millis(1_000).await;
+
+    #[cfg(feature = "wired")]
+    let (ethernet_signal, stack) = tasks::ethernet::init_ethernet(
         spawner, p.SPI0, p.PIN_16, p.PIN_19, p.PIN_18, p.PIN_17, p.PIN_21, p.PIN_20, p.DMA_CH0, p.DMA_CH1,
     )
     .await;
+
+    #[cfg(feature = "wifi")]
+    let (ethernet_signal, stack) = tasks::wifi::init_wifi(spawner, p.PIO2, p.PIN_24, p.PIN_29, p.PIN_25, p.PIN_23, p.DMA_CH6).await;
 
     let flash = Flash::new(p.FLASH, p.DMA_CH4);
 
@@ -111,7 +118,6 @@ async fn main(spawner: Spawner) {
     let button_signal = make_static!(ButtonSignal, Signal::new());
     let door_signal = make_static!(DoorSignal, Signal::new());
     let audio_signal = make_static!(AudioCommandSignal, Signal::new());
-    let ws2812_signal = make_static!(Ws2812Signal, Signal::new());
 
     // Background tasks
     // spawner.spawn(rfid_task(rfid_signal, p.PIO1, p.DMA_CH2, p.DMA_CH3, p.PIN_11, p.PIN_12, p.PIN_10, p.PIN_13).unwrap());
@@ -119,8 +125,8 @@ async fn main(spawner: Spawner) {
     spawner.spawn(door_task(door_signal, p.PIN_15).unwrap());
     spawner.spawn(button_task(button_signal, p.PIN_14).unwrap());
     spawner.spawn(audio_task(audio_signal, shared_fs.clone(), p.PIO0, p.DMA_CH5, p.PIN_6, p.PIN_7, p.PIN_8).unwrap());
-    spawner.spawn(ws2812_task(ws2812_signal, p.PIO2, p.DMA_CH6, p.PIN_9).unwrap());
 
+    // Flash white
     ws2812_signal.signal(Ws2812Message::Flash(50, 5, 127, 127, 127));
 
     let web_socket_outgoing_channel = make_static!(WebSocketOutgoingChannel, Channel::new());
@@ -170,15 +176,26 @@ async fn main(spawner: Spawner) {
 
     embassy_futures::join::join4(
         async {
+            #[cfg(feature = "wifi")]
+            let mut led_state = false;
+
             loop {
+                #[cfg(feature = "wired")]
                 led.toggle();
+
+                #[cfg(feature = "wifi")]
+                {
+                    // wifi_control.gpio_set(0, led_state);
+                    // led_state = !led_state;
+                }
+
                 Timer::after_secs(1).await;
                 feed_watchdog();
             }
         },
         async {
             match ethernet_signal.wait().await {
-                tasks::ethernet::EthernetSignalMessage::Connected => {
+                tasks::common::EthernetSignalMessage::Connected => {
                     audio_signal.signal(AudioCommand::PlayFile("STARTUP.MP3".to_string()));
 
                     ws2812_signal.signal(Ws2812Message::Flash(50, 5, 0, 0, 255));
@@ -236,25 +253,29 @@ async fn main(spawner: Spawner) {
                                         defmt::info!("VALID: {}", name.as_str());
                                         door_signal.signal(DoorSignalMessage::Open(5));
                                         audio_signal.signal(AudioCommand::PlayFile("SUCCESS.MP3".to_string()));
-                                        web_socket_outgoing_channel
-                                            .send(WebSocketOutgoing::TagScanned {
-                                                allowed: true,
-                                                code,
-                                                timestamp: 0,
-                                            })
-                                            .await;
+
+                                        if let Err(err) = web_socket_outgoing_channel.try_send(WebSocketOutgoing::TagScanned {
+                                            allowed: true,
+                                            code,
+                                            timestamp: 0,
+                                        }) {
+                                            defmt::error!("Could not push code. Error: {}", defmt::Debug2Format(&err));
+                                        }
+
                                         ws2812_signal.signal(Ws2812Message::Flash(50, 5, 0, 255, 0));
                                     }
                                     services::auth::CheckCodeResult::Invalid => {
                                         defmt::info!("INVALID");
                                         audio_signal.signal(AudioCommand::PlayFile("FAILURE.MP3".to_string()));
-                                        web_socket_outgoing_channel
-                                            .send(WebSocketOutgoing::TagScanned {
-                                                allowed: false,
-                                                code,
-                                                timestamp: 0,
-                                            })
-                                            .await;
+
+                                        if let Err(err) = web_socket_outgoing_channel.try_send(WebSocketOutgoing::TagScanned {
+                                            allowed: true,
+                                            code,
+                                            timestamp: 0,
+                                        }) {
+                                            defmt::error!("Could not push code. Error: {}", defmt::Debug2Format(&err));
+                                        }
+
                                         ws2812_signal.signal(Ws2812Message::Flash(50, 5, 255, 0, 0));
                                     }
                                 },
@@ -316,7 +337,7 @@ async fn main(spawner: Spawner) {
 
                         web_socket_outgoing_channel.send(WebSocketOutgoing::LatchChanged { latch_state }).await;
                     }
-                    WebSocketIncoming::Ping { payload } => {
+                    WebSocketIncoming::Ping { payload: _ } => {
                         ws_last_seen.store(Instant::now().as_secs() as u32, Ordering::Relaxed);
                         feed_watchdog();
 

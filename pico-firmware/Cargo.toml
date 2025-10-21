@@ -10,6 +10,10 @@ name = "pico-firmware"
 test = false
 bench = false
 
+[features]
+wifi = []
+wired = []
+
 [dependencies]
 defmt = "1.0.1"
 defmt-rtt = "1.0.0"
@@ -89,6 +93,7 @@ embassy-net = { path = "embassy/embassy-net", features = [
     "dns",
 ] }
 embassy-embedded-hal = { path = "embassy/embassy-embedded-hal" }
+libm = "0.2.15"
 
 # embassy-executor = { version = "*", features = [
 #     "arch-cortex-m",

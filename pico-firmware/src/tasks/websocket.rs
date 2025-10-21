@@ -4,9 +4,6 @@ use alloc::fmt;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
-use core::future::join;
-use core::net::Ipv4Addr;
-use core::net::Ipv6Addr;
 use core::net::SocketAddr;
 use defmt::*;
 use edge_http::io::client::Connection;
@@ -31,11 +28,11 @@ use serde::Serialize;
 
 const WEB_SOCKET_SERVER: (&str, &str, &str) = (env!("WEB_SOCKET_SERVER_HOST"), env!("WEB_SOCKET_SERVER_PORT"), "/ws");
 
-pub type WebSocketOutgoingChannel = Channel<CriticalSectionRawMutex, WebSocketOutgoing, 1>;
-pub type WebSocketOutgoingReceiver = Receiver<'static, CriticalSectionRawMutex, WebSocketOutgoing, 1>;
+pub type WebSocketOutgoingChannel = Channel<CriticalSectionRawMutex, WebSocketOutgoing, 4>;
+pub type WebSocketOutgoingReceiver = Receiver<'static, CriticalSectionRawMutex, WebSocketOutgoing, 4>;
 
-pub type WebSocketIncomingChannel = Channel<CriticalSectionRawMutex, WebSocketIncoming, 1>;
-pub type WebSocketIncomingSender = Sender<'static, CriticalSectionRawMutex, WebSocketIncoming, 1>;
+pub type WebSocketIncomingChannel = Channel<CriticalSectionRawMutex, WebSocketIncoming, 4>;
+pub type WebSocketIncomingSender = Sender<'static, CriticalSectionRawMutex, WebSocketIncoming, 4>;
 
 #[embassy_executor::task]
 pub async fn websocket_task(
@@ -72,10 +69,10 @@ enum WsClient {
 impl defmt::Format for WsClient {
     fn format(&self, f: defmt::Formatter<'_>) {
         match self {
-            WsClient::Dns(e) => defmt::write!(f, "DNS error"),
-            WsClient::Io(e) => defmt::write!(f, "IO error"),
-            WsClient::Ws(e) => defmt::write!(f, "WebSocket error"),
-            WsClient::Serde(e) => defmt::write!(f, "Serde error"),
+            WsClient::Dns(_e) => defmt::write!(f, "DNS error"),
+            WsClient::Io(_e) => defmt::write!(f, "IO error"),
+            WsClient::Ws(_e) => defmt::write!(f, "WebSocket error"),
+            WsClient::Serde(_e) => defmt::write!(f, "Serde error"),
             WsClient::Misc(msg) => defmt::write!(f, "Error: {}", msg.as_str()),
         }
     }

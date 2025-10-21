@@ -1,4 +1,4 @@
-use alloc::{format, string::String, vec::Vec};
+use alloc::{format, string::String};
 use core::fmt;
 use defmt::*;
 use embassy_rp::{
