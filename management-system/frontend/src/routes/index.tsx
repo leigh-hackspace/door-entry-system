@@ -1,3 +1,4 @@
+import { formatDateTime } from "@door-entry-management-system/common";
 import { Button, Card, Tile } from "@frontend/components";
 import { beginPage } from "@frontend/helper";
 import { AppService } from "@frontend/services";
@@ -35,6 +36,8 @@ export function Home() {
 function AdminControls() {
   const [deviceState, setDeviceState] = createStore<Record<string, boolean>>();
 
+  const [tasks] = createResource(() => AppService.get().tRPC.Task.List.query({}));
+
   let activitySubscription: Unsubscribable | undefined;
 
   onMount(() => {
@@ -57,6 +60,10 @@ function AdminControls() {
     const result = await AppService.get().tRPC.Stats.SyncAuthentik.mutate({});
 
     alert(JSON.stringify(result));
+  };
+
+  const onRunTask = async (task: { name: string }) => {
+    await AppService.get().tRPC.Task.Run.mutate({ name: task.name });
   };
 
   return (
@@ -86,12 +93,40 @@ function AdminControls() {
             </Button>
           </div>
 
+          <hr />
+
           <div>
             <p>Manually sync users from Authentik to this system.</p>
             <Button colour="warning" on:click={() => onSyncAuthentik()}>
               Sync Authentik
             </Button>
           </div>
+
+          <hr />
+
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Next Run Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              <For each={tasks()}>
+                {(task) => (
+                  <tr>
+                    <td>{task.name}</td>
+                    <td>{formatDateTime(task.nextRunTime)}</td>
+                    <td>
+                      <Button colour="warning" on:click={() => onRunTask(task)}>
+                        Run
+                      </Button>
+                    </td>
+                  </tr>
+                )}
+              </For>
+            </tbody>
+          </table>
         </div>
       </Card.Body>
     </Card>

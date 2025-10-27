@@ -2,6 +2,7 @@
   "name": "@door-entry-management-system/common",
   "exports": "./src/index.ts",
   "imports": {
+    "date-fns": "npm:date-fns@^4.1.0",
     "ts-essentials": "npm:ts-essentials",
     "valibot": "npm:valibot@^1.1.0"
   }

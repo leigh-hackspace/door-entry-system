@@ -1,30 +1,31 @@
 /// <reference types='@types/node' />
+import { Config } from "@/config";
+import { AppRouter, tRPC } from "@/routers";
 import { bootstrap, getWebSocketRouter, GlobalDeviceCollectionWs, HomeAssistantService } from "@/services";
+import { SyncGocardless, TaskManager } from "@/tasks";
 import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import cors from "cors";
 import http from "node:http";
 import { WebSocketExpress } from "websocket-express";
-import { Config } from "@/config";
-import { AppRouter, tRPC } from "@/routers";
 
 const Port = Config.DE_BACKEND_PORT;
 
-export type AppRouter = typeof AppRouter;
+export type AppRouter = ReturnType<typeof AppRouter>;
 
 async function start() {
+  const taskManager = new TaskManager();
+
+  taskManager.scheduleTask(new SyncGocardless());
+
   const app = new WebSocketExpress();
 
   app.use(cors());
-
-  // app.use((req) => {
-  //   console.log(req.socket.remoteAddress);
-  // });
-
   app.use(getWebSocketRouter());
+
   app.set("shutdown timeout", 1000);
 
   const trpcHandler = createHTTPHandler({
-    router: AppRouter,
+    router: AppRouter(taskManager),
     createContext: tRPC.createContext,
   });
 
@@ -41,7 +42,7 @@ async function start() {
 
   const homeAssistantService = new HomeAssistantService(
     Config.DE_HOME_ASSISTANT_WS_URL,
-    Config.DE_HOME_ASSISTANT_ACCESS_TOKEN,
+    Config.DE_HOME_ASSISTANT_ACCESS_TOKEN
   );
 
   homeAssistantService.initialize();

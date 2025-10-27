@@ -1,5 +1,6 @@
 import { relations, sql } from "drizzle-orm";
-import { pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { date, jsonb, numeric, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import type { ElementOf } from "ts-essentials";
 import { ActivityLogAction, DeviceNameLength, IpAddressLength, UserRole } from "../../../common/src/index.ts"; // Drizzle Kit bodge
 
 export type TableType = typeof UserTable | typeof TagTable | typeof ActivityLogTable | typeof DeviceTable;
@@ -8,6 +9,9 @@ const UTC_NOW = sql`(NOW() AT TIME ZONE 'UTC')`;
 
 export const ScryptKeyLength = 64;
 const ScryptHashLength = 88; // Base64 length of 64 bytes
+
+const GoCardlessCustomerIdLength = 14;
+const GoCardlessPaymentIdLength = 14;
 
 export const UserRoleEnum = pgEnum("user_role", UserRole);
 
@@ -20,7 +24,7 @@ export const UserTable = pgTable("user", {
   email: varchar({ length: 128 }).notNull().unique(),
   password_hash: varchar({ length: ScryptHashLength }).notNull(),
   refresh_token: varchar({ length: 128 }),
-  gocardless_customer_id: varchar({ length: 14 }),
+  gocardless_customer_id: varchar({ length: GoCardlessCustomerIdLength }),
   notes: text(),
   created: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
   updated: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
@@ -71,4 +75,57 @@ export const DeviceTable = pgTable("device", {
   ip_address: varchar({ length: IpAddressLength }).notNull(),
   created: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
   updated: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
+});
+
+export const PaymentStatus = [
+  "pending_customer_approval",
+  "pending_submission",
+  "submitted",
+  "confirmed",
+  "paid_out",
+  "cancelled",
+  "customer_approval_denied",
+  "failed",
+  "charged_back",
+] as const;
+export type PaymentStatus = ElementOf<typeof PaymentStatus>;
+export const PaymentStatusEnum = pgEnum("payment_status", PaymentStatus);
+
+export const PaymentTable = pgTable("payment", {
+  id: varchar({ length: GoCardlessPaymentIdLength }).primaryKey(),
+  user_id: uuid("user_id")
+    .references(() => UserTable.id)
+    .notNull(),
+  status: PaymentStatusEnum().notNull(),
+  amount: numeric({ scale: 2, precision: 10 }).notNull(),
+  charge_date: date({ mode: "date" }).notNull(),
+  description: varchar({ length: 100 }).notNull(),
+  created: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
+  updated: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
+});
+
+export const PaymentRelations = relations(PaymentTable, ({ one }) => ({
+  user: one(UserTable, {
+    fields: [PaymentTable.user_id],
+    references: [UserTable.id],
+  }),
+}));
+
+export const LogLevel = ["error", "warning", "info", "debug"] as const;
+export type LogLevel = ElementOf<typeof LogLevel>;
+
+export const LogLevelEnum = pgEnum("log_level", LogLevel);
+
+export const TaskLogTable = pgTable("task_log", {
+  id: uuid()
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  level: LogLevelEnum().notNull(),
+  job_started: timestamp({ withTimezone: false, mode: "date", precision: 3 }).notNull(),
+  type: varchar({ length: 50 }).notNull(),
+  notes: text(),
+  data: jsonb()
+    .notNull()
+    .default(sql`'{}'`),
+  created: timestamp({ withTimezone: false, mode: "date", precision: 3 }).notNull().default(UTC_NOW),
 });

@@ -1,11 +1,11 @@
+import { db, PaymentTable, UserTable } from "@/db";
+import { getHexEncodedSha256, GoCardlessService, scryptAsync } from "@/services";
 import { RowSelection, UserCreateSchema, UserUpdateSchema } from "@door-entry-management-system/common";
 import { and, eq, ilike, inArray, notInArray, or } from "drizzle-orm";
 import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import * as uuid from "npm:uuid";
 import { assert } from "ts-essentials";
 import * as v from "valibot";
-import { db, UserTable } from "@/db";
-import { getHexEncodedSha256, GoCardlessService, scryptAsync } from "@/services";
 import { assertOneRecord, assertRole, PaginationSchema, toDrizzleOrderBy, UUID, withId } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 
@@ -14,7 +14,9 @@ const UserSearchSchema = v.intersect([PaginationSchema]);
 export const UserRouter = tRPC.router({
   Search: tRPC.ProtectedProcedure.input(v.parser(UserSearchSchema)).query(
     async ({ input: { take, skip, orderBy, search } }) => {
-      const quickSearchCondition = search ? or(ilike(UserTable.email, `%${search}%`), ilike(UserTable.name, `%${search}%`)) : and();
+      const quickSearchCondition = search
+        ? or(ilike(UserTable.email, `%${search}%`), ilike(UserTable.name, `%${search}%`))
+        : and();
 
       const condition = and(quickSearchCondition);
 
@@ -33,19 +35,17 @@ export const UserRouter = tRPC.router({
         db_rows.map(async (user) => ({
           ...user,
           image_url: "https://gravatar.com/avatar/" + (await getHexEncodedSha256(user.email)),
-        })),
+        }))
       );
 
       return { rows, total } as const;
-    },
+    }
   ),
 
   One: tRPC.ProtectedProcedure.input(v.parser(UUID)).query(async ({ input }) => {
     const user = assertOneRecord(await db.select().from(UserTable).where(eq(UserTable.id, input)));
 
-    const goCardlessService = new GoCardlessService();
-
-    const payments = user.gocardless_customer_id ? await goCardlessService.getPayments(user.gocardless_customer_id) : null;
+    const payments = await db.select().from(PaymentTable).where(eq(PaymentTable.user_id, input));
 
     return {
       ...user,
@@ -107,7 +107,7 @@ export const UserRouter = tRPC.router({
       }
 
       await db.update(UserTable).set(update).where(eq(UserTable.id, id));
-    },
+    }
   ),
 
   Delete: tRPC.ProtectedProcedure.input(RowSelection).mutation(async ({ ctx, input: { ids, mode } }) => {

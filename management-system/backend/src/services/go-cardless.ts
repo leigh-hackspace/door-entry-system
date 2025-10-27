@@ -1,7 +1,7 @@
-import type { PaymentSummary } from "@door-entry-management-system/common";
-import { GoCardlessClient } from "npm:gocardless-nodejs/client.js";
-import { Environments } from "npm:gocardless-nodejs/constants.js";
 import { Config } from "@/config";
+import type { PaymentSummary } from "@door-entry-management-system/common";
+import { GoCardlessClient } from "gocardless-nodejs/client.js";
+import { Environments } from "gocardless-nodejs/constants.js";
 
 export class GoCardlessService {
   #client: GoCardlessClient;
@@ -25,7 +25,7 @@ export class GoCardlessService {
   }
 
   public async getPayments(customerId: string): Promise<readonly PaymentSummary[]> {
-    const { payments } = await this.#client.payments.list({ limit: "500", customer: customerId });
+    const { payments } = await this.#client.payments.list({ limit: "100", customer: customerId });
 
     return payments
       .map(({ id, amount, charge_date, created_at, currency, description, status }): PaymentSummary | null => {

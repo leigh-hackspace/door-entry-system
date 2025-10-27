@@ -1,3 +1,5 @@
+import { format } from "date-fns";
+import { enGB } from "date-fns/locale";
 import { assert, type ElementOf } from "ts-essentials";
 
 export function assertError(err: unknown): asserts err is Error {
@@ -50,4 +52,12 @@ export function camelToPascal(camelCaseString: string) {
 
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function formatDateTime(date: Date) {
+  return format(date, "PPp", { locale: enGB });
+}
+
+export function formatDate(date: Date) {
+  return format(date, "P", { locale: enGB });
 }

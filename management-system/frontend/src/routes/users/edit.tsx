@@ -1,4 +1,12 @@
-import { assertError, FieldMetadata, ScanEvent, type UserUpdate, UserUpdateSchema } from "@door-entry-management-system/common";
+import {
+  assertError,
+  FieldMetadata,
+  formatDate,
+  humanise,
+  type ScanEvent,
+  type UserUpdate,
+  UserUpdateSchema,
+} from "@door-entry-management-system/common";
 import {
   Button,
   Card,
@@ -11,16 +19,13 @@ import {
   RowDataDefault,
   RowSelectionDefault,
 } from "@frontend/components";
-import { beginPage } from "@frontend/helper";
-import type { RouteSectionProps } from "@solidjs/router";
-import { createEffect, createResource, createSignal, Show, Suspense } from "solid-js";
-import * as v from "valibot";
 import { openAlert, openConfirm } from "@frontend/dialogs";
+import { beginPage } from "@frontend/helper";
 import type { TagSearchRecord } from "@frontend/services";
-import { onCleanup } from "solid-js";
-import { differenceInSeconds, format, formatDistanceToNow } from "date-fns";
-import { enGB } from "date-fns/locale";
-import { sourceMapsEnabled } from "node:process";
+import type { RouteSectionProps } from "@solidjs/router";
+import { differenceInSeconds, formatDistanceToNow } from "date-fns";
+import { createEffect, createResource, createSignal, onCleanup, Show, Suspense } from "solid-js";
+import * as v from "valibot";
 
 const TagTableSchema = v.object({
   code: v.pipe(v.string(), v.title("Code"), v.metadata(FieldMetadata({ icon: "🔑" }))),
@@ -151,7 +156,10 @@ export function UserEdit(props: RouteSectionProps) {
         <Card colour="success">
           <Card.Header text="Tags" />
           <Card.Body pad={0}>
-            <Show when={rows().rows.length > 0} fallback={<div class="p-2">No tags have been assigned to this user</div>}>
+            <Show
+              when={rows().rows.length > 0}
+              fallback={<div class="p-2">No tags have been assigned to this user</div>}
+            >
               <MagicBrowser
                 schema={TagTableSchema}
                 rowData={rows()}
@@ -196,12 +204,10 @@ export function UserEdit(props: RouteSectionProps) {
                         {user().payments?.map((payment) => (
                           <li class="list-group-item">
                             <div>ID: {payment.id}</div>
-                            <div>{payment.charge_date}</div>
-                            <div>
-                              Amount: {parseInt(payment.amount, 10) / 100} {payment.currency}
-                            </div>
+                            <div>{formatDate(payment.charge_date)}</div>
+                            <div>Amount: £{payment.amount}</div>
                             <div>{payment.description}</div>
-                            <div>Status: {payment.status}</div>
+                            <div>Status: {humanise(payment.status)}</div>
                           </li>
                         ))}
                       </ol>
