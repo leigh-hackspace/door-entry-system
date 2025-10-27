@@ -1,0 +1,44 @@
+import { db, PaymentTable, UserTable } from "@/db";
+import { addDays } from "date-fns/addDays";
+import { and, eq, gt, isNotNull } from "drizzle-orm";
+import { Task } from "./common.ts";
+import { getNextDailyRuntime } from "./index.ts";
+
+export class CheckPayments extends Task {
+  protected override calculateNextRunTime() {
+    return getNextDailyRuntime("02:30").getTime();
+  }
+
+  protected override async run(signal: AbortSignal): Promise<void> {
+    const users = await db.select().from(UserTable).where(isNotNull(UserTable.gocardless_customer_id));
+
+    for (const user of users) {
+      console.log("Checking payments for user:", user.name);
+
+      let paidUp = false;
+
+      if (user.gocardless_customer_id) {
+        const payments = await db
+          .select()
+          .from(PaymentTable)
+          .where(
+            and(
+              eq(PaymentTable.user_id, user.id),
+              gt(PaymentTable.charge_date, addDays(new Date(), -45)),
+              eq(PaymentTable.status, "paid_out")
+            )
+          );
+
+        if (payments.length > 0) {
+          paidUp = true;
+        }
+      }
+
+      if (user.paidUp !== paidUp) {
+        console.log("Changing paid up:", paidUp);
+
+        await db.update(UserTable).set({ paidUp }).where(eq(UserTable.id, user.id));
+      }
+    }
+  }
+}

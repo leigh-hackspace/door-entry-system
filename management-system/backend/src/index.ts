@@ -2,7 +2,7 @@
 import { Config } from "@/config";
 import { AppRouter, tRPC } from "@/routers";
 import { bootstrap, getWebSocketRouter, GlobalDeviceCollectionWs, HomeAssistantService } from "@/services";
-import { SyncGocardless, TaskManager } from "@/tasks";
+import { CheckPayments, SyncGocardless, TaskManager } from "@/tasks";
 import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import cors from "cors";
 import http from "node:http";
@@ -16,6 +16,7 @@ async function start() {
   const taskManager = new TaskManager();
 
   taskManager.scheduleTask(new SyncGocardless());
+  taskManager.scheduleTask(new CheckPayments());
 
   const app = new WebSocketExpress();
 

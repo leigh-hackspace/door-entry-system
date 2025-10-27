@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { date, jsonb, numeric, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, date, jsonb, numeric, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import type { ElementOf } from "ts-essentials";
 import { ActivityLogAction, DeviceNameLength, IpAddressLength, UserRole } from "../../../common/src/index.ts"; // Drizzle Kit bodge
 
@@ -26,6 +26,7 @@ export const UserTable = pgTable("user", {
   refresh_token: varchar({ length: 128 }),
   gocardless_customer_id: varchar({ length: GoCardlessCustomerIdLength }),
   notes: text(),
+  paidUp: boolean("paid_up").default(false).notNull(),
   created: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
   updated: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
 });

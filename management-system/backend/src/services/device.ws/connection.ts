@@ -1,11 +1,14 @@
+import { Config } from "@/config";
+import { ActivityLogTable, db, DeviceTable, TagTable, UserTable } from "@/db";
 import type { ActivityLogAction, DeviceInfo } from "@door-entry-management-system/common";
 import { WebClient } from "@slack/web-api";
-import { eq, getTableColumns } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { clearInterval, clearTimeout, setInterval, setTimeout } from "node:timers";
+import { assert } from "ts-essentials";
 import * as uuid from "uuid";
-import { ActivityLogTable, db, DeviceTable, TagTable, UserTable } from "@/db";
 import {
   DeviceEvents,
+  TagCode,
   type DeviceOutgoingFn,
   type IncomingFileList,
   type IncomingFileStart,
@@ -14,8 +17,6 @@ import {
   type IncomingTagScanned,
   type PublicDeviceInterface,
 } from "./common.ts";
-import { assert } from "ts-essentials";
-import { Config } from "@/config";
 
 const CHUNK_SIZE = 4 * 1024;
 const WRITE_TIMEOUT = 10_000;
@@ -23,10 +24,7 @@ const WRITE_TIMEOUT = 10_000;
 export class DeviceConnection implements PublicDeviceInterface {
   private interval: NodeJS.Timeout;
 
-  constructor(
-    public device: DeviceInfo,
-    public commander: DeviceOutgoingFn,
-  ) {
+  constructor(public device: DeviceInfo, public commander: DeviceOutgoingFn) {
     console.log("DeviceConnection:", device);
 
     this.commander(["message", { type: "ping", payload: "Connection successful" }]);
@@ -48,7 +46,10 @@ export class DeviceConnection implements PublicDeviceInterface {
       await db.insert(DeviceTable).values({ id, name: this.device.name, ip_address: this.device.ip_address });
     } else {
       id = rows[0].id;
-      await db.update(DeviceTable).set({ ip_address: this.device.ip_address, updated: new Date() }).where(eq(DeviceTable.id, id));
+      await db
+        .update(DeviceTable)
+        .set({ ip_address: this.device.ip_address, updated: new Date() })
+        .where(eq(DeviceTable.id, id));
     }
 
     this.device = (await db.select().from(DeviceTable).where(eq(DeviceTable.id, id)))[0];
@@ -59,16 +60,14 @@ export class DeviceConnection implements PublicDeviceInterface {
     this.commander(["message", { type: "ping", payload: "Server ping" }]);
   }
 
-  public async pushValidCodes() {
-    const rows = await db
-      .select({ ...getTableColumns(TagTable), user_name: UserTable.name })
-      .from(TagTable)
-      .innerJoin(UserTable, eq(TagTable.user_id, UserTable.id));
-
-    this.commander(["message", {
-      type: "push_tags",
-      tags: rows.map((r) => ({ tag_name: r.description, member_name: r.user_name, code: r.code })),
-    }]);
+  public async pushValidCodes(tags: TagCode[]) {
+    this.commander([
+      "message",
+      {
+        type: "push_tags",
+        tags,
+      },
+    ]);
   }
 
   public async pushLatchState(latch: boolean) {
@@ -77,11 +76,14 @@ export class DeviceConnection implements PublicDeviceInterface {
 
   public async pushBinaryFile(file_name: string, data: Uint8Array): Promise<void> {
     return new Promise((resolve, reject) => {
-      void this.commander(["message", {
-        type: "file_start",
-        file_name,
-        length: data.length,
-      }]);
+      void this.commander([
+        "message",
+        {
+          type: "file_start",
+          file_name,
+          length: data.length,
+        },
+      ]);
 
       const chunk_count = Math.ceil(data.length / CHUNK_SIZE);
       let chunk_index = 0;
@@ -124,10 +126,13 @@ export class DeviceConnection implements PublicDeviceInterface {
 
   public getBinaryFile(requestFileName: string) {
     return new Promise<Uint8Array>((resolve, reject) => {
-      this.commander(["message", {
-        type: "file_request",
-        file_name: requestFileName,
-      }]);
+      this.commander([
+        "message",
+        {
+          type: "file_request",
+          file_name: requestFileName,
+        },
+      ]);
 
       const cleanUp = () => {
         this.fileStartHandler = undefined;
@@ -220,10 +225,13 @@ export class DeviceConnection implements PublicDeviceInterface {
       };
 
       // Then start the command
-      this.commander(["message", {
-        type: "file_delete",
-        file_name,
-      }]).catch((error) => {
+      this.commander([
+        "message",
+        {
+          type: "file_delete",
+          file_name,
+        },
+      ]).catch((error) => {
         cleanUp();
         return reject(error);
       });
@@ -231,17 +239,23 @@ export class DeviceConnection implements PublicDeviceInterface {
   }
 
   public async playFile(file_name: string) {
-    await this.commander(["message", {
-      type: "play",
-      file_name,
-    }]);
+    await this.commander([
+      "message",
+      {
+        type: "play",
+        file_name,
+      },
+    ]);
   }
 
   public listFiles() {
     return new Promise<IncomingFileList["list"]>((resolve) => {
-      this.commander(["message", {
-        type: "file_list",
-      }]);
+      this.commander([
+        "message",
+        {
+          type: "file_list",
+        },
+      ]);
 
       this.fileListHandler = ({ list }) => {
         this.fileListHandler = undefined;

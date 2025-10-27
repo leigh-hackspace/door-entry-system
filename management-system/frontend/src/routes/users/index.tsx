@@ -23,6 +23,7 @@ const UserTableSchema = v.object({
   role: v.pipe(v.string(), v.title("Role"), v.metadata(FieldMetadata({ icon: "🏅" }))),
   email: v.pipe(v.string(), v.title("Email"), v.metadata(FieldMetadata({ icon: "📧" }))),
   name: v.pipe(v.string(), v.title("Name"), v.metadata(FieldMetadata({ icon: "👤" }))),
+  paidUp: v.pipe(v.boolean(), v.title("Paid Up"), v.metadata(FieldMetadata({ icon: "£" }))),
   created: v.pipe(v.date(), v.title("Created"), v.metadata(FieldMetadata({ displayMode: "raw" }))),
   updated: v.pipe(v.date(), v.title("Updated"), v.metadata(FieldMetadata({ displayMode: "raw" }))),
 });
@@ -90,6 +91,11 @@ export function Users(props: RouteSectionProps) {
             selection={selectionSignal}
             acquireImage={(row) => row.image_url}
             renderRole={(row) => humanise(row.role)}
+            renderPaidUp={(row) => (
+              <div style={{ "font-weight": "bold", color: row.paidUp ? "green" : "red" }}>
+                {row.paidUp ? "Yes" : "No"}
+              </div>
+            )}
             onRowClick={onRowClick}
           />
         </Card.Body>

@@ -1,11 +1,11 @@
+import { db, TagTable } from "@/db";
+import { GlobalDeviceCollectionWs } from "@/services";
 import { TagCreateSchema, TagUpdateSchema } from "@door-entry-management-system/common";
 import { and, count, eq, getTableColumns, ilike, or } from "drizzle-orm";
 import * as uuid from "npm:uuid";
 import { assert } from "ts-essentials";
 import * as v from "valibot";
-import { db, TagTable } from "@/db";
 import { UserTable } from "../db/schema.ts";
-import { GlobalDeviceCollectionWs } from "@/services";
 import { assertOneRecord, PaginationSchema, toDrizzleOrderBy, UUID, withId } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 
@@ -18,10 +18,10 @@ export const TagRouter = tRPC.router({
     async ({ ctx, input: { take, skip, orderBy, search, user_id } }) => {
       const quickSearchCondition = search
         ? or(
-          ilike(TagTable.code, `%${search}%`),
-          ilike(TagTable.description, `%${search}%`),
-          ilike(UserTable.name, `%${search}%`),
-        )
+            ilike(TagTable.code, `%${search}%`),
+            ilike(TagTable.description, `%${search}%`),
+            ilike(UserTable.name, `%${search}%`)
+          )
         : and();
 
       // Normal users can only see tags belonging to them
@@ -49,7 +49,7 @@ export const TagRouter = tRPC.router({
         .where(condition);
 
       return { rows, total } as const;
-    },
+    }
   ),
 
   One: tRPC.ProtectedProcedure.input(v.parser(UUID)).query(async ({ input }) => {
@@ -88,7 +88,7 @@ export const TagRouter = tRPC.router({
       });
 
       await GlobalDeviceCollectionWs.pushValidCodes();
-    },
+    }
   ),
 
   Delete: tRPC.ProtectedProcedure.input(v.parser(UUID)).mutation(async ({ ctx, input }) => {
@@ -131,5 +131,7 @@ export const TagRouter = tRPC.router({
         description: `Auto-generated tag for user "${userToAddTag.email}"`,
       });
     }
+
+    await GlobalDeviceCollectionWs.pushValidCodes();
   }),
 });

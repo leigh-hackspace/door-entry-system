@@ -3,6 +3,7 @@ import process from "node:process";
 import { assert } from "ts-essentials";
 import type { Task } from "./common.ts";
 
+export * from "./check-payments.ts";
 export * from "./common.ts";
 export * from "./sync-gocardless.ts";
 

@@ -1,6 +1,9 @@
-import * as v from "valibot";
-import EventEmitter from "node:events";
 import { type ScanEvent, sleep } from "@door-entry-management-system/common";
+import EventEmitter from "node:events";
+import * as v from "valibot";
+
+export const TagCode = v.object({ tag_name: v.string(), member_name: v.string(), code: v.string() });
+export type TagCode = v.InferInput<typeof TagCode>;
 
 // ==== Events ====
 
@@ -72,7 +75,7 @@ export type DeviceIncoming = v.InferInput<typeof DeviceIncoming>;
 
 export const OutgoingPushTags = v.object({
   type: v.literal("push_tags"),
-  tags: v.array(v.object({ tag_name: v.string(), member_name: v.string(), code: v.string() })),
+  tags: v.array(TagCode),
 });
 export type OutgoingPushTags = v.InferInput<typeof OutgoingPushTags>;
 
@@ -135,7 +138,7 @@ export type DeviceCommand = readonly ["message", DeviceOutgoing] | readonly ["bi
 export type DeviceOutgoingFn = (command: DeviceCommand) => Promise<void>;
 
 export interface PublicDeviceInterface {
-  pushValidCodes(): Promise<void>;
+  pushValidCodes(tags: TagCode[]): Promise<void>;
   pushLatchState(latch: boolean): Promise<void>;
   getBinaryFile(request_file_name: string): Promise<Uint8Array>;
   pushBinaryFile(file_name: string, data: Uint8Array): Promise<void>;
@@ -145,11 +148,9 @@ export interface PublicDeviceInterface {
 }
 
 export class FakeDeviceConnection implements PublicDeviceInterface {
-  async pushValidCodes(): Promise<void> {
-  }
+  async pushValidCodes(tags: TagCode[]): Promise<void> {}
 
-  async pushLatchState(latch: boolean): Promise<void> {
-  }
+  async pushLatchState(latch: boolean): Promise<void> {}
 
   async getBinaryFile(request_file_name: string): Promise<Uint8Array> {
     return new Uint8Array([48, 49, 50, 0x0d, 0x0a]);

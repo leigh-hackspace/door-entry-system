@@ -24,7 +24,7 @@ import { beginPage } from "@frontend/helper";
 import type { TagSearchRecord } from "@frontend/services";
 import type { RouteSectionProps } from "@solidjs/router";
 import { differenceInSeconds, formatDistanceToNow } from "date-fns";
-import { createEffect, createResource, createSignal, onCleanup, Show, Suspense } from "solid-js";
+import { createEffect, createResource, createSignal, For, onCleanup, Show, Suspense } from "solid-js";
 import * as v from "valibot";
 
 const TagTableSchema = v.object({
@@ -201,15 +201,17 @@ export function UserEdit(props: RouteSectionProps) {
                     <div>
                       <label class="form-label">GoCardless Payments</label>
                       <ol class="list-group">
-                        {user().payments?.map((payment) => (
-                          <li class="list-group-item">
-                            <div>ID: {payment.id}</div>
-                            <div>{formatDate(payment.charge_date)}</div>
-                            <div>Amount: £{payment.amount}</div>
-                            <div>{payment.description}</div>
-                            <div>Status: {humanise(payment.status)}</div>
-                          </li>
-                        ))}
+                        <For each={user().payments}>
+                          {(payment) => (
+                            <li class="list-group-item">
+                              <div>ID: {payment.id}</div>
+                              <div>{formatDate(payment.charge_date)}</div>
+                              <div>Amount: £{payment.amount}</div>
+                              <div>{payment.description}</div>
+                              <div>Status: {humanise(payment.status)}</div>
+                            </li>
+                          )}
+                        </For>
                       </ol>
                     </div>
                   </div>

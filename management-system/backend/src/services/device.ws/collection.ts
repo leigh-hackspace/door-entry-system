@@ -1,12 +1,18 @@
+import { db, TagTable, UserTable } from "@/db";
 import type { DeviceInfo } from "@door-entry-management-system/common";
-import { type DeviceOutgoingFn, FakeDeviceConnection, type IncomingAnnounce, type PublicDeviceInterface } from "./common.ts";
+import { eq, getTableColumns } from "drizzle-orm";
+import {
+  type DeviceOutgoingFn,
+  FakeDeviceConnection,
+  type IncomingAnnounce,
+  type PublicDeviceInterface,
+} from "./common.ts";
 import { DeviceConnection } from "./connection.ts";
 
 class DeviceCollection {
   private devices: Record<string, DeviceConnection> = {};
 
-  constructor() {
-  }
+  constructor() {}
 
   public handleAnnounce(announce: IncomingAnnounce, ip_address: string, commander: DeviceOutgoingFn) {
     const deviceInfo: DeviceInfo = {
@@ -18,7 +24,7 @@ class DeviceCollection {
       this.devices[announce.name].destroy();
     }
 
-    return this.devices[announce.name] = new DeviceConnection(deviceInfo, commander);
+    return (this.devices[announce.name] = new DeviceConnection(deviceInfo, commander));
   }
 
   public remove(connection_to_remove: DeviceConnection) {
@@ -30,15 +36,25 @@ class DeviceCollection {
     }
   }
 
-  public pushValidCodes() {
-    return Promise.all(Object.values(this.devices).map((device) => device.pushValidCodes()));
+  public async pushValidCodes() {
+    const rows = await db
+      .select({ ...getTableColumns(TagTable), user_name: UserTable.name })
+      .from(TagTable)
+      .innerJoin(UserTable, eq(TagTable.user_id, UserTable.id))
+      .where(eq(UserTable.paidUp, true));
+
+    const tags = rows.map((r) => ({ tag_name: r.description, member_name: r.user_name, code: r.code }));
+
+    console.log("Pushing tags:", tags);
+
+    return Promise.all(Object.values(this.devices).map((device) => device.pushValidCodes(tags)));
   }
 
   public pushLatchStateAll(latch: boolean) {
     return Promise.all(
       Object.values(this.devices).map((device) => {
         device.pushLatchState(latch);
-      }),
+      })
     );
   }
 
