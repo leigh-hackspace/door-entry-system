@@ -1,4 +1,4 @@
-import { formatDateTime } from "@door-entry-management-system/common";
+import { formatDateTime, humanise } from "@door-entry-management-system/common";
 import { Button, Card, Tile } from "@frontend/components";
 import { beginPage } from "@frontend/helper";
 import { AppService } from "@frontend/services";
@@ -56,12 +56,6 @@ function AdminControls() {
     return AppService.get().tRPC.Stats.SetLatch.mutate({ latch });
   };
 
-  const onSyncAuthentik = async () => {
-    const result = await AppService.get().tRPC.Stats.SyncAuthentik.mutate({});
-
-    alert(JSON.stringify(result));
-  };
-
   const onRunTask = async (task: { name: string }) => {
     await AppService.get().tRPC.Task.Run.mutate({ name: task.name });
   };
@@ -95,15 +89,6 @@ function AdminControls() {
 
           <hr />
 
-          <div>
-            <p>Manually sync users from Authentik to this system.</p>
-            <Button colour="warning" on:click={() => onSyncAuthentik()}>
-              Sync Authentik
-            </Button>
-          </div>
-
-          <hr />
-
           <table>
             <thead>
               <tr>
@@ -115,7 +100,7 @@ function AdminControls() {
               <For each={tasks()}>
                 {(task) => (
                   <tr>
-                    <td>{task.name}</td>
+                    <td>{humanise(task.name)}</td>
                     <td>{formatDateTime(task.nextRunTime)}</td>
                     <td>
                       <Button colour="warning" on:click={() => onRunTask(task)}>

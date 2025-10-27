@@ -1,4 +1,4 @@
-import { db, type PaymentStatus, PaymentTable, UserTable } from "@/db";
+import { PaymentTable, UserTable, db, type PaymentStatus } from "@/db";
 import { GoCardlessService } from "@/services";
 import { parse } from "date-fns";
 import { eq, isNotNull } from "drizzle-orm";
@@ -7,10 +7,7 @@ import { Task, getNextDailyRuntime } from "./common.ts";
 
 export class SyncGocardlessTask extends Task {
   protected override calculateNextRunTime() {
-    // return Math.max(this.nextRunTime + 60_000, Date.now());
-
-    // return getNextWeeklyRuntime("06:00", 1).getTime();
-    return getNextDailyRuntime("02:00").getTime();
+    return getNextDailyRuntime("02:10").getTime();
   }
 
   protected override async run(signal: AbortSignal): Promise<void> {
@@ -21,12 +18,16 @@ export class SyncGocardlessTask extends Task {
     const api = new GoCardlessService();
 
     for (const user of users) {
+      if (signal.aborted) return;
+
       console.log("Syncing payments for user:", user.name);
 
       assert(user.gocardless_customer_id, "No gocardless_customer_id!");
       const payments = await api.getPayments(user.gocardless_customer_id);
 
       for (const payment of payments) {
+        if (signal.aborted) return;
+
         if (!payment.charge_date) continue;
 
         const exists = await db

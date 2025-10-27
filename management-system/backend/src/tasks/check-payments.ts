@@ -5,13 +5,15 @@ import { getNextDailyRuntime, Task } from "./common.ts";
 
 export class CheckPaymentsTask extends Task {
   protected override calculateNextRunTime() {
-    return getNextDailyRuntime("02:10").getTime();
+    return getNextDailyRuntime("02:20").getTime();
   }
 
   protected override async run(signal: AbortSignal): Promise<void> {
     const users = await db.select().from(UserTable).where(isNotNull(UserTable.gocardless_customer_id));
 
     for (const user of users) {
+      if (signal.aborted) return;
+
       console.log("Checking payments for user:", user.name);
 
       let paidUp = false;

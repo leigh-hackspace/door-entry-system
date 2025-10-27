@@ -26,7 +26,7 @@ export abstract class Task {
 
     const abortController = new AbortController();
 
-    const timeoutMs = 15 * Minute * 1_000;
+    const timeoutMs = 10 * Minute * 1_000;
     const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
 
     try {
