@@ -2,11 +2,12 @@
 import { Config } from "@/config";
 import { AppRouter, tRPC } from "@/routers";
 import { bootstrap, getWebSocketRouter, GlobalDeviceCollectionWs, HomeAssistantService } from "@/services";
-import { CheckPayments, SyncGocardless, TaskManager } from "@/tasks";
+import { CheckPaymentsTask, SyncGocardlessTask, TaskManager } from "@/tasks";
 import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import cors from "cors";
 import http from "node:http";
 import { WebSocketExpress } from "websocket-express";
+import { PushTagCodesTask } from "./tasks/push-tag-codes.ts";
 
 const Port = Config.DE_BACKEND_PORT;
 
@@ -15,8 +16,9 @@ export type AppRouter = ReturnType<typeof AppRouter>;
 async function start() {
   const taskManager = new TaskManager();
 
-  taskManager.scheduleTask(new SyncGocardless());
-  taskManager.scheduleTask(new CheckPayments());
+  taskManager.scheduleTask(new SyncGocardlessTask());
+  taskManager.scheduleTask(new CheckPaymentsTask());
+  taskManager.scheduleTask(new PushTagCodesTask());
 
   const app = new WebSocketExpress();
 

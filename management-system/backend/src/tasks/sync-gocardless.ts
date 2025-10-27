@@ -1,13 +1,11 @@
-import { db, type PaymentStatus, UserTable } from "@/db";
+import { db, type PaymentStatus, PaymentTable, UserTable } from "@/db";
 import { GoCardlessService } from "@/services";
+import { parse } from "date-fns";
 import { eq, isNotNull } from "drizzle-orm";
-import { parse } from "npm:date-fns";
 import { assert } from "ts-essentials";
-import { PaymentTable } from "../db/schema.ts";
-import { Task } from "./common.ts";
-import { getNextDailyRuntime } from "./index.ts";
+import { Task, getNextDailyRuntime } from "./common.ts";
 
-export class SyncGocardless extends Task {
+export class SyncGocardlessTask extends Task {
   protected override calculateNextRunTime() {
     // return Math.max(this.nextRunTime + 60_000, Date.now());
 

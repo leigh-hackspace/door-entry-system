@@ -1,12 +1,11 @@
 import { db, PaymentTable, UserTable } from "@/db";
-import { addDays } from "date-fns/addDays";
+import { addDays } from "date-fns";
 import { and, eq, gt, isNotNull } from "drizzle-orm";
-import { Task } from "./common.ts";
-import { getNextDailyRuntime } from "./index.ts";
+import { getNextDailyRuntime, Task } from "./common.ts";
 
-export class CheckPayments extends Task {
+export class CheckPaymentsTask extends Task {
   protected override calculateNextRunTime() {
-    return getNextDailyRuntime("02:30").getTime();
+    return getNextDailyRuntime("02:10").getTime();
   }
 
   protected override async run(signal: AbortSignal): Promise<void> {
