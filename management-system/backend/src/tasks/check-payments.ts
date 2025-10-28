@@ -1,6 +1,6 @@
 import { db, PaymentTable, UserTable } from "@/db";
 import { addDays } from "date-fns";
-import { and, eq, gt, isNotNull } from "drizzle-orm";
+import { and, eq, gt, isNotNull, or } from "drizzle-orm";
 import { getNextDailyRuntime, Task } from "./common.ts";
 
 export class CheckPaymentsTask extends Task {
@@ -9,7 +9,10 @@ export class CheckPaymentsTask extends Task {
   }
 
   protected override async run(signal: AbortSignal): Promise<void> {
-    const users = await db.select().from(UserTable).where(isNotNull(UserTable.gocardless_customer_id));
+    const users = await db
+      .select()
+      .from(UserTable)
+      .where(or(isNotNull(UserTable.gocardless_customer_id), eq(UserTable.name, "Keysafe")));
 
     for (const user of users) {
       if (signal.aborted) return;
