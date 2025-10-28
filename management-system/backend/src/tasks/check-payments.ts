@@ -35,6 +35,11 @@ export class CheckPaymentsTask extends Task {
         }
       }
 
+      // Special "Keysafe" user is always allowed
+      if (user.name === "Keysafe") {
+        paidUp = true;
+      }
+
       if (user.paidUp !== paidUp) {
         console.log("Changing paid up:", paidUp);
 
