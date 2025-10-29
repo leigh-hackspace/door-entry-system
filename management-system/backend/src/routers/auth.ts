@@ -3,14 +3,14 @@ import { db, UserTable } from "@/db";
 import { AuthentikService, AuthentikUserClient, scryptAsync } from "@/services";
 import { LoginDataSchema } from "@door-entry-management-system/common";
 import { eq } from "drizzle-orm";
+import jwt from "jsonwebtoken";
 import { on } from "node:events";
-import jwt from "npm:jsonwebtoken";
-import * as uuid from "npm:uuid";
 import { assert } from "ts-essentials";
+import * as uuid from "uuid";
 import * as v from "valibot";
 import { assertOneRecord, type TokenPayload } from "./common.ts";
-import { tRPC } from "./trpc.ts";
 import { SessionEvents } from "./events.ts";
+import { tRPC } from "./trpc.ts";
 
 export const AuthRouter = tRPC.router({
   Login: tRPC.PublicProcedure.input(v.parser(LoginDataSchema)).mutation(async ({ input }) => {
@@ -18,7 +18,7 @@ export const AuthRouter = tRPC.router({
       await db.select().from(UserTable).where(eq(UserTable.email, input.email.toLowerCase())),
     );
 
-    const result = (await scryptAsync(input.password, user.id)) === user.password_hash;
+    const result = (await scryptAsync(input.password, user.id)) === user.passwordHash;
     assert(result, "Invalid password");
 
     const payload: TokenPayload = { id: user.id };
@@ -70,15 +70,20 @@ export const AuthRouter = tRPC.router({
           email: userData.email,
           name: userData.name,
           role: shouldBeAdmin ? "admin" : "user",
-          password_hash: "Authentik",
-          refresh_token,
+          passwordHash: "Authentik",
+          refreshToken: refresh_token,
         });
       } else {
         id = matchingUsers[0].id;
 
         await db
           .update(UserTable)
-          .set({ email: userData.email, name: userData.name, role: shouldBeAdmin ? "admin" : "user", refresh_token })
+          .set({
+            email: userData.email,
+            name: userData.name,
+            role: shouldBeAdmin ? "admin" : "user",
+            refreshToken: refresh_token,
+          })
           .where(eq(UserTable.id, id));
       }
 

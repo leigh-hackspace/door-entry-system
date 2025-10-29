@@ -12,6 +12,7 @@ import { Login } from "./routes/login.tsx";
 import { TagEdit } from "./routes/tags/edit.tsx";
 import { Tags } from "./routes/tags/index.tsx";
 import { TagNew } from "./routes/tags/new.tsx";
+import { TaskLogs } from "./routes/task-log/index.tsx";
 import { UserEdit } from "./routes/users/edit.tsx";
 import { Users } from "./routes/users/index.tsx";
 import { UserNew } from "./routes/users/new.tsx";
@@ -48,6 +49,8 @@ function App() {
       <Route path="/tags/:id" component={TagEdit} />
 
       <Route path="/activity-log/" component={ActivityLogs} />
+
+      <Route path="/task-log/" component={TaskLogs} />
     </Router>
   );
 }

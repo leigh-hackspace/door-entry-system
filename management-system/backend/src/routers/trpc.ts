@@ -1,10 +1,10 @@
-import { assertUnreachable } from "@door-entry-management-system/common";
-import { eq } from "drizzle-orm";
-import { initTRPC, TRPCError } from "@trpc/server";
-import type { CreateHTTPContextOptions } from "@trpc/server/adapters/standalone";
-import superjson from "superjson";
 import { db, UserTable } from "@/db";
 import { AuthentikService, AuthentikUserClient } from "@/services";
+import { assertUnreachable } from "@door-entry-management-system/common";
+import { initTRPC, TRPCError } from "@trpc/server";
+import type { CreateHTTPContextOptions } from "@trpc/server/adapters/standalone";
+import { eq } from "drizzle-orm";
+import superjson from "superjson";
 import { assertOneRecord, verifyToken } from "./common.ts";
 
 // deno-lint-ignore no-namespace
@@ -20,15 +20,15 @@ export namespace tRPC {
     const session = await getSession(authorization);
 
     const getAuthentikUserClient = async () => {
-      if (!session?.user.refresh_token) throw new Error("No refresh_token!");
+      if (!session?.user.refreshToken) throw new Error("No refresh_token!");
 
       const authentikService = new AuthentikService();
 
       const { access_token, refresh_token } = await authentikService.getTokenWithRefreshToken(
-        session.user.refresh_token,
+        session.user.refreshToken,
       );
 
-      await db.update(UserTable).set({ refresh_token }).where(eq(UserTable.id, session.user.id));
+      await db.update(UserTable).set({ refreshToken: refresh_token }).where(eq(UserTable.id, session.user.id));
 
       return new AuthentikUserClient(access_token);
     };

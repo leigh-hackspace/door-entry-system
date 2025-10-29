@@ -3,8 +3,8 @@ import { getHexEncodedSha256, GoCardlessService, scryptAsync } from "@/services"
 import { RowSelection, UserCreateSchema, UserUpdateSchema } from "@door-entry-management-system/common";
 import { and, eq, ilike, inArray, notInArray, or } from "drizzle-orm";
 import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
-import * as uuid from "npm:uuid";
 import { assert } from "ts-essentials";
+import * as uuid from "uuid";
 import * as v from "valibot";
 import { assertOneRecord, assertRole, PaginationSchema, toDrizzleOrderBy, UUID, withId } from "./common.ts";
 import { tRPC } from "./trpc.ts";
@@ -14,9 +14,7 @@ const UserSearchSchema = v.intersect([PaginationSchema]);
 export const UserRouter = tRPC.router({
   Search: tRPC.ProtectedProcedure.input(v.parser(UserSearchSchema)).query(
     async ({ input: { take, skip, orderBy, search } }) => {
-      const quickSearchCondition = search
-        ? or(ilike(UserTable.email, `%${search}%`), ilike(UserTable.name, `%${search}%`))
-        : and();
+      const quickSearchCondition = search ? or(ilike(UserTable.email, `%${search}%`), ilike(UserTable.name, `%${search}%`)) : and();
 
       const condition = and(quickSearchCondition);
 
@@ -35,11 +33,11 @@ export const UserRouter = tRPC.router({
         db_rows.map(async (user) => ({
           ...user,
           image_url: "https://gravatar.com/avatar/" + (await getHexEncodedSha256(user.email)),
-        }))
+        })),
       );
 
       return { rows, total } as const;
-    }
+    },
   ),
 
   One: tRPC.ProtectedProcedure.input(v.parser(UUID)).query(async ({ input }) => {
@@ -56,17 +54,17 @@ export const UserRouter = tRPC.router({
   Create: tRPC.ProtectedProcedure.input(v.parser(UserCreateSchema)).mutation(async ({ ctx, input }) => {
     assertRole(ctx, "admin");
 
-    const { new_password, confirm_password, ...rest } = input;
+    const { newPassword, confirmPassword, ...rest } = input;
 
     const id = uuid.v4();
 
-    assert(new_password === confirm_password, "Passwords do not match");
+    assert(newPassword === confirmPassword, "Passwords do not match");
 
-    const password_hash = await scryptAsync(new_password, id);
+    const passwordHash = await scryptAsync(newPassword, id);
 
     rest.email = rest.email.toLowerCase();
 
-    await db.insert(UserTable).values({ id, ...rest, password_hash });
+    await db.insert(UserTable).values({ id, ...rest, passwordHash });
 
     return id;
   }),
@@ -75,10 +73,10 @@ export const UserRouter = tRPC.router({
     async ({ ctx, input: [id, fields] }) => {
       assertRole(ctx, "admin");
 
-      const { new_password, confirm_password, ...rest } = fields;
+      const { newPassword, confirmPassword, ...rest } = fields;
 
-      if (new_password) {
-        assert(new_password === confirm_password, "Passwords do not match");
+      if (newPassword) {
+        assert(newPassword === confirmPassword, "Passwords do not match");
       }
 
       const currentUser = assertOneRecord(await db.select().from(UserTable).where(eq(UserTable.id, id)));
@@ -91,23 +89,23 @@ export const UserRouter = tRPC.router({
       if (rest.email) {
         update.email = rest.email.toLowerCase();
 
-        if (!currentUser.gocardless_customer_id) {
+        if (!currentUser.gocardlessCustomerId) {
           try {
             const goCardlessService = new GoCardlessService();
 
-            update.gocardless_customer_id = await goCardlessService.getCustomerId(update.email);
+            update.gocardlessCustomerId = await goCardlessService.getCustomerId(update.email);
           } catch (err: unknown) {
             console.error("goCardlessService.getCustomerId", err);
           }
         }
       }
 
-      if (new_password) {
-        update.password_hash = await scryptAsync(new_password, id);
+      if (newPassword) {
+        update.passwordHash = await scryptAsync(newPassword, id);
       }
 
       await db.update(UserTable).set(update).where(eq(UserTable.id, id));
-    }
+    },
   ),
 
   Delete: tRPC.ProtectedProcedure.input(RowSelection).mutation(async ({ ctx, input: { ids, mode } }) => {

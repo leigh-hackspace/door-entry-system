@@ -195,7 +195,7 @@ export function UserEdit(props: RouteSectionProps) {
                   <div class="d-flex flex-column gap-3">
                     <div>
                       <label class="form-label">GoCardless Customer ID</label>
-                      <input class="form-control" readOnly value={user()?.gocardless_customer_id ?? "[Unknown]"} />
+                      <input class="form-control" readOnly value={user()?.gocardlessCustomerId ?? "[Unknown]"} />
                     </div>
 
                     <div>

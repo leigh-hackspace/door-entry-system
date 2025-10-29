@@ -1,9 +1,9 @@
-import { PaymentTable, UserTable, db, type PaymentStatus } from "@/db";
+import { db, type PaymentStatus, PaymentTable, UserTable } from "@/db";
 import { GoCardlessService } from "@/services";
 import { parse } from "date-fns";
 import { eq, isNotNull } from "drizzle-orm";
 import { assert } from "ts-essentials";
-import { Task, getNextDailyRuntime } from "./common.ts";
+import { getNextDailyRuntime, Task } from "./common.ts";
 
 export class SyncGocardlessTask extends Task {
   protected override calculateNextRunTime() {
@@ -11,19 +11,17 @@ export class SyncGocardlessTask extends Task {
   }
 
   protected override async run(signal: AbortSignal): Promise<void> {
-    await this.writeLog("info", `Syncing payments`);
-
-    const users = await db.select().from(UserTable).where(isNotNull(UserTable.gocardless_customer_id));
+    const users = await db.select().from(UserTable).where(isNotNull(UserTable.gocardlessCustomerId));
 
     const api = new GoCardlessService();
 
     for (const user of users) {
       if (signal.aborted) return;
 
-      console.log("Syncing payments for user:", user.name);
+      await this.writeLog("info", `Syncing payments for user: ${user.name}`);
 
-      assert(user.gocardless_customer_id, "No gocardless_customer_id!");
-      const payments = await api.getPayments(user.gocardless_customer_id);
+      assert(user.gocardlessCustomerId, "No gocardless_customer_id!");
+      const payments = await api.getPayments(user.gocardlessCustomerId);
 
       for (const payment of payments) {
         if (signal.aborted) return;
@@ -36,7 +34,7 @@ export class SyncGocardlessTask extends Task {
           .where(eq(PaymentTable.id, payment.id));
 
         if (exists.length === 0) {
-          console.log("New payment:", payment.amount, payment.status);
+          await this.writeLog("info", `New payment: ${payment.amount} ${payment.status}`);
 
           await db.insert(PaymentTable).values({
             id: payment.id,
@@ -48,7 +46,7 @@ export class SyncGocardlessTask extends Task {
           });
         } else {
           if (exists[0].status !== payment.status) {
-            console.log("Updated payment:", payment.amount, payment.status);
+            await this.writeLog("info", `Updated payment: ${payment.amount} ${payment.status}`);
 
             await db
               .update(PaymentTable)

@@ -1,12 +1,12 @@
+import { Config } from "@/config";
+import type { TableType } from "@/db";
 import { assertError, includes, keys, type UserRole } from "@door-entry-management-system/common";
-import { asc, desc, getTableColumns } from "npm:drizzle-orm";
-import type { PgColumn } from "npm:drizzle-orm/pg-core";
+import { asc, desc, getTableColumns } from "drizzle-orm";
+import type { PgColumn } from "drizzle-orm/pg-core";
 // @deno-types="@types/jsonwebtoken"
 import jwt from "jsonwebtoken";
-import { assert } from "npm:ts-essentials";
-import * as v from "npm:valibot";
-import { Config } from "@/config";
-import type * as dbSchema from "../db/schema.ts";
+import { assert } from "ts-essentials";
+import * as v from "valibot";
 import type { tRPC } from "./trpc.ts";
 
 export interface TokenPayload {
@@ -59,7 +59,7 @@ export function assertOneRecord<T>(records: readonly T[]): T {
 }
 
 export function toDrizzleOrderBy(
-  table: dbSchema.TableType,
+  table: TableType,
   orderBy: Pagination["orderBy"],
   joinColumns: Record<string, PgColumn> = {},
 ) {

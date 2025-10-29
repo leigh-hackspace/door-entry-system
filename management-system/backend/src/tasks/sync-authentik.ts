@@ -25,7 +25,7 @@ export class SyncAuthentikTask extends Task {
       console.log("Syncing user:", apiUser.name, apiUser.email);
 
       const shouldBeAdmin = apiUser.groups_obj.map((g) => g.name).includes("Infra");
-      const gocardless_customer_id = apiUser.attributes["leighhack.org/gocardless-customer-id"];
+      const gocardlessCustomerId = apiUser.attributes["leighhack.org/gocardless-customer-id"];
 
       // Match or UUID or Email
       const matchExpression = or(eq(UserTable.id, apiUser.uuid), ilike(UserTable.email, apiUser.email));
@@ -44,8 +44,8 @@ export class SyncAuthentikTask extends Task {
           email: apiUser.email.toLowerCase(),
           name: apiUser.name,
           role: shouldBeAdmin ? "admin" : "user",
-          password_hash: "Authentik",
-          gocardless_customer_id,
+          passwordHash: "Authentik",
+          gocardlessCustomerId,
         });
 
         addedUsers += 1;
@@ -57,7 +57,7 @@ export class SyncAuthentikTask extends Task {
         const emailDifferent = matchingUser.email !== apiUser.email.toLowerCase();
         const nameDifferent = matchingUser.name !== apiUser.name;
         const roleDifferent = matchingUser.role !== (shouldBeAdmin ? "admin" : "user");
-        const gcDifferent = (matchingUser.gocardless_customer_id ?? null) !== (gocardless_customer_id ?? null);
+        const gcDifferent = (matchingUser.gocardlessCustomerId ?? null) !== (gocardlessCustomerId ?? null);
 
         if (emailDifferent || nameDifferent || roleDifferent || gcDifferent) {
           console.log("Updating", id, { emailDifferent, nameDifferent, roleDifferent, gcDifferent });
@@ -68,7 +68,7 @@ export class SyncAuthentikTask extends Task {
               email: apiUser.email.toLowerCase(),
               name: apiUser.name,
               role: shouldBeAdmin ? "admin" : "user",
-              gocardless_customer_id,
+              gocardlessCustomerId,
               updated: new Date(),
             })
             .where(eq(UserTable.id, id));

@@ -2,14 +2,14 @@ import { assertUnreachable, sleep } from "@door-entry-management-system/common";
 import { assert } from "ts-essentials";
 import * as v from "valibot";
 import { Router } from "websocket-express";
-import { GlobalDeviceCollectionWs } from "./collection.ts";
+import type { DeviceCollection } from "./collection.ts";
 import { DeviceIncoming, type DeviceOutgoingFn } from "./common.ts";
 import type { DeviceConnection } from "./connection.ts";
 
 export * from "./collection.ts";
 export * from "./common.ts";
 
-export function getWebSocketRouter() {
+export function getWebSocketRouter(deviceCollectionWs: DeviceCollection) {
   const router = new Router();
 
   router.ws("/ws", async (req, res) => {
@@ -27,10 +27,10 @@ export function getWebSocketRouter() {
     const commander: DeviceOutgoingFn = async ([type, data]) => {
       if (type === "message") {
         ws.send(JSON.stringify(data));
-        console.log("==== OUT:", data);
+        // console.log("==== OUT:", data);
       } else {
         ws.send(data);
-        console.log("==== OUT BINARY:", data.length);
+        // console.log("==== OUT BINARY:", data.length);
       }
 
       while (ws.bufferedAmount > 0) {
@@ -45,11 +45,11 @@ export function getWebSocketRouter() {
           const msg_str = msg.toString("utf8");
           const deviceIncoming = v.parse(DeviceIncoming, JSON.parse(msg_str));
 
-          console.log("===== IN:", msg_str);
+          // console.log("===== IN:", msg_str);
 
           switch (deviceIncoming.type) {
             case "announce":
-              connection = GlobalDeviceCollectionWs.handleAnnounce(deviceIncoming, ip, commander);
+              connection = deviceCollectionWs.handleAnnounce(deviceIncoming, ip, commander);
               break;
             case "status_update":
               assert(connection, "No connection!");
@@ -75,7 +75,7 @@ export function getWebSocketRouter() {
               assertUnreachable(deviceIncoming);
           }
         } else if (msg instanceof Uint8Array) {
-          console.log("===== IN BINARY:", msg.length);
+          // console.log("===== IN BINARY:", msg.length);
 
           assert(connection, "No connection!");
           connection.handleBinaryData(msg);
@@ -89,7 +89,7 @@ export function getWebSocketRouter() {
 
     ws.on("close", () => {
       if (connection) {
-        GlobalDeviceCollectionWs.remove(connection);
+        deviceCollectionWs.remove(connection);
       }
     });
 

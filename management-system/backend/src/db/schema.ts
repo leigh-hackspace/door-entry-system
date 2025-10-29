@@ -3,7 +3,12 @@ import { boolean, date, jsonb, numeric, pgEnum, pgTable, text, timestamp, uuid, 
 import type { ElementOf } from "ts-essentials";
 import { ActivityLogAction, DeviceNameLength, IpAddressLength, UserRole } from "../../../common/src/index.ts"; // Drizzle Kit bodge
 
-export type TableType = typeof UserTable | typeof TagTable | typeof ActivityLogTable | typeof DeviceTable;
+export type TableType =
+  | typeof UserTable
+  | typeof TagTable
+  | typeof ActivityLogTable
+  | typeof DeviceTable
+  | typeof TaskLogTable;
 
 const UTC_NOW = sql`(NOW() AT TIME ZONE 'UTC')`;
 
@@ -16,19 +21,19 @@ const GoCardlessPaymentIdLength = 14;
 export const UserRoleEnum = pgEnum("user_role", UserRole);
 
 export const UserTable = pgTable("user", {
-  id: uuid()
+  id: uuid("id")
     .primaryKey()
     .default(sql`gen_random_uuid()`),
-  role: UserRoleEnum().notNull(),
-  name: varchar({ length: 128 }).notNull(),
-  email: varchar({ length: 128 }).notNull().unique(),
-  password_hash: varchar({ length: ScryptHashLength }).notNull(),
-  refresh_token: varchar({ length: 128 }),
-  gocardless_customer_id: varchar({ length: GoCardlessCustomerIdLength }),
-  notes: text(),
+  role: UserRoleEnum("role").notNull(),
+  name: varchar("name", { length: 128 }).notNull(),
+  email: varchar("email", { length: 128 }).notNull().unique(),
+  passwordHash: varchar("password_hash", { length: ScryptHashLength }).notNull(),
+  refreshToken: varchar("refresh_token", { length: 128 }),
+  gocardlessCustomerId: varchar("gocardless_customer_id", { length: GoCardlessCustomerIdLength }),
+  notes: text("notes"),
   paidUp: boolean("paid_up").default(false).notNull(),
-  created: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
-  updated: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
+  created: timestamp("created", { withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
+  updated: timestamp("updated", { withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
 });
 
 export const UsersRelations = relations(UserTable, ({ many }) => ({

@@ -42,6 +42,7 @@
       "Hackspace",
       "heapless",
       "ilike",
+      "Keysafe",
       "latchoff",
       "latchon",
       "leighhack",
@@ -93,7 +94,7 @@
       "source.organizeImports": "always"
     },
     "[typescript]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "denoland.vscode-deno"
     },
     "[nix]": {
       "editor.defaultFormatter": "jnoortheen.nix-ide"

@@ -25,8 +25,8 @@ export const UserCreateSchema = v.object({
   role: v.pipe(v.picklist(["admin", "user"]), v.title("Role"), v.metadata(FieldMetadata({ icon: "🏅" }))),
   email: EmailAddress,
   name: v.pipe(v.string(), v.minLength(2), v.title("Name"), v.metadata(FieldMetadata({ icon: "👤" }))),
-  new_password: Password("New Password", "Leave blank to keep existing password"),
-  confirm_password: Password("Confirm Password"),
+  newPassword: Password("New Password", "Leave blank to keep existing password"),
+  confirmPassword: Password("Confirm Password"),
   notes: v.nullable(
     v.pipe(
       v.string(),

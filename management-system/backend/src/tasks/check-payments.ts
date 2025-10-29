@@ -12,16 +12,16 @@ export class CheckPaymentsTask extends Task {
     const users = await db
       .select()
       .from(UserTable)
-      .where(or(isNotNull(UserTable.gocardless_customer_id), eq(UserTable.name, "Keysafe")));
+      .where(or(isNotNull(UserTable.gocardlessCustomerId), eq(UserTable.name, "Keysafe")));
 
     for (const user of users) {
       if (signal.aborted) return;
 
-      console.log("Checking payments for user:", user.name);
+      await this.writeLog("info", `Checking payments for user: ${user.name}`);
 
       let paidUp = false;
 
-      if (user.gocardless_customer_id) {
+      if (user.gocardlessCustomerId) {
         const payments = await db
           .select()
           .from(PaymentTable)
@@ -29,8 +29,8 @@ export class CheckPaymentsTask extends Task {
             and(
               eq(PaymentTable.user_id, user.id),
               gt(PaymentTable.charge_date, addDays(new Date(), -45)),
-              eq(PaymentTable.status, "paid_out")
-            )
+              eq(PaymentTable.status, "paid_out"),
+            ),
           );
 
         if (payments.length > 0) {
@@ -44,7 +44,7 @@ export class CheckPaymentsTask extends Task {
       }
 
       if (user.paidUp !== paidUp) {
-        console.log("Changing paid up:", paidUp);
+        await this.writeLog("info", `Changing paid up: ${paidUp}`);
 
         await db.update(UserTable).set({ paidUp }).where(eq(UserTable.id, user.id));
       }

@@ -1,7 +1,6 @@
 import { AppService } from "@frontend/services";
 import { useNavigate } from "@solidjs/router";
-import { createSignal, Show } from "solid-js";
-import { onCleanup, onMount } from "solid-js";
+import { createSignal, onCleanup, onMount, Show } from "solid-js";
 import { Button } from "../Button/index.tsx";
 
 interface Props {
@@ -50,11 +49,11 @@ export function NavBar(props: Props) {
 
         <div classList={{ collapse: true, "navbar-collapse": true, show: expanded() }}>
           <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-            <li class="nav-item">
+            {/* <li class="nav-item">
               <a class="nav-link active" href="/">
                 🖥 Dashboard
               </a>
-            </li>
+            </li> */}
 
             <Show when={user()?.role === "admin"}>
               <li class="nav-item">
@@ -78,7 +77,13 @@ export function NavBar(props: Props) {
 
             <li class="nav-item">
               <a class="nav-link active" href="/activity-log">
-                🪵 Logs
+                🪵 Scans
+              </a>
+            </li>
+
+            <li class="nav-item">
+              <a class="nav-link active" href="/task-log">
+                🪵 Tasks
               </a>
             </li>
           </ul>

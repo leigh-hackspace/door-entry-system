@@ -1,7 +1,7 @@
 /// <reference types='@types/node' />
 import { Config } from "@/config";
 import { AppRouter, tRPC } from "@/routers";
-import { bootstrap, getWebSocketRouter, GlobalDeviceCollectionWs, HomeAssistantService } from "@/services";
+import { bootstrap, DeviceCollection, getWebSocketRouter, HomeAssistantService } from "@/services";
 import { CheckPaymentsTask, SyncAuthentikTask, SyncGocardlessTask, TaskManager } from "@/tasks";
 import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import cors from "cors";
@@ -14,22 +14,24 @@ const Port = Config.DE_BACKEND_PORT;
 export type AppRouter = ReturnType<typeof AppRouter>;
 
 async function start() {
+  const deviceCollectionWs = new DeviceCollection();
+
   const taskManager = new TaskManager();
 
   taskManager.scheduleTask(new SyncAuthentikTask());
   taskManager.scheduleTask(new SyncGocardlessTask());
   taskManager.scheduleTask(new CheckPaymentsTask());
-  taskManager.scheduleTask(new PushTagCodesTask());
+  taskManager.scheduleTask(new PushTagCodesTask(deviceCollectionWs));
 
   const app = new WebSocketExpress();
 
   app.use(cors());
-  app.use(getWebSocketRouter());
+  app.use(getWebSocketRouter(deviceCollectionWs));
 
   app.set("shutdown timeout", 1000);
 
   const trpcHandler = createHTTPHandler({
-    router: AppRouter(taskManager),
+    router: AppRouter(taskManager, deviceCollectionWs),
     createContext: tRPC.createContext,
   });
 
@@ -56,7 +58,7 @@ async function start() {
     if (entityId === "input_boolean.hackspace_open") {
       console.log("hackspace_status:", newState);
 
-      GlobalDeviceCollectionWs.pushLatchStateAll(newState.state === "on");
+      deviceCollectionWs.pushLatchStateAll(newState.state === "on");
     }
   };
 

@@ -1,15 +1,10 @@
 import { db, TagTable, UserTable } from "@/db";
 import type { DeviceInfo } from "@door-entry-management-system/common";
 import { eq, getTableColumns } from "drizzle-orm";
-import {
-  type DeviceOutgoingFn,
-  FakeDeviceConnection,
-  type IncomingAnnounce,
-  type PublicDeviceInterface,
-} from "./common.ts";
+import { type DeviceOutgoingFn, FakeDeviceConnection, type IncomingAnnounce, type PublicDeviceInterface } from "./common.ts";
 import { DeviceConnection } from "./connection.ts";
 
-class DeviceCollection {
+export class DeviceCollection {
   private devices: Record<string, DeviceConnection> = {};
 
   constructor() {}
@@ -54,7 +49,7 @@ class DeviceCollection {
     return Promise.all(
       Object.values(this.devices).map((device) => {
         device.pushLatchState(latch);
-      })
+      }),
     );
   }
 
@@ -69,5 +64,3 @@ class DeviceCollection {
     return device;
   }
 }
-
-export const GlobalDeviceCollectionWs = new DeviceCollection();
