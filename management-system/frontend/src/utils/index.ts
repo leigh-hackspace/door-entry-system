@@ -1,3 +1,5 @@
+import type { Accessor } from "solid-js";
+
 export function downloadFile(file_name: string, file_data: Uint8Array) {
   // Create a blob from the Uint8Array data
   const blob = new Blob([file_data], { type: "application/octet-binary" }); // Change the type if needed
@@ -31,3 +33,12 @@ export function uploadFile() {
     input.click();
   });
 }
+
+// Allows type guards to work within a template
+export const narrow = <A, B extends A>(accessor: Accessor<A>, guard: (v: A) => v is B): B | null => {
+  const val = accessor();
+  if (guard(val)) {
+    return val;
+  }
+  return null;
+};

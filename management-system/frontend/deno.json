@@ -10,6 +10,7 @@
   },
   "imports": {
     "@luca/esbuild-deno-loader": "jsr:@luca/esbuild-deno-loader@^0.11.1",
+    "@nuintun/qrcode": "npm:@nuintun/qrcode@^5.0.2",
     "@solidjs/router": "npm:@solidjs/router@^0.15.3",
     "@std/http": "jsr:@std/http@^1.0.12",
     "@trpc/client": "npm:@trpc/client@^11.4.3",

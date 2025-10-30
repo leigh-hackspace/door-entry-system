@@ -102,6 +102,22 @@ export const AuthRouter = tRPC.router({
     },
   ),
 
+  GetMfaInfo: tRPC.PublicProcedure.input(v.parser(v.object({}))).mutation(
+    async ({ ctx, input }) => {
+      assert(ctx.session, "MFA: No session!");
+
+      return ctx.session.mfaHelper.getMfaInfo();
+    },
+  ),
+
+  SendMfaToken: tRPC.PublicProcedure.input(v.parser(v.object({ token: v.string() }))).mutation(
+    async ({ ctx, input }) => {
+      assert(ctx.session, "MFA: No session!");
+
+      return ctx.session.mfaHelper.checkMfaToken(input.token);
+    },
+  ),
+
   Activity: tRPC.ProtectedProcedure.subscription(async function* (opts) {
     for await (
       const [data] of on(SessionEvents, "loggedIn", {

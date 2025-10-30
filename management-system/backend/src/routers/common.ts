@@ -1,5 +1,5 @@
 import { Config } from "@/config";
-import type { TableType } from "@/db";
+import type { MfaData, TableType } from "@/db";
 import { assertError, includes, keys, type UserRole } from "@door-entry-management-system/common";
 import { asc, desc, getTableColumns } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
@@ -8,6 +8,21 @@ import jwt from "jsonwebtoken";
 import { assert } from "ts-essentials";
 import * as v from "valibot";
 import type { tRPC } from "./trpc.ts";
+
+export interface SessionUser {
+  id: string;
+  role: "admin" | "user";
+  name: string;
+  email: string;
+  passwordHash: string;
+  refreshToken: string | null;
+  gocardlessCustomerId: string | null;
+  notes: string | null;
+  paidUp: boolean;
+  mfaData: MfaData;
+  created: Date;
+  updated: Date;
+}
 
 export interface TokenPayload {
   id: string;

@@ -9,6 +9,7 @@ import { DeviceEdit } from "./routes/devices/edit.tsx";
 import { Devices } from "./routes/devices/index.tsx";
 import { Home } from "./routes/index.tsx";
 import { Login } from "./routes/login.tsx";
+import { Mfa } from "./routes/mfa.tsx";
 import { TagEdit } from "./routes/tags/edit.tsx";
 import { Tags } from "./routes/tags/index.tsx";
 import { TagNew } from "./routes/tags/new.tsx";
@@ -36,6 +37,7 @@ function App() {
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
       <Route path="/auth-return" component={AuthReturn} />
+      <Route path="/mfa" component={Mfa} />
 
       <Route path="/users/" component={Users} />
       <Route path="/users/new" component={UserNew} />

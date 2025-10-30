@@ -41,6 +41,10 @@ export const UserRouter = tRPC.router({
   ),
 
   One: tRPC.ProtectedProcedure.input(v.parser(UUID)).query(async ({ input }) => {
+    return assertOneRecord(await db.select().from(UserTable).where(eq(UserTable.id, input)));
+  }),
+
+  OneDetailed: tRPC.ProtectedProcedure.input(v.parser(UUID)).query(async ({ input }) => {
     const user = assertOneRecord(await db.select().from(UserTable).where(eq(UserTable.id, input)));
 
     const payments = await db.select().from(PaymentTable).where(eq(PaymentTable.user_id, input));

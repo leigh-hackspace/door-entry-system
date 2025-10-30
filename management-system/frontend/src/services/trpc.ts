@@ -1,12 +1,5 @@
 import type { AppRouter } from "@door-entry-management-system/backend";
-import {
-  createTRPCClient,
-  httpBatchLink,
-  httpSubscriptionLink,
-  splitLink,
-  TRPCClientError,
-  type TRPCLink,
-} from "@trpc/client";
+import { createTRPCClient, httpBatchLink, httpSubscriptionLink, splitLink, TRPCClientError, type TRPCLink } from "@trpc/client";
 import { observable } from "@trpc/server/observable";
 import superjson from "superjson";
 
@@ -19,9 +12,7 @@ export function getApiBaseUrl() {
       globalThis.location.hostname,
     )
   ) {
-    return `http://${globalThis.location.hostname}:${
-      parseInt(globalThis.location.port, 10) - 1
-    }`;
+    return `http://${globalThis.location.hostname}:${parseInt(globalThis.location.port, 10) - 1}`;
   } else {
     return globalThis.location.origin.replace("://", "://api-");
   }
@@ -30,6 +21,7 @@ export function getApiBaseUrl() {
 interface TrpcClientOptions {
   getAuthorisation: () => string | undefined;
   onSessionExpired: () => void;
+  onMfaRequired: () => void;
 }
 
 export function getTrpcClient(options: TrpcClientOptions) {
@@ -41,7 +33,11 @@ export function getTrpcClient(options: TrpcClientOptions) {
             if (
               err.data && "code" in err.data && err.data.code === "UNAUTHORIZED"
             ) {
-              options.onSessionExpired();
+              if (err.message.includes("MFA")) {
+                options.onMfaRequired();
+              } else {
+                options.onSessionExpired();
+              }
             }
           }
         },

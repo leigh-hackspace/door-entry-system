@@ -1,7 +1,8 @@
 import { relations, sql } from "drizzle-orm";
 import { boolean, date, jsonb, numeric, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import type { ElementOf } from "ts-essentials";
-import { ActivityLogAction, DeviceNameLength, IpAddressLength, UserRole } from "../../../common/src/index.ts"; // Drizzle Kit bodge
+import * as v from "valibot";
+import { ActivityLogAction, DeviceNameLength, IpAddressLength, IsoDateDb, UserRole } from "../../../common/src/index.ts"; // Drizzle Kit bodge
 
 export type TableType =
   | typeof UserTable
@@ -20,6 +21,22 @@ const GoCardlessPaymentIdLength = 14;
 
 export const UserRoleEnum = pgEnum("user_role", UserRole);
 
+export const MfaData = v.variant("type", [
+  v.object({ type: v.literal("not_set") }),
+  v.object({ type: v.literal("unconfirmed"), secret_key: v.string() }),
+  v.object({
+    type: v.literal("confirmed"),
+    secret_key: v.string(),
+    confirmed: v.pipe(
+      v.string(),
+      v.regex(IsoDateDb),
+    ),
+    challenges: v.record(v.string(), v.pipe(v.string(), v.regex(IsoDateDb))),
+  }),
+]);
+
+export type MfaData = v.InferInput<typeof MfaData>;
+
 export const UserTable = pgTable("user", {
   id: uuid("id")
     .primaryKey()
@@ -32,6 +49,7 @@ export const UserTable = pgTable("user", {
   gocardlessCustomerId: varchar("gocardless_customer_id", { length: GoCardlessCustomerIdLength }),
   notes: text("notes"),
   paidUp: boolean("paid_up").default(false).notNull(),
+  mfaData: jsonb("mfa_data").notNull().$type<MfaData>().default({ type: "not_set" }),
   created: timestamp("created", { withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
   updated: timestamp("updated", { withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
 });

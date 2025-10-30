@@ -26,6 +26,7 @@ export class AppService {
   public tRPC = getTrpcClient({
     getAuthorisation: () => this.sessionService.session()?.sessionUser.sessionToken,
     onSessionExpired: () => this.onSessionExpired(),
+    onMfaRequired: () => this.onMfaRequired(),
   });
 
   public lookupService = new LookupService(this.tRPC);
@@ -91,6 +92,12 @@ export class AppService {
 
     if (globalThis.location.pathname !== "/login") {
       globalThis.location.href = "/login?reason=expired";
+    }
+  }
+
+  private onMfaRequired() {
+    if (globalThis.location.pathname !== "/mfa") {
+      globalThis.location.href = "/mfa";
     }
   }
 

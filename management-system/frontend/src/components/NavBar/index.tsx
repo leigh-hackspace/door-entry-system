@@ -67,6 +67,12 @@ export function NavBar(props: Props) {
                   📟 Devices
                 </a>
               </li>
+
+              <li class="nav-item">
+                <a class="nav-link active" href="/task-log">
+                  🪵 Tasks
+                </a>
+              </li>
             </Show>
 
             <li class="nav-item">
@@ -78,12 +84,6 @@ export function NavBar(props: Props) {
             <li class="nav-item">
               <a class="nav-link active" href="/activity-log">
                 🪵 Scans
-              </a>
-            </li>
-
-            <li class="nav-item">
-              <a class="nav-link active" href="/task-log">
-                🪵 Tasks
               </a>
             </li>
           </ul>

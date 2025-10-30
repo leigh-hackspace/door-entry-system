@@ -5,7 +5,16 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import type { CreateHTTPContextOptions } from "@trpc/server/adapters/standalone";
 import { eq } from "drizzle-orm";
 import superjson from "superjson";
-import { assertOneRecord, verifyToken } from "./common.ts";
+import { assert } from "ts-essentials";
+import { assertOneRecord, type SessionUser, verifyToken } from "./common.ts";
+import { MfaHelper } from "./mfa-helper.ts";
+
+export interface Session {
+  readonly user: SessionUser;
+  readonly remoteAddress: string;
+  readonly mfaPassed: boolean;
+  readonly mfaHelper: MfaHelper;
+}
 
 // deno-lint-ignore no-namespace
 export namespace tRPC {
@@ -14,10 +23,14 @@ export namespace tRPC {
   });
 
   export const createContext = async (opts: CreateHTTPContextOptions) => {
+    const isMfa = opts.info.calls.some((c) => c.path.toLowerCase().includes("mfa"));
+
     let authorization = opts.info.connectionParams?.authorization;
     if (!authorization) authorization = opts.req.headers["authorization"];
 
-    const session = await getSession(authorization);
+    assert(opts.req.socket.remoteAddress, "No remoteAddress!");
+
+    const session = await getSession(authorization, isMfa, opts.req.socket.remoteAddress);
 
     const getAuthentikUserClient = async () => {
       if (!session?.user.refreshToken) throw new Error("No refresh_token!");
@@ -39,7 +52,7 @@ export namespace tRPC {
     };
   };
 
-  async function getSession(authorization: string | undefined) {
+  async function getSession(authorization: string | undefined, isMfaRoute: boolean, remoteAddress: string): Promise<Session | undefined> {
     const verifyResponse = verifyToken(authorization);
 
     if (verifyResponse[0] === "expired") {
@@ -61,8 +74,26 @@ export namespace tRPC {
 
       const user = assertOneRecord(await db.select().from(UserTable).where(eq(UserTable.id, userId)));
 
+      const mfaHelper = new MfaHelper(user, remoteAddress);
+
+      const mfaPassed = mfaHelper.getMfaPassed();
+
+      const triggerChallenge = !isMfaRoute && // Need to allow MFA routes to still function before MFA challenge passed
+        user.role === "admin" && // Only "admin" role requires MFA (for now)
+        !mfaPassed; // Only if MFA challenge is not already passed
+
+      if (triggerChallenge) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "MFA Required",
+        });
+      }
+
       return {
         user,
+        remoteAddress,
+        mfaPassed,
+        mfaHelper,
       };
     }
 
