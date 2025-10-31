@@ -1,6 +1,6 @@
+import { db } from "@/db";
 import { eq } from "drizzle-orm";
 import * as uuid from "npm:uuid";
-import { db } from "@/db";
 import { UserTable } from "../db/schema.ts";
 import { scryptAsync } from "./common.ts";
 
@@ -13,11 +13,11 @@ export async function bootstrap() {
     console.log("==== Create default admin...");
 
     const id = uuid.v4();
-    const password_hash = await scryptAsync("password", id);
+    const passwordHash = await scryptAsync("password", id);
 
     await db
       .insert(UserTable)
-      .values({ id, role: "admin", email: "admin@example.com", name: "Default Admin", password_hash });
+      .values({ id, role: "admin", email: "admin@example.com", name: "Default Admin", passwordHash });
   } else {
     console.log("Admin already exists");
   }

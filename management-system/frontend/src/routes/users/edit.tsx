@@ -39,7 +39,7 @@ export function UserEdit(props: RouteSectionProps) {
 
   const id = () => props.params.id;
 
-  const [user, { mutate }] = createResource(() => tRPC.User.One.query(id()));
+  const [user, { mutate }] = createResource(() => tRPC.User.OneDetailed.query(id()));
   const [submittedCount, setSubmittedCount] = createSignal(0);
   const [lastScan, setLastScan] = createSignal<ScanEvent>();
 

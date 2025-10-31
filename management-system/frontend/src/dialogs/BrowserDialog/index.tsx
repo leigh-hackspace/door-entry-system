@@ -11,9 +11,9 @@ import {
   SearchBar,
 } from "@frontend/components";
 import { openAlert } from "@frontend/dialogs";
+import type { UserSearchRecord } from "@frontend/services";
 import { createEffect, createSignal } from "solid-js";
 import type * as v from "valibot";
-import type { UserSearchRecord } from "../../lib/types.ts";
 
 interface Props {
   title: string;
