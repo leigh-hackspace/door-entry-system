@@ -12,10 +12,7 @@ import { type FetchParameters, getFieldInfo, type QuerySort } from "../helper.ts
 
 const PageSize = 25;
 
-interface Props<
-  TSchema extends v.ObjectSchema<any, any>,
-  TRow extends v.InferInput<TSchema>,
-> {
+interface Props<TSchema extends v.ObjectSchema<any, any>, TRow extends v.InferInput<TSchema>> {
   title?: string;
   schema: TSchema;
   initialData?: readonly TRow[];
@@ -56,16 +53,17 @@ export const RowSelectionDefault: RowSelection = {
 };
 
 type Overrides<TRow> = {
-  [TProp in Extract<keyof TRow, string> as `render${Capitalize<TProp>}`]?: (
-    row: TRow,
-  ) => JSXElement;
+  [TProp in Extract<keyof TRow, string> as `render${Capitalize<TProp>}`]?: (row: TRow) => JSXElement;
 };
 
 export function MagicBrowser<
   TSchema extends v.ObjectSchema<any, any>,
-  TRow extends v.InferInput<TSchema> & { id: string },
+  TRow extends v.InferInput<TSchema> & { id: string }
 >(props: Props<TSchema, TRow> & Overrides<TRow>) {
-  const propSchemas = Object.entries(props.schema.entries) as readonly (readonly [string, v.SchemaWithPipe<Array<any> & [any]>])[];
+  const propSchemas = Object.entries(props.schema.entries) as readonly (readonly [
+    string,
+    v.SchemaWithPipe<Array<any> & [any]>
+  ])[];
 
   const onPage = (page: number) => {
     const cursor = props.cursor[0]();
@@ -99,7 +97,7 @@ export function MagicBrowser<
         name: propName,
         label: title ?? "???",
         icon: metadata?.icon,
-        displayMode: metadata?.displayMode,
+        width: metadata?.width,
         render: (row): JSXElement => {
           const overrideName = `render${camelToPascal(propName)}`;
 
@@ -117,20 +115,11 @@ export function MagicBrowser<
 
   const desktop = false;
 
-  const TableHeader = () => (
-    <>
-      {props.title && <div>{props.title}</div>}
-    </>
-  );
+  const TableHeader = () => <>{props.title && <div>{props.title}</div>}</>;
 
   if (desktop) {
     const TableFooter = () => (
-      <Pagination
-        page={props.cursor[0]().page}
-        pageSize={PageSize}
-        count={props.rowData.total}
-        onPage={onPage}
-      />
+      <Pagination page={props.cursor[0]().page} pageSize={PageSize} count={props.rowData.total} onPage={onPage} />
     );
 
     return (
@@ -207,11 +196,7 @@ function renderValue(value: unknown, propName: string): JSXElement {
   }
 
   if (typeof value === "object" && value instanceof Date) {
-    return (
-      <span class="badge text-bg-secondary">
-        {format(value, "PPp", { locale: enGB })}
-      </span>
-    );
+    return <span class="badge text-bg-secondary">{format(value, "PPp", { locale: enGB })}</span>;
   }
 
   return "!! Cannot format !!";

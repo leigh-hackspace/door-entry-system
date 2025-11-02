@@ -15,7 +15,6 @@ export interface DataTableColumn<TRow> {
   name: string;
   label?: string;
   icon?: string;
-  displayMode?: string;
   render: (row: TRow) => JSXElement;
 }
 
@@ -66,7 +65,11 @@ export function DataTable<TRow>(props: Props<TRow>) {
                   <div class="d-md-flex gap-2 align-items-center text-nowrap">
                     {column.label ?? column.name}
                     {props.sort?.sort === column.name &&
-                      (props.sort?.dir === "asc" ? <span>&nbsp;↑</span> : props.sort?.dir === "desc" ? <span>&nbsp;↓</span> : undefined)}
+                      (props.sort?.dir === "asc" ? (
+                        <span>&nbsp;↑</span>
+                      ) : props.sort?.dir === "desc" ? (
+                        <span>&nbsp;↓</span>
+                      ) : undefined)}
                   </div>
                 </th>
               )}

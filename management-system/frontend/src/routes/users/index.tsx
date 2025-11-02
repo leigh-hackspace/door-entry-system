@@ -20,12 +20,12 @@ import { createEffect, createSignal, Show } from "solid-js";
 import * as v from "valibot";
 
 const UserTableSchema = v.object({
-  role: v.pipe(v.string(), v.title("Role"), v.metadata(FieldMetadata({ icon: "🏅" }))),
+  role: v.pipe(v.string(), v.title("Role"), v.metadata(FieldMetadata({ icon: "🏅", width: "50px" }))),
   email: v.pipe(v.string(), v.title("Email"), v.metadata(FieldMetadata({ icon: "📧" }))),
   name: v.pipe(v.string(), v.title("Name"), v.metadata(FieldMetadata({ icon: "👤" }))),
-  paidUp: v.pipe(v.boolean(), v.title("Paid Up"), v.metadata(FieldMetadata({ icon: "£" }))),
-  created: v.pipe(v.date(), v.title("Created"), v.metadata(FieldMetadata({ displayMode: "raw" }))),
-  updated: v.pipe(v.date(), v.title("Updated"), v.metadata(FieldMetadata({ displayMode: "raw" }))),
+  paidUp: v.pipe(v.boolean(), v.title("Paid"), v.metadata(FieldMetadata({ icon: "£", width: "60px" }))),
+  created: v.pipe(v.date(), v.title("Created"), v.metadata(FieldMetadata({ width: "140px" }))),
+  updated: v.pipe(v.date(), v.title("Updated"), v.metadata(FieldMetadata({ width: "140px" }))),
 });
 
 export function Users(props: RouteSectionProps) {

@@ -92,8 +92,7 @@
     }
 
     .data-item-values {
-      // grid-template-columns: 80px 1fr 1fr 140px 140px 14px;
-      grid-template-columns: repeat(var(--data-list-columns), minmax(100px, 1fr)) 14px;
+      grid-template-columns: var(--data-list-widths);
     }
 
     .data-item-value {

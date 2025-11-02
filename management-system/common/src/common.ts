@@ -11,6 +11,7 @@ export interface FieldMetadata {
   icon?: string;
   lookup?: EntityType;
   displayMode?: string;
+  width?: string;
   text?: boolean;
 }
 

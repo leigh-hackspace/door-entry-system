@@ -19,8 +19,8 @@ interface Props<TRow> {
 export interface DataListColumn<TRow> {
   name: string;
   label?: string;
-  displayMode?: string;
   icon?: string;
+  width?: string;
   render: (row: TRow) => JSXElement;
   renderHeader?: () => JSXElement;
 }
@@ -59,9 +59,10 @@ export function DataList<TRow>(props: Props<TRow>) {
     columns.push({
       name: "select",
       label: "Select",
-      displayMode: "raw",
-      renderHeader: () => (
-        props.selectAll !== undefined && props.onSelectAll && (
+      width: "14px",
+      renderHeader: () =>
+        props.selectAll !== undefined &&
+        props.onSelectAll && (
           <input
             type="checkbox"
             checked={props.selectAll}
@@ -71,8 +72,7 @@ export function DataList<TRow>(props: Props<TRow>) {
               props.onSelectAll!();
             }}
           />
-        )
-      ),
+        ),
       render: (row) => (
         <input
           type="checkbox"
@@ -90,13 +90,16 @@ export function DataList<TRow>(props: Props<TRow>) {
   const dataColumns = columns.filter((c) => !["actions"].includes(c.name));
 
   const onClick = (row: TRow) =>
-    handleAsyncClick(async () => {
-      if (props.selected && props.selected.length > 0 && props.onSelectionChanged) {
-        props.onSelectionChanged(row);
-      } else {
-        return props.onRowClick && props.onRowClick(row);
-      }
-    }, () => {});
+    handleAsyncClick(
+      async () => {
+        if (props.selected && props.selected.length > 0 && props.onSelectionChanged) {
+          props.onSelectionChanged(row);
+        } else {
+          return props.onRowClick && props.onRowClick(row);
+        }
+      },
+      () => {}
+    );
 
   const createLongPressHandler = (row: TRow) => {
     let timer: number | null = null;
@@ -145,9 +148,7 @@ export function DataList<TRow>(props: Props<TRow>) {
           if (!startPos || !timer) return;
 
           const touch = e.touches[0];
-          const distance = Math.sqrt(
-            Math.pow(touch.clientX - startPos.x, 2) + Math.pow(touch.clientY - startPos.y, 2),
-          );
+          const distance = Math.sqrt(Math.pow(touch.clientX - startPos.x, 2) + Math.pow(touch.clientY - startPos.y, 2));
 
           if (distance > 10) {
             hasMoved = true;
@@ -174,7 +175,13 @@ export function DataList<TRow>(props: Props<TRow>) {
   };
 
   return (
-    <div class="data-list" ref={(div) => div.style.setProperty("--data-list-columns", props.columns.length.toString())}>
+    <div
+      class="data-list"
+      ref={(div) => {
+        div.style.setProperty("--data-list-columns", props.columns.length.toString());
+        div.style.setProperty("--data-list-widths", dataColumns.map((c) => c.width ?? "1fr").join(" "));
+      }}
+    >
       <ul class="data-list-header">
         <li class="data-item">
           <Show when={props.acquireImage}>
@@ -189,7 +196,11 @@ export function DataList<TRow>(props: Props<TRow>) {
                 >
                   {column.renderHeader ? column.renderHeader() : column.label ?? column.name}
                   {props.sort?.sort === column.name &&
-                    (props.sort?.dir === "asc" ? <span>&nbsp;↓</span> : props.sort?.dir === "desc" ? <span>&nbsp;↑</span> : undefined)}
+                    (props.sort?.dir === "asc" ? (
+                      <span>&nbsp;↓</span>
+                    ) : props.sort?.dir === "desc" ? (
+                      <span>&nbsp;↑</span>
+                    ) : undefined)}
                 </div>
               )}
             </For>
@@ -203,7 +214,10 @@ export function DataList<TRow>(props: Props<TRow>) {
 
             return (
               <li
-                classList={{ "data-item": true, "selected": props.selected!.includes(row) !== (props.selectAll ?? false) }}
+                classList={{
+                  "data-item": true,
+                  selected: props.selected!.includes(row) !== (props.selectAll ?? false),
+                }}
                 on:click={onClick(row)}
                 on:touchstart={onTouchStart}
                 on:touchmove={onTouchMove}
@@ -219,9 +233,7 @@ export function DataList<TRow>(props: Props<TRow>) {
                 </Show>
 
                 <div class="data-item-values">
-                  <For each={dataColumns}>
-                    {(column) => <DataItemValue column={column} row={row} />}
-                  </For>
+                  <For each={dataColumns}>{(column) => <DataItemValue column={column} row={row} />}</For>
                 </div>
               </li>
             );
@@ -243,17 +255,12 @@ function DataItemValue<TRow>(props: PLVProps<TRow>) {
       classList={{
         "data-item-value": true,
         [`column-${props.column.name}`]: true,
-        [props.column.displayMode ?? "default-mode"]: true,
       }}
     >
-      <div class="data-item-value-label">
-        {props.column.icon ?? props.column.label ?? props.column.name}
-      </div>
-      {
-        /* <Show when={props.column.icon}>
+      <div class="data-item-value-label">{props.column.icon ?? props.column.label ?? props.column.name}</div>
+      {/* <Show when={props.column.icon}>
         <div class="data-item-value-icon">{props.column.icon}</div>
-      </Show> */
-      }
+      </Show> */}
       <div class="data-item-value-value">{props.column.render(props.row)}</div>
     </div>
   );
