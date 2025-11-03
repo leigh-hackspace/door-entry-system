@@ -2,7 +2,7 @@ import { relations, sql } from "drizzle-orm";
 import { boolean, date, jsonb, numeric, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import type { ElementOf } from "ts-essentials";
 import * as v from "valibot";
-import { ActivityLogAction, DeviceNameLength, IpAddressLength, IsoDateDb, UserRole } from "../../../common/src/index.ts"; // Drizzle Kit bodge
+import { ActivityLogAction, DeviceNameLength, IpAddressLength, IsoDateDb, TaskLogLevel, UserRole } from "../../../common/src/index.ts"; // Drizzle Kit bodge
 
 export type TableType =
   | typeof UserTable
@@ -135,16 +135,13 @@ export const PaymentRelations = relations(PaymentTable, ({ one }) => ({
   }),
 }));
 
-export const LogLevel = ["error", "warning", "info", "debug"] as const;
-export type LogLevel = ElementOf<typeof LogLevel>;
-
-export const LogLevelEnum = pgEnum("log_level", LogLevel);
+export const TaskLogLevelEnum = pgEnum("log_level", TaskLogLevel);
 
 export const TaskLogTable = pgTable("task_log", {
   id: uuid()
     .primaryKey()
     .default(sql`gen_random_uuid()`),
-  level: LogLevelEnum().notNull(),
+  level: TaskLogLevelEnum().notNull(),
   job_started: timestamp({ withTimezone: false, mode: "date", precision: 3 }).notNull(),
   type: varchar({ length: 50 }).notNull(),
   notes: text(),

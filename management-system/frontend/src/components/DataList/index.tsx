@@ -1,5 +1,5 @@
 import { For, type JSXElement, onMount, Show } from "solid-js";
-import { type Colour, debounce, handleAsyncClick, type QuerySort } from "../helper.ts";
+import { type Colour, createLongPressHandler, debounce, handleAsyncClick, type QuerySort } from "../helper.ts";
 
 interface Props<TRow> {
   columns: readonly DataListColumn<TRow>[];
@@ -10,6 +10,7 @@ interface Props<TRow> {
   acquireImage?: (row: TRow) => string;
 
   onSort?: (colName: string) => void;
+  onFilter?: (colName: string) => void;
   onLoadMore?: () => void;
   onSelectionChanged?: (row: TRow) => void;
   onSelectAll?: () => void;
@@ -21,6 +22,7 @@ export interface DataListColumn<TRow> {
   label?: string;
   icon?: string;
   width?: string;
+  filter?: boolean;
   render: (row: TRow) => JSXElement;
   renderHeader?: () => JSXElement;
 }
@@ -76,7 +78,7 @@ export function DataList<TRow>(props: Props<TRow>) {
       render: (row) => (
         <input
           type="checkbox"
-          checked={props.selected!.includes(row) !== (props.selectAll ?? false)}
+          checked={props.selected && props.selected.includes(row) !== (props.selectAll ?? false)}
           on:click={(e) => {
             e.stopPropagation();
             e.stopImmediatePropagation();
@@ -101,78 +103,9 @@ export function DataList<TRow>(props: Props<TRow>) {
       () => {}
     );
 
-  const createLongPressHandler = (row: TRow) => {
-    let timer: number | null = null;
-    let startPos: { x: number; y: number } | null = null;
-    let isLongPress = false;
-    let hasMoved = false;
-
-    const cleanup = () => {
-      if (timer) {
-        clearTimeout(timer);
-        timer = null;
-      }
-      startPos = null;
-      isLongPress = false;
-      hasMoved = false;
-    };
-
-    const triggerHaptic = () => {
-      if ("vibrate" in navigator) {
-        navigator.vibrate(50);
-      }
-    };
-
-    return {
-      onTouchStart: {
-        handleEvent: (e: TouchEvent) => {
-          const touch = e.touches[0];
-          startPos = { x: touch.clientX, y: touch.clientY };
-          isLongPress = false;
-          hasMoved = false;
-
-          timer = setTimeout(() => {
-            if (props.onSelectionChanged && timer && !hasMoved) {
-              isLongPress = true;
-              triggerHaptic();
-              props.onSelectionChanged(row);
-            }
-            cleanup();
-          }, 500);
-        },
-        passive: true,
-      },
-
-      onTouchMove: {
-        handleEvent: (e: TouchEvent) => {
-          if (!startPos || !timer) return;
-
-          const touch = e.touches[0];
-          const distance = Math.sqrt(Math.pow(touch.clientX - startPos.x, 2) + Math.pow(touch.clientY - startPos.y, 2));
-
-          if (distance > 10) {
-            hasMoved = true;
-            cleanup();
-          }
-        },
-        passive: true,
-      },
-
-      onTouchEnd: (e: TouchEvent) => {
-        // Only prevent default for short taps (not scrolls)
-        if (timer && !hasMoved) {
-          e.preventDefault(); // Prevent text selection only for actual taps
-
-          if (!isLongPress) {
-            onClick(row)(e);
-          }
-        }
-        cleanup();
-      },
-
-      onTouchCancel: cleanup,
-    };
-  };
+  const renderColumnSort = (columnName: string) =>
+    props.sort?.sort === columnName &&
+    (props.sort?.dir === "asc" ? <span>&nbsp;↓</span> : props.sort?.dir === "desc" ? <span>&nbsp;↑</span> : undefined);
 
   return (
     <div
@@ -190,17 +123,20 @@ export function DataList<TRow>(props: Props<TRow>) {
           <div class="data-item-values">
             <For each={dataColumns}>
               {(column) => (
-                <div
-                  style={{ cursor: props.onSort ? "pointer" : undefined }}
-                  onclick={() => column.name !== "select" && props.onSort?.(column.name)}
-                >
-                  {column.renderHeader ? column.renderHeader() : column.label ?? column.name}
-                  {props.sort?.sort === column.name &&
-                    (props.sort?.dir === "asc" ? (
-                      <span>&nbsp;↓</span>
-                    ) : props.sort?.dir === "desc" ? (
-                      <span>&nbsp;↑</span>
-                    ) : undefined)}
+                <div>
+                  <div
+                    style={{ cursor: props.onSort ? "pointer" : undefined }}
+                    on:click={() => column.name !== "select" && props.onSort?.(column.name)}
+                  >
+                    {column.renderHeader ? column.renderHeader() : column.label ?? column.name}
+                    {renderColumnSort(column.name)}
+                  </div>
+
+                  {column.filter && (
+                    <div class="data-item-filter" on:click={() => props.onFilter?.(column.name)}>
+                      Filter
+                    </div>
+                  )}
                 </div>
               )}
             </For>
@@ -210,15 +146,21 @@ export function DataList<TRow>(props: Props<TRow>) {
       <ul class="scrollable" ref={(_ul) => (ul = _ul)}>
         <For each={props.rows}>
           {(row) => {
-            const { onTouchStart, onTouchMove, onTouchEnd, onTouchCancel } = createLongPressHandler(row);
+            const { onMouseDown, onMouseMove, onMouseUp, onTouchStart, onTouchMove, onTouchEnd, onTouchCancel } =
+              createLongPressHandler({
+                onShortTap: (e) => onClick(row)(e),
+                onLongTap: () => props.onSelectionChanged && props.onSelectionChanged(row),
+              });
 
             return (
               <li
                 classList={{
                   "data-item": true,
-                  selected: props.selected!.includes(row) !== (props.selectAll ?? false),
+                  selected: props.selected && props.selected.includes(row) !== (props.selectAll ?? false),
                 }}
-                on:click={onClick(row)}
+                on:mousedown={onMouseDown}
+                on:mousemove={onMouseMove}
+                on:mouseup={onMouseUp}
                 on:touchstart={onTouchStart}
                 on:touchmove={onTouchMove}
                 on:touchend={onTouchEnd}
@@ -258,9 +200,6 @@ function DataItemValue<TRow>(props: PLVProps<TRow>) {
       }}
     >
       <div class="data-item-value-label">{props.column.icon ?? props.column.label ?? props.column.name}</div>
-      {/* <Show when={props.column.icon}>
-        <div class="data-item-value-icon">{props.column.icon}</div>
-      </Show> */}
       <div class="data-item-value-value">{props.column.render(props.row)}</div>
     </div>
   );

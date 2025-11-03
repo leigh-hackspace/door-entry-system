@@ -10,9 +10,10 @@ export interface FieldMetadata {
   [key: string]: unknown;
   icon?: string;
   lookup?: EntityType;
-  displayMode?: string;
   width?: string;
   text?: boolean;
+  hidden?: boolean;
+  filter?: boolean;
 }
 
 export const FieldMetadata = (m: FieldMetadata) => m;
@@ -96,7 +97,6 @@ export function assertConditions(condition: Condition): { success: boolean; mess
 
 export const RowSelection = v.object({
   ids: v.array(v.string()),
-  mode: v.picklist(["noneBut", "allBut"]),
 });
 
 export type RowSelection = v.InferOutput<typeof RowSelection>;

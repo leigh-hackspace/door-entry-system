@@ -7,13 +7,13 @@ import {
   MagicBrowser,
   type RowData,
   RowDataDefault,
-  RowSelectionDefault,
   SearchBar,
 } from "@frontend/components";
 import { openAlert } from "@frontend/dialogs";
-import type { UserSearchRecord } from "@frontend/services";
+import type { FetchResult } from "@frontend/services";
 import { createEffect, createSignal } from "solid-js";
 import type * as v from "valibot";
+import { openDialog } from "../common.tsx";
 
 interface Props {
   title: string;
@@ -22,12 +22,11 @@ interface Props {
   onClose?: (row?: any) => void;
 }
 
-export function BrowserDialog(props: Props) {
-  const [rows, setRows] = createSignal<RowData<UserSearchRecord>>(RowDataDefault);
+export function BrowserPickDialog(props: Props) {
+  const [rows, setRows] = createSignal<RowData<unknown>>(RowDataDefault);
 
   const cursorSignal = createSignal(CursorDefault);
   const searchSignal = createSignal("");
-  const selectionSignal = createSignal(RowSelectionDefault);
 
   const fetchRows = async () => {
     const cursor = cursorSignal[0]();
@@ -66,13 +65,7 @@ export function BrowserDialog(props: Props) {
           <div class="p-2">
             <SearchBar search={searchSignal} />
           </div>
-          <MagicBrowser
-            schema={props.schema}
-            rowData={rows()}
-            cursor={cursorSignal}
-            selection={selectionSignal}
-            onRowClick={onSelect}
-          />
+          <MagicBrowser schema={props.schema} rowData={rows()} cursor={cursorSignal} onRowClick={onSelect} />
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-warning btn-default" on:click={onClear}>
@@ -85,4 +78,18 @@ export function BrowserDialog(props: Props) {
       </div>
     </div>
   );
+}
+
+export async function openBrowser<TRow>(
+  title: string,
+  schema: v.ObjectSchema<any, any>,
+  onFetch: (params: FetchParameters) => Promise<FetchResult<TRow>>
+) {
+  const row = await openDialog(BrowserPickDialog, {
+    title,
+    schema,
+    onFetch,
+  });
+
+  return row as TRow | undefined | null;
 }

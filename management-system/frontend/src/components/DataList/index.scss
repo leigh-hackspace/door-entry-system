@@ -12,10 +12,26 @@
 
     &.data-list-header {
       font-weight: bold;
+
+      .data-item {
+        .data-item-values {
+          align-items: start;
+
+          .data-item-filter {
+            cursor: pointer;
+            font-weight: normal;
+            color: var(--bs-secondary);
+          }
+        }
+      }
     }
 
     &.scrollable {
       overflow: overlay;
+
+      .data-item {
+        cursor: pointer;
+      }
     }
   }
 
@@ -23,7 +39,6 @@
     display: flex;
     gap: 0.5rem;
     border-bottom: solid 1px var(--bs-secondary);
-    cursor: pointer;
 
     -webkit-user-select: none;
     -moz-user-select: none;

@@ -3,10 +3,10 @@ import { type DeviceCollection, DeviceEvents } from "@/services";
 import { and, count, eq, getTableColumns, ilike, or } from "drizzle-orm";
 import { on } from "node:events";
 import * as v from "valibot";
-import { assertOneRecord, PaginationSchema, toDrizzleOrderBy, UUID } from "./common.ts";
+import { assertOneRecord, PaginationSchema, SearchSchema, toDrizzleOrderBy, UUID } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 
-const DeviceSearchSchema = v.intersect([PaginationSchema]);
+const DeviceSearchSchema = v.intersect([PaginationSchema, SearchSchema]);
 
 export const DeviceRouter = (deviceCollectionWs: DeviceCollection) =>
   tRPC.router({

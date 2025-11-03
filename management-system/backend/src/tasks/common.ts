@@ -1,4 +1,5 @@
-import { db, type LogLevel, TaskLogTable } from "@/db";
+import { db, TaskLogTable } from "@/db";
+import type { TaskLogLevel } from "@door-entry-management-system/common";
 import { addDays, type Day, isAfter, isBefore, nextDay } from "date-fns";
 import { assert } from "ts-essentials";
 
@@ -9,20 +10,20 @@ export abstract class Task {
     return this.constructor.name;
   }
   public get running() {
-    return this.#running;
+    return this.#jobStarted !== null;
   }
   public get nextRunTime() {
     return this.#nextRunTime;
   }
 
-  #nextRunTime = this.calculateNextRunTime() ?? Date.now();
-  #running = false;
+  #nextRunTime = this.calculateNextRunTime();
+  #jobStarted: number | null = null;
 
   protected abstract calculateNextRunTime(): number;
 
   public async tryStart() {
     if (this.running) return;
-    this.#running = true;
+    this.#jobStarted = Date.now();
 
     const abortController = new AbortController();
 
@@ -44,18 +45,18 @@ export abstract class Task {
       }
     } finally {
       clearTimeout(timeoutId);
-      this.#running = false;
+      this.#jobStarted = null;
+      await this.writeLog("debug", "Finished");
 
       this.#nextRunTime = this.calculateNextRunTime();
-
-      await this.writeLog("debug", "Finished");
       console.log("Finished task:", this.name, "Next run:", new Date(this.#nextRunTime));
     }
   }
 
-  protected async writeLog(level: LogLevel, notes: string, data: Record<string, string> = {}) {
+  protected async writeLog(level: TaskLogLevel, notes: string, data: Record<string, string> = {}) {
     try {
-      const job_started = new Date(this.#nextRunTime);
+      assert(this.#jobStarted, "`jobStarted` not set!");
+      const job_started = new Date(this.#jobStarted);
 
       const [result] = await db
         .insert(TaskLogTable)

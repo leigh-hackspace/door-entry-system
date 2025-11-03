@@ -1,3 +1,5 @@
+import { openDialog } from "../common.tsx";
+
 interface Props {
   title: string;
   message: string;
@@ -27,4 +29,8 @@ export function AlertDialog(props: Props) {
       </div>
     </div>
   );
+}
+
+export function openAlert(title: string, message: string) {
+  return openDialog(AlertDialog, { title, message });
 }

@@ -8,7 +8,6 @@ import { assert } from "ts-essentials";
 import * as uuid from "uuid";
 import {
   DeviceEvents,
-  TagCode,
   type DeviceOutgoingFn,
   type IncomingFileList,
   type IncomingFileStart,
@@ -16,6 +15,7 @@ import {
   type IncomingStatusUpdate,
   type IncomingTagScanned,
   type PublicDeviceInterface,
+  type TagCode,
 } from "./common.ts";
 
 const CHUNK_SIZE = 4 * 1024;
@@ -283,53 +283,65 @@ export class DeviceConnection implements PublicDeviceInterface {
   public async handleIncomingTag(req: IncomingTagScanned) {
     console.log("DeviceConnection.receiveCode:", req.code);
 
-    const slackClient = new WebClient(Config.DE_SLACK_API_KEY, {});
-
     const matchingTags = await db
       .select({ id: TagTable.id, code: TagTable.code, user_id: UserTable.id, user_name: UserTable.name })
       .from(TagTable)
       .leftJoin(UserTable, eq(TagTable.user_id, UserTable.id))
       .where(eq(TagTable.code, req.code));
 
+    const tag = matchingTags.length > 0 ? matchingTags[0] : null;
+
     const id = uuid.v4();
 
     let action: ActivityLogAction;
     let user_id: string | null = null;
-    let user_name: string | null = null;
 
     if (req.allowed) {
       action = "allowed";
 
-      const tag = matchingTags.length > 0 ? matchingTags[0] : null;
-
       if (tag) {
-        ({ user_id, user_name } = tag);
+        user_id = tag.user_id;
+
+        await this.announceToSlack(`${tag.user_name} has entered the hackspace`);
       }
     } else {
-      if (matchingTags.length > 0) {
-        action = "denied-unassigned";
+      if (tag) {
+        if (tag.user_id) {
+          action = "denied-blocked";
+
+          await this.announceToSlack(`${tag.user_name} has been denied`);
+        } else {
+          action = "denied-unassigned";
+
+          DeviceEvents.emit("unknownScans", {
+            code: req.code,
+            time: new Date(),
+          });
+        }
       } else {
         action = "denied-unknown-code";
-      }
 
-      DeviceEvents.emit("unknownScans", {
-        code: req.code,
-        time: new Date(),
-      });
-    }
-
-    if (user_name) {
-      try {
-        await slackClient.chat.postMessage({
-          channel: Config.DE_SLACK_CHANNEL,
-          text: `${user_name} has entered the hackspace`,
+        DeviceEvents.emit("unknownScans", {
+          code: req.code,
+          time: new Date(),
         });
-      } catch (err) {
-        console.error("slackClient.chat.postMessage ERROR:", err);
       }
     }
 
     await db.insert(ActivityLogTable).values({ id, user_id, code: req.code, action });
+  }
+
+  private async announceToSlack(text: string) {
+    const slackClient = new WebClient(Config.DE_SLACK_API_KEY, {});
+
+    try {
+      await slackClient.chat.postMessage({
+        channel: Config.DE_SLACK_CHANNEL,
+        text,
+      });
+    } catch (err) {
+      console.error("slackClient.chat.postMessage ERROR:", err);
+    }
   }
 
   private fileStartHandler?: (fileStart: IncomingFileStart) => void;

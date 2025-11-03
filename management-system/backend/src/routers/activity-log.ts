@@ -5,10 +5,10 @@ import type { ScanEvent } from "@door-entry-management-system/common";
 import { and, count, desc, eq, getTableColumns, ilike, inArray, or } from "drizzle-orm";
 import { on } from "node:events";
 import * as v from "valibot";
-import { PaginationSchema, toDrizzleOrderBy } from "./common.ts";
+import { PaginationSchema, SearchSchema, toDrizzleOrderBy } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 
-const ActivityLogSearchSchema = v.intersect([PaginationSchema]);
+const ActivityLogSearchSchema = v.intersect([PaginationSchema, SearchSchema]);
 
 export const ActivityLogRouter = tRPC.router({
   Search: tRPC.ProtectedProcedure.input(v.parser(ActivityLogSearchSchema)).query(

@@ -1,5 +1,11 @@
 // deno-lint-ignore-file no-explicit-any
-import { camelToPascal, includes, keys, type RowSelection } from "@door-entry-management-system/common";
+import {
+  camelToPascal,
+  includes,
+  isNotNullOrUndefined,
+  keys,
+  type RowSelection,
+} from "@door-entry-management-system/common";
 import { format } from "date-fns";
 import { enGB } from "date-fns/locale";
 import type { JSXElement } from "solid-js";
@@ -20,10 +26,11 @@ interface Props<TSchema extends v.ObjectSchema<any, any>, TRow extends v.InferIn
   initialPageSize?: number;
   cursor: readonly [cursor: () => Cursor, setCursor: (cursor: Cursor) => void];
   rowData: RowData<TRow>;
-  selection: readonly [selection: () => RowSelection, setSelection: (selection: RowSelection) => void];
+  selection?: readonly [selection: () => RowSelection, setSelection: (selection: RowSelection) => void];
   acquireImage?: (row: TRow) => string;
 
   onRowClick?: (row: TRow) => Promise<void>;
+  onFilter?: (colName: keyof TRow) => void;
 }
 
 export interface Cursor {
@@ -49,7 +56,6 @@ export const RowDataDefault: RowData<never> = {
 
 export const RowSelectionDefault: RowSelection = {
   ids: [],
-  mode: "noneBut",
 };
 
 type Overrides<TRow> = {
@@ -90,27 +96,32 @@ export function MagicBrowser<
   };
 
   const getColumns = (): readonly DataTableColumn<TRow>[] => {
-    return propSchemas.map(([propName]) => {
-      const { title, metadata } = getFieldInfo(props.schema, propName);
+    return propSchemas
+      .map(([propName]) => {
+        const { title, metadata } = getFieldInfo(props.schema, propName);
 
-      return {
-        name: propName,
-        label: title ?? "???",
-        icon: metadata?.icon,
-        width: metadata?.width,
-        render: (row): JSXElement => {
-          const overrideName = `render${camelToPascal(propName)}`;
+        if (metadata?.hidden) return;
 
-          if (includes(overrideName, keys(props)) && typeof props[overrideName] === "function") {
-            return props[overrideName](row);
-          }
+        return {
+          name: propName,
+          label: title,
+          icon: metadata?.icon,
+          width: metadata?.width,
+          filter: metadata?.filter,
+          render: (row: TRow): JSXElement => {
+            const overrideName = `render${camelToPascal(propName)}`;
 
-          assert(includes(propName, keys(row)), `Property "${propName}" not in row!`);
+            if (includes(overrideName, keys(props)) && typeof props[overrideName] === "function") {
+              return props[overrideName](row);
+            }
 
-          return renderValue(row[propName], propName);
-        },
-      };
-    });
+            assert(includes(propName, keys(row)), `Property "${propName}" not in row!`);
+
+            return renderValue(row[propName], propName);
+          },
+        };
+      })
+      .filter(isNotNullOrUndefined);
   };
 
   const desktop = false;
@@ -136,26 +147,34 @@ export function MagicBrowser<
       </div>
     );
   } else {
+    const selected = () => {
+      if (!props.selection) return;
+
+      return props.selection[0]()
+        .ids.map((id) => props.rowData.rows.find((r) => r.id === id))
+        .filter(isNotNullOrUndefined);
+    };
+
     const onLoadMore = () => {
       if (props.cursor[0]().pageSize < props.rowData.total) {
         onPageSize(props.cursor[0]().pageSize + props.cursor[0]().pageSize);
       }
     };
 
-    const onSelectionChanged = (row: TRow) => {
-      const { ids, mode } = props.selection[0]();
-
-      if (props.selection[0]().ids.includes(row.id)) {
-        props.selection[1]({ mode, ids: ids.filter((s) => s !== row.id) });
-      } else {
-        props.selection[1]({ mode, ids: [...ids, row.id] });
-      }
+    const onFilter = (colName: string) => {
+      if (props.onFilter) props.onFilter(colName);
     };
 
-    const onSelectAll = () => {
-      const { ids, mode } = props.selection[0]();
+    const onSelectionChanged = (row: TRow) => {
+      if (!props.selection) return;
 
-      props.selection[1]({ mode: mode === "allBut" ? "noneBut" : "allBut", ids });
+      const { ids } = props.selection[0]();
+
+      if (props.selection[0]().ids.includes(row.id)) {
+        props.selection[1]({ ids: ids.filter((s) => s !== row.id) });
+      } else {
+        props.selection[1]({ ids: [...ids, row.id] });
+      }
     };
 
     return (
@@ -164,12 +183,12 @@ export function MagicBrowser<
           columns={getColumns()}
           rows={props.rowData.rows}
           sort={props.cursor[0]().sort}
-          selected={props.selection[0]().ids.map((id) => props.rowData.rows.find((r) => r.id === id)!)}
-          selectAll={props.selection[0]().mode === "allBut"}
+          selected={selected()}
+          selectAll={false}
           onSort={onSort}
           onLoadMore={onLoadMore}
-          onSelectionChanged={onSelectionChanged}
-          // onSelectAll={onSelectAll}
+          onFilter={onFilter}
+          onSelectionChanged={props.selection && onSelectionChanged}
           onRowClick={props.onRowClick}
           acquireImage={props.acquireImage}
         />

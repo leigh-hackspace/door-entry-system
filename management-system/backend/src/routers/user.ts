@@ -1,15 +1,15 @@
 import { db, PaymentTable, UserTable } from "@/db";
 import { getHexEncodedSha256, GoCardlessService, scryptAsync } from "@/services";
 import { RowSelection, UserCreateSchema, UserUpdateSchema } from "@door-entry-management-system/common";
-import { and, eq, ilike, inArray, notInArray, or } from "drizzle-orm";
+import { and, eq, ilike, inArray, or } from "drizzle-orm";
 import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { assert } from "ts-essentials";
 import * as uuid from "uuid";
 import * as v from "valibot";
-import { assertOneRecord, assertRole, PaginationSchema, toDrizzleOrderBy, UUID, withId } from "./common.ts";
+import { assertOneRecord, assertRole, PaginationSchema, SearchSchema, toDrizzleOrderBy, UUID, withId } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 
-const UserSearchSchema = v.intersect([PaginationSchema]);
+const UserSearchSchema = v.intersect([PaginationSchema, SearchSchema]);
 
 export const UserRouter = tRPC.router({
   Search: tRPC.ProtectedProcedure.input(v.parser(UserSearchSchema)).query(
@@ -112,11 +112,9 @@ export const UserRouter = tRPC.router({
     },
   ),
 
-  Delete: tRPC.ProtectedProcedure.input(RowSelection).mutation(async ({ ctx, input: { ids, mode } }) => {
+  Delete: tRPC.ProtectedProcedure.input(RowSelection).mutation(async ({ ctx, input: { ids } }) => {
     assertRole(ctx, "admin");
 
-    const where = mode === "noneBut" ? inArray(UserTable.id, ids) : notInArray(UserTable.id, ids.slice());
-
-    await db.delete(UserTable).where(where);
+    await db.delete(UserTable).where(inArray(UserTable.id, ids));
   }),
 });

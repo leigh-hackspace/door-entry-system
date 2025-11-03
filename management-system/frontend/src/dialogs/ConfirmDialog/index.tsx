@@ -1,4 +1,5 @@
 import { Button } from "@frontend/components";
+import { openDialog } from "../common.tsx";
 
 interface Props {
   title: string;
@@ -32,4 +33,11 @@ export function ConfirmDialog(props: Props) {
       </div>
     </div>
   );
+}
+
+export function openConfirm(title: string, message: string) {
+  return openDialog(ConfirmDialog, {
+    title,
+    message,
+  });
 }

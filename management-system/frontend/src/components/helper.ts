@@ -61,6 +61,125 @@ export function debounce<
   };
 }
 
+export const createLongPressHandler = (
+  { onShortTap, onLongTap }: { onShortTap: (e: MouseEvent | TouchEvent) => void; onLongTap: () => void },
+) => {
+  let timer: number | null = null;
+  let startPos: { x: number; y: number } | null = null;
+  let isLongPress = false;
+  let hasMoved = false;
+
+  const cleanup = () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    startPos = null;
+    isLongPress = false;
+    hasMoved = false;
+  };
+
+  const triggerHaptic = () => {
+    if ("vibrate" in navigator) {
+      navigator.vibrate(50);
+    }
+  };
+
+  return {
+    onMouseDown: (e: MouseEvent) => {
+      if (e.target instanceof HTMLInputElement) return;
+
+      startPos = { x: e.clientX, y: e.clientY };
+      isLongPress = false;
+      hasMoved = false;
+
+      timer = setTimeout(() => {
+        if (timer && !hasMoved) {
+          isLongPress = true;
+          triggerHaptic();
+          onLongTap();
+        }
+        cleanup();
+      }, 500);
+    },
+
+    onMouseMove: (e: MouseEvent) => {
+      if (e.target instanceof HTMLInputElement) return;
+
+      if (!startPos || !timer) return;
+
+      const distance = Math.sqrt(Math.pow(e.clientX - startPos.x, 2) + Math.pow(e.clientY - startPos.y, 2));
+
+      if (distance > 10) {
+        hasMoved = true;
+        cleanup();
+      }
+    },
+
+    onMouseUp: (e: MouseEvent) => {
+      if (e.target instanceof HTMLInputElement) return;
+
+      // Only prevent default for short taps (not scrolls)
+      if (timer && !hasMoved) {
+        e.preventDefault(); // Prevent text selection only for actual taps
+
+        if (!isLongPress) {
+          onShortTap(e);
+        }
+      }
+      cleanup();
+    },
+
+    onTouchStart: {
+      handleEvent: (e: TouchEvent) => {
+        const touch = e.touches[0];
+        startPos = { x: touch.clientX, y: touch.clientY };
+        isLongPress = false;
+        hasMoved = false;
+
+        timer = setTimeout(() => {
+          if (timer && !hasMoved) {
+            isLongPress = true;
+            triggerHaptic();
+            onLongTap();
+          }
+          cleanup();
+        }, 500);
+      },
+      passive: true,
+    },
+
+    onTouchMove: {
+      handleEvent: (e: TouchEvent) => {
+        if (!startPos || !timer) return;
+
+        const touch = e.touches[0];
+        const distance = Math.sqrt(Math.pow(touch.clientX - startPos.x, 2) + Math.pow(touch.clientY - startPos.y, 2));
+
+        if (distance > 10) {
+          hasMoved = true;
+          cleanup();
+        }
+      },
+      passive: true,
+    },
+
+    onTouchEnd: (e: TouchEvent) => {
+      // Only prevent default for short taps (not scrolls)
+      if (timer && !hasMoved) {
+        e.preventDefault(); // Prevent text selection only for actual taps
+
+        if (!isLongPress) {
+          onShortTap(e);
+        }
+      }
+      cleanup();
+    },
+
+    onTouchCancel: cleanup,
+  };
+};
+
 export function normaliseError(err: Error) {
   return err;
 }
@@ -135,7 +254,7 @@ export function getFieldInfo(formSchema: v.ObjectSchema<any, any>, fieldName: st
     (item): item is v.BaseValidation<any, any, any> => item.kind === "validation",
   )?.type;
 
-  const title = propSchema.pipe.find((item): item is v.TitleAction<string, string> => item.type === "title")?.title ?? "???";
+  const title = propSchema.pipe.find((item): item is v.TitleAction<string, string> => item.type === "title")?.title ?? humanise(fieldName);
 
   const description = propSchema.pipe.find(
     (item): item is v.DescriptionAction<string, string> => item.type === "description",
