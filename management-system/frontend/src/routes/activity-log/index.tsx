@@ -18,10 +18,10 @@ import { createEffect, createSignal } from "solid-js";
 import * as v from "valibot";
 
 const ActivityLogTableSchema = v.object({
-  code: v.pipe(v.string(), v.title("Code"), v.metadata(FieldMetadata({ icon: "🔑" }))),
-  action: v.pipe(v.string(), v.title("Action"), v.metadata(FieldMetadata({ icon: "🔘" }))),
+  code: v.pipe(v.string(), v.title("Code"), v.metadata(FieldMetadata({ icon: "🔑", width: "140px" }))),
+  action: v.pipe(v.string(), v.title("Action"), v.metadata(FieldMetadata({ icon: "🔘", width: "200px" }))),
   user_name: v.nullable(v.pipe(v.string(), v.title("User Name"), v.metadata(FieldMetadata({ icon: "👤" })))),
-  created: v.pipe(v.date(), v.title("Created"), v.metadata(FieldMetadata({ displayMode: "raw" }))),
+  created: v.pipe(v.date(), v.title("Created"), v.metadata(FieldMetadata({ width: "140px" }))),
 });
 
 export function ActivityLogs(props: RouteSectionProps) {
@@ -50,8 +50,7 @@ export function ActivityLogs(props: RouteSectionProps) {
 
   createEffect(fetchRows);
 
-  const onRowClick = async (row: ActivityLogSearchRecord) => {
-  };
+  const onRowClick = async (row: ActivityLogSearchRecord) => {};
 
   return (
     <main>

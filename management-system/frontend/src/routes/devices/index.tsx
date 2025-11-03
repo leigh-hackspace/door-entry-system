@@ -20,25 +20,23 @@ import * as v from "valibot";
 const DeviceTableSchema = v.object({
   name: v.pipe(v.string(), v.title("Name"), v.metadata(FieldMetadata({ icon: "N" }))),
   ip_address: v.pipe(v.string(), v.title("IP Address"), v.metadata(FieldMetadata({ icon: "IP" }))),
-  created: v.pipe(v.date(), v.title("Created"), v.metadata(FieldMetadata({ displayMode: "raw" }))),
-  updated: v.pipe(v.date(), v.title("Updated"), v.metadata(FieldMetadata({ displayMode: "raw" }))),
+  created: v.pipe(v.date(), v.title("Created"), v.metadata(FieldMetadata({ width: "140px" }))),
+  updated: v.pipe(v.date(), v.title("Updated"), v.metadata(FieldMetadata({ width: "140px" }))),
 });
 
 export function Devices(props: RouteSectionProps) {
   const { navigate, tRPC } = beginPage(["admin", "user"]);
 
   const [rows, setRows] = createSignal<RowData<DeviceSearchRecord>>(RowDataDefault);
-
-  const cursorSignal = createSignal(CursorDefault);
-  const searchSignal = createSignal("");
-  const selectionSignal = createSignal(RowSelectionDefault);
+  const [cursor, setCursor] = createSignal(CursorDefault);
+  const [search, setSearch] = createSignal("");
+  const [selection, setSelection] = createSignal(RowSelectionDefault);
 
   const fetchRows = async () => {
-    const cursor = cursorSignal[0]();
-    const params = fetchParamsFromCursor(cursor);
+    const params = fetchParamsFromCursor(cursor());
 
     try {
-      setRows(await tRPC.Device.Search.query({ ...params, search: searchSignal[0]() }));
+      setRows(await tRPC.Device.Search.query({ ...params, search: search() }));
     } catch (err) {
       assertError(err);
       await openAlert(`Fetch Error: ${err.name}`, err.message);
@@ -50,18 +48,16 @@ export function Devices(props: RouteSectionProps) {
   };
 
   const onDelete = async () => {
-    const { total } = rows();
-    const { ids, mode } = selectionSignal[0]();
+    const { ids } = selection();
 
-    const deleteCount = mode === "noneBut" ? ids.length : total - ids.length;
-    if (deleteCount === 0 || mode === "allBut") return;
+    if (ids.length === 0) return;
 
-    const res = await openConfirm("Delete user", `Are you sure you wish to delete ${deleteCount} devices`);
+    const res = await openConfirm("Delete user", `Are you sure you wish to delete ${ids.length} devices`);
 
     if (res === "yes") {
-      await tRPC.User.Delete.mutate({ ids, mode });
+      await tRPC.User.Delete.mutate({ ids });
 
-      selectionSignal[1](RowSelectionDefault);
+      setSelection(RowSelectionDefault);
 
       await fetchRows();
     }
@@ -73,21 +69,21 @@ export function Devices(props: RouteSectionProps) {
     <main>
       <Card colour="info">
         <Card.Header text="📟 Devices" />
-        <Card.Body>
+        <Card.Body pad={0}>
           <MagicBrowser
             schema={DeviceTableSchema}
             rowData={rows()}
-            cursor={cursorSignal}
-            selection={selectionSignal}
+            cursor={[cursor, setCursor]}
+            selection={[selection, setSelection]}
             onRowClick={onRowClick}
           />
         </Card.Body>
         <Card.Footer>
-          <Show when={selectionSignal[0]().ids.length > 0}>
+          <Show when={selection().ids.length > 0}>
             <Button colour="danger" on:click={() => onDelete()}>
               Delete
             </Button>
-          </Show>{" "}
+          </Show>
           <LinkButton colour="info" href="/devices/new">
             New
           </LinkButton>

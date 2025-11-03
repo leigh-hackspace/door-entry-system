@@ -23,7 +23,7 @@ export function FormFields(props: Props) {
             <div classList={{ "input-group": true, "has-validation": field.messages.length > 0 }}>
               {field.icon && <span class="input-group-text">{field.icon}</span>}
               {field.children}
-              {field.messages.map((m) => <div class="invalid-feedback">{m}</div>)}
+              <For each={field.messages}>{(m) => <div class="invalid-feedback">{m}</div>}</For>
             </div>
             {field.description && <div class="form-text">{field.description}</div>}
           </div>

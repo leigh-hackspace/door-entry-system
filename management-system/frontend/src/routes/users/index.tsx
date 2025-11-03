@@ -31,21 +31,19 @@ const UserTableSchema = v.object({
 export function Users(props: RouteSectionProps) {
   const { navigate, tRPC } = beginPage("admin");
 
-  const [rows, setRows] = createSignal<RowData<UserSearchRecord>>(RowDataDefault);
-
   // Start with created date descending (most useful)
   const initialCursor: Cursor = { ...CursorDefault, sort: { sort: "created", dir: "desc" } };
 
-  const cursorSignal = createSignal(initialCursor);
-  const searchSignal = createSignal("");
-  const selectionSignal = createSignal(RowSelectionDefault);
+  const [rows, setRows] = createSignal<RowData<UserSearchRecord>>(RowDataDefault);
+  const [cursor, setCursor] = createSignal(initialCursor);
+  const [search, setSearch] = createSignal("");
+  const [selection, setSelection] = createSignal(RowSelectionDefault);
 
   const fetchRows = async () => {
-    const cursor = cursorSignal[0]();
-    const params = fetchParamsFromCursor(cursor);
+    const params = fetchParamsFromCursor(cursor());
 
     try {
-      setRows(await tRPC.User.Search.query({ ...params, search: searchSignal[0]() }));
+      setRows(await tRPC.User.Search.query({ ...params, search: search() }));
     } catch (err) {
       assertError(err);
       await openAlert(`Fetch Error: ${err.name}`, err.message);
@@ -59,22 +57,24 @@ export function Users(props: RouteSectionProps) {
   };
 
   const onDelete = async () => {
-    const { total } = rows();
-    const { ids, mode } = selectionSignal[0]();
+    const { ids } = selection();
 
-    const deleteCount = mode === "noneBut" ? ids.length : total - ids.length;
-    if (deleteCount === 0 || mode === "allBut") return;
+    if (ids.length === 0) return;
 
-    const res = await openConfirm("Delete user", `Are you sure you wish to delete ${deleteCount} users`);
+    const res = await openConfirm("Delete user", `Are you sure you wish to delete ${ids.length} users`);
 
     if (res === "yes") {
-      await tRPC.User.Delete.mutate({ ids, mode });
+      await tRPC.User.Delete.mutate({ ids });
 
-      selectionSignal[1](RowSelectionDefault);
+      setSelection(RowSelectionDefault);
 
       await fetchRows();
     }
   };
+
+  const renderPaidUp = (row: UserSearchRecord) => (
+    <div style={{ "font-weight": "bold", color: row.paidUp ? "green" : "red" }}>{row.paidUp ? "Yes" : "No"}</div>
+  );
 
   return (
     <main>
@@ -82,25 +82,21 @@ export function Users(props: RouteSectionProps) {
         <Card.Header text="👤 Users" />
         <Card.Body pad={0}>
           <div class="p-2">
-            <SearchBar search={searchSignal} />
+            <SearchBar search={[search, setSearch]} />
           </div>
           <MagicBrowser
             schema={UserTableSchema}
             rowData={rows()}
-            cursor={cursorSignal}
-            selection={selectionSignal}
+            cursor={[cursor, setCursor]}
+            selection={[selection, setSelection]}
             acquireImage={(row) => row.image_url}
             renderRole={(row) => humanise(row.role)}
-            renderPaidUp={(row) => (
-              <div style={{ "font-weight": "bold", color: row.paidUp ? "green" : "red" }}>
-                {row.paidUp ? "Yes" : "No"}
-              </div>
-            )}
+            renderPaidUp={renderPaidUp}
             onRowClick={onRowClick}
           />
         </Card.Body>
         <Card.Footer>
-          <Show when={selectionSignal[0]().ids.length > 0}>
+          <Show when={selection().ids.length > 0}>
             <Button colour="danger" on:click={() => onDelete()}>
               Delete
             </Button>

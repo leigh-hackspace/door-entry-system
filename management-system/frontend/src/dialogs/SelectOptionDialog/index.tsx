@@ -1,5 +1,5 @@
-import { FieldMetadata, isNotNullOrUndefined } from "@door-entry-management-system/common";
-import { CursorDefault, MagicBrowser, type RowData, RowSelectionDefault } from "@frontend/components";
+import { FieldMetadata, isNotNullOrUndefined, RowSelection } from "@door-entry-management-system/common";
+import { CursorDefault, MagicBrowser, type RowData } from "@frontend/components";
 import { createSignal } from "solid-js";
 import { assert } from "ts-essentials";
 import * as v from "valibot";
@@ -7,25 +7,26 @@ import { openDialog } from "../common.tsx";
 
 interface Props {
   title: string;
-  options: Option[];
-  onClose?: (row?: Option[] | null) => void;
+  options: SelectOption[];
+  previouslySelectedOptions?: string[];
+  onClose?: (row?: SelectOption[] | null) => void;
 }
 
-const OptionTableSchema = v.object({
+const SelectOptionSchema = v.object({
   id: v.pipe(v.string(), v.metadata(FieldMetadata({ hidden: true }))),
-  text: v.pipe(v.string()),
+  text: v.pipe(v.string(), v.metadata(FieldMetadata({ icon: "Option" }))),
 });
 
-export interface Option {
+export interface SelectOption {
   id: string;
   text: string;
 }
 
-export function OptionDialog(props: Props) {
-  const [rowData] = createSignal<RowData<Option>>({ rows: props.options, total: props.options.length });
+export function SelectOptionDialog(props: Props) {
+  const [rowData] = createSignal<RowData<SelectOption>>({ rows: props.options, total: props.options.length });
 
   const [cursor, setCursor] = createSignal(CursorDefault);
-  const [selection, setSelection] = createSignal(RowSelectionDefault);
+  const [selection, setSelection] = createSignal<RowSelection>({ ids: props.previouslySelectedOptions ?? [] });
 
   const onClose = () => {
     assert(props.onClose);
@@ -49,8 +50,6 @@ export function OptionDialog(props: Props) {
     props.onClose(null); // Clear selection
   };
 
-  const onSelect = async (row: Option) => {};
-
   return (
     <div class="modal-dialog">
       <div class="modal-content">
@@ -60,11 +59,10 @@ export function OptionDialog(props: Props) {
         </div>
         <div class="modal-body p-0">
           <MagicBrowser
-            schema={OptionTableSchema}
+            schema={SelectOptionSchema}
             rowData={rowData()}
             cursor={[cursor, setCursor]}
             selection={[selection, setSelection]}
-            onRowClick={onSelect}
           />
         </div>
         <div class="modal-footer">
@@ -80,9 +78,10 @@ export function OptionDialog(props: Props) {
   );
 }
 
-export function openOptions(title: string, options: Option[]) {
-  return openDialog(OptionDialog, {
+export function openOptions(title: string, options: SelectOption[], previouslySelectedOptions?: string[]) {
+  return openDialog(SelectOptionDialog, {
     title,
     options,
+    previouslySelectedOptions,
   });
 }

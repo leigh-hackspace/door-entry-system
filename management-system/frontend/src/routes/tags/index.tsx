@@ -20,33 +20,31 @@ import { createEffect, createSignal, Show } from "solid-js";
 import * as v from "valibot";
 
 const TagTableSchema = v.object({
-  code: v.pipe(v.string(), v.title("Code"), v.metadata(FieldMetadata({ icon: "🔑" }))),
+  code: v.pipe(v.string(), v.title("Code"), v.metadata(FieldMetadata({ icon: "🔑", width: "140px" }))),
   description: v.pipe(v.string(), v.title("Description"), v.metadata(FieldMetadata({ icon: "✍" }))),
   user_name: v.nullable(
-    v.pipe(v.string(), v.title("User Name"), v.metadata(FieldMetadata({ icon: "👤", lookup: "User" }))),
+    v.pipe(v.string(), v.title("User Name"), v.metadata(FieldMetadata({ icon: "👤", lookup: "User" })))
   ),
-  created: v.pipe(v.date(), v.title("Created"), v.metadata(FieldMetadata({ displayMode: "raw" }))),
-  updated: v.pipe(v.date(), v.title("Updated"), v.metadata(FieldMetadata({ displayMode: "raw" }))),
+  created: v.pipe(v.date(), v.title("Created"), v.metadata(FieldMetadata({ width: "140px" }))),
+  updated: v.pipe(v.date(), v.title("Updated"), v.metadata(FieldMetadata({ width: "140px" }))),
 });
 
 export function Tags(props: RouteSectionProps) {
   const { navigate, tRPC } = beginPage(["admin", "user"]);
 
-  const [rows, setRows] = createSignal<RowData<TagSearchRecord>>(RowDataDefault);
-
   // Start with created date descending (most useful)
   const initialCursor: Cursor = { ...CursorDefault, sort: { sort: "created", dir: "desc" } };
 
-  const cursorSignal = createSignal(initialCursor);
-  const searchSignal = createSignal("");
-  const selectionSignal = createSignal(RowSelectionDefault);
+  const [rows, setRows] = createSignal<RowData<TagSearchRecord>>(RowDataDefault);
+  const [cursor, setCursor] = createSignal(initialCursor);
+  const [search, setSearch] = createSignal("");
+  const [selection, setSelection] = createSignal(RowSelectionDefault);
 
   const fetchRows = async () => {
-    const cursor = cursorSignal[0]();
-    const params = fetchParamsFromCursor(cursor);
+    const params = fetchParamsFromCursor(cursor());
 
     try {
-      setRows(await tRPC.Tag.Search.query({ ...params, search: searchSignal[0]() }));
+      setRows(await tRPC.Tag.Search.query({ ...params, search: search() }));
     } catch (err) {
       assertError(err);
       await openAlert(`Fetch Error: ${err.name}`, err.message);
@@ -60,18 +58,16 @@ export function Tags(props: RouteSectionProps) {
   };
 
   const onDelete = async () => {
-    const { total } = rows();
-    const { ids, mode } = selectionSignal[0]();
+    const { ids } = selection();
 
-    const deleteCount = mode === "noneBut" ? ids.length : total - ids.length;
-    if (deleteCount !== 1 || mode === "allBut") return;
+    if (ids.length !== 1) return;
 
-    const res = await openConfirm("Delete tag", `Are you sure you wish to delete ${deleteCount} tags`);
+    const res = await openConfirm("Delete tag", `Are you sure you wish to delete ${ids.length} tags`);
 
     if (res === "yes") {
       await tRPC.Tag.Delete.mutate(ids[0]);
 
-      selectionSignal[1](RowSelectionDefault);
+      setSelection(RowSelectionDefault);
 
       await fetchRows();
     }
@@ -83,18 +79,18 @@ export function Tags(props: RouteSectionProps) {
         <Card.Header text="🪪 Tags" />
         <Card.Body pad={0}>
           <div class="p-2">
-            <SearchBar search={searchSignal} />
+            <SearchBar search={[search, setSearch]} />
           </div>
           <MagicBrowser
             schema={TagTableSchema}
             rowData={rows()}
-            cursor={cursorSignal}
-            selection={selectionSignal}
+            cursor={[cursor, setCursor]}
+            selection={[selection, setSelection]}
             onRowClick={onRowClick}
           />
         </Card.Body>
         <Card.Footer>
-          <Show when={selectionSignal[0]().ids.length === 1}>
+          <Show when={selection().ids.length === 1}>
             <Button colour="danger" on:click={() => onDelete()}>
               Delete
             </Button>

@@ -1,6 +1,7 @@
 import {
   assertError,
   FieldMetadata,
+  formatDateTime,
   type TaskLogFilter,
   TaskLogLevelSchema,
 } from "@door-entry-management-system/common";
@@ -18,6 +19,7 @@ import { openAlert, openOptions } from "@frontend/dialogs";
 import { beginPage } from "@frontend/helper";
 import type { TaskLogSearchRecord } from "@frontend/services";
 import type { RouteSectionProps } from "@solidjs/router";
+import { parseISO } from "date-fns";
 import { createEffect, createSignal } from "solid-js";
 import * as v from "valibot";
 
@@ -56,9 +58,23 @@ export function TaskLogs(props: RouteSectionProps) {
   const onFilter = async (colName: keyof TaskLogSearchRecord) => {
     const options = await tRPC.TaskLog.GetFilterOptions.query({ search: search(), filter: filter(), colName });
 
+    const _filter = filter();
+    let previouslySelectedOptions: string[] = [];
+
+    if ((colName === "level" || colName === "type") && _filter[colName]) {
+      previouslySelectedOptions = _filter[colName];
+    }
+    if (colName === "job_started" && _filter[colName]) {
+      previouslySelectedOptions = _filter[colName].map((d) => d.toISOString());
+    }
+
     const selectedOptions = await openOptions(
       "Filter",
-      options.map((r) => ({ id: String(r.value), text: String(r.value) }))
+      options.map((r) => ({
+        id: r.value instanceof Date ? r.value.toISOString() : String(r.value),
+        text: r.value instanceof Date ? formatDateTime(r.value) : String(r.value),
+      })),
+      previouslySelectedOptions
     );
 
     if (selectedOptions === undefined) return;
@@ -69,13 +85,13 @@ export function TaskLogs(props: RouteSectionProps) {
         level: selectedOptions ? selectedOptions.map((o) => v.parse(TaskLogLevelSchema, o.id)) : undefined,
       });
     }
-
     if (colName === "type") {
       setFilter({ ...filter(), type: selectedOptions ? selectedOptions.map((o) => o.id) : undefined });
     }
+    if (colName === "job_started") {
+      setFilter({ ...filter(), job_started: selectedOptions ? selectedOptions.map((o) => parseISO(o.id)) : undefined });
+    }
   };
-
-  const onRowClick = async (row: TaskLogSearchRecord) => {};
 
   return (
     <main>

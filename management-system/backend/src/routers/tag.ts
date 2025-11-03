@@ -6,10 +6,10 @@ import * as uuid from "npm:uuid";
 import { assert } from "ts-essentials";
 import * as v from "valibot";
 import { UserTable } from "../db/schema.ts";
-import { assertOneRecord, PaginationSchema, toDrizzleOrderBy, UUID, withId } from "./common.ts";
+import { assertOneRecord, PaginationSchema, SearchSchema, toDrizzleOrderBy, UUID, withId } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 
-const TagSearchSchema = v.intersect([PaginationSchema, v.object({ user_id: v.optional(UUID) })]);
+const TagSearchSchema = v.intersect([PaginationSchema, SearchSchema, v.object({ user_id: v.optional(UUID) })]);
 
 const AddCodeToUserReq = v.object({ code: v.string(), user_id: UUID });
 
@@ -39,7 +39,7 @@ export const TagRouter = (deviceCollectionWs: DeviceCollection) =>
           .where(condition)
           .limit(take)
           .offset(skip)
-          .orderBy(toDrizzleOrderBy(TagTable, orderBy));
+          .orderBy(toDrizzleOrderBy(TagTable, orderBy, { user_name: UserTable.name }));
 
         const rows = await query;
 

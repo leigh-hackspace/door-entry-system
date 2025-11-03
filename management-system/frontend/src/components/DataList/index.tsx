@@ -94,10 +94,11 @@ export function DataList<TRow>(props: Props<TRow>) {
   const onClick = (row: TRow) =>
     handleAsyncClick(
       async () => {
-        if (props.selected && props.selected.length > 0 && props.onSelectionChanged) {
-          props.onSelectionChanged(row);
-        } else {
-          return props.onRowClick && props.onRowClick(row);
+        // Click does selection if no `onRowClick` defined or we're already in the middle of selecting...
+        if (props.onSelectionChanged && (!props.onRowClick || (props.selected?.length ?? 0) > 0)) {
+          return props.onSelectionChanged(row);
+        } else if (props.onRowClick) {
+          return props.onRowClick(row);
         }
       },
       () => {}

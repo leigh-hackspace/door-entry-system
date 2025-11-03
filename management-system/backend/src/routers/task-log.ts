@@ -21,6 +21,7 @@ export const TaskLogRouter = tRPC.router({
       const filterCondition = and(
         filter.level ? inArray(TaskLogTable.level, filter.level) : undefined,
         filter.type ? inArray(TaskLogTable.type, filter.type) : undefined,
+        filter.job_started ? inArray(TaskLogTable.job_started, filter.job_started) : undefined,
       );
 
       const condition = and(quickSearchCondition, filterCondition);
@@ -50,6 +51,7 @@ export const TaskLogRouter = tRPC.router({
       const filterCondition = and(
         filter.level ? inArray(TaskLogTable.level, filter.level) : undefined,
         filter.type ? inArray(TaskLogTable.type, filter.type) : undefined,
+        filter.job_started ? inArray(TaskLogTable.job_started, filter.job_started) : undefined,
       );
 
       const condition = and(quickSearchCondition, filterCondition);

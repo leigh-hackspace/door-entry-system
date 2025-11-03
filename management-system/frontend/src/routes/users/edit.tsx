@@ -30,8 +30,8 @@ import * as v from "valibot";
 const TagTableSchema = v.object({
   code: v.pipe(v.string(), v.title("Code"), v.metadata(FieldMetadata({ icon: "🔑" }))),
   description: v.pipe(v.string(), v.title("Description"), v.metadata(FieldMetadata({ icon: "✍" }))),
-  created: v.pipe(v.date(), v.title("Created"), v.metadata(FieldMetadata({ displayMode: "raw" }))),
-  updated: v.pipe(v.date(), v.title("Updated"), v.metadata(FieldMetadata({ displayMode: "raw" }))),
+  created: v.pipe(v.date(), v.title("Created"), v.metadata(FieldMetadata({ width: "140px" }))),
+  updated: v.pipe(v.date(), v.title("Updated"), v.metadata(FieldMetadata({ width: "140px" }))),
 });
 
 export function UserEdit(props: RouteSectionProps) {
@@ -44,10 +44,9 @@ export function UserEdit(props: RouteSectionProps) {
   const [lastScan, setLastScan] = createSignal<ScanEvent>();
 
   const [rows, setRows] = createSignal<RowData<TagSearchRecord>>(RowDataDefault);
-
-  const cursorSignal = createSignal(CursorDefault);
-  const searchSignal = createSignal("");
-  const selectionSignal = createSignal(RowSelectionDefault);
+  const [cursor, setCursor] = createSignal(CursorDefault);
+  const [search, setSearch] = createSignal("");
+  const [selection, setSelection] = createSignal(RowSelectionDefault);
 
   const scanSubscription = tRPC.ActivityLog.UnknownScans.subscribe(undefined, {
     onData: (scan) => {
@@ -89,29 +88,26 @@ export function UserEdit(props: RouteSectionProps) {
   };
 
   const onDeleteTag = async () => {
-    const { total } = rows();
-    const { ids, mode } = selectionSignal[0]();
+    const { ids } = selection();
 
-    const deleteCount = mode === "noneBut" ? ids.length : total - ids.length;
-    if (deleteCount === 0 || mode === "allBut") return;
+    if (ids.length !== 1) return;
 
-    const res = await openConfirm("Delete tag", `Are you sure you wish to delete ${deleteCount} tags`);
+    const res = await openConfirm("Delete tag", `Are you sure you wish to delete ${ids.length} tags`);
 
     if (res === "yes") {
       await tRPC.Tag.Delete.mutate(ids[0]);
 
-      selectionSignal[1](RowSelectionDefault);
+      setSelection(RowSelectionDefault);
 
       await fetchUserTags();
     }
   };
 
   const fetchUserTags = async () => {
-    const cursor = cursorSignal[0]();
-    const params = fetchParamsFromCursor(cursor);
+    const params = fetchParamsFromCursor(cursor());
 
     try {
-      setRows(await tRPC.Tag.Search.query({ ...params, search: searchSignal[0](), user_id: id() }));
+      setRows(await tRPC.Tag.Search.query({ ...params, search: search(), user_id: id() }));
     } catch (err) {
       assertError(err);
       await openAlert(`Fetch Error: ${err.name}`, err.message);
@@ -163,8 +159,8 @@ export function UserEdit(props: RouteSectionProps) {
               <MagicBrowser
                 schema={TagTableSchema}
                 rowData={rows()}
-                cursor={cursorSignal}
-                selection={selectionSignal}
+                cursor={[cursor, setCursor]}
+                selection={[selection, setSelection]}
               />
             </Show>
           </Card.Body>
@@ -176,7 +172,7 @@ export function UserEdit(props: RouteSectionProps) {
                 </Button>
               )}
             </Show>
-            <Show when={selectionSignal[0]().ids.length === 1}>
+            <Show when={selection().ids.length === 1}>
               <Button colour="danger" on:click={() => onDeleteTag()}>
                 Delete
               </Button>
