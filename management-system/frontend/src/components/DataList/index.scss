@@ -6,6 +6,27 @@
   container-name: data-list;
   container-type: inline-size;
 
+  .data-item-header {
+    .data-item-header-label {
+      display: block;
+      color: var(--bs-primary-text-emphasis);
+      text-decoration: none;
+      cursor: default;
+
+      &.sortable {
+        cursor: pointer;
+      }
+    }
+
+    .data-item-header-filter {
+      display: block;
+      cursor: pointer;
+      font-weight: normal;
+      color: var(--bs-secondary-text-emphasis);
+      text-decoration: none;
+    }
+  }
+
   ul {
     margin: 0;
     padding: 0;
@@ -16,12 +37,6 @@
       .data-item {
         .data-item-values {
           align-items: start;
-
-          .data-item-filter {
-            cursor: pointer;
-            font-weight: normal;
-            color: var(--bs-secondary);
-          }
         }
       }
     }
@@ -168,6 +183,9 @@
       }
       .data-item-value-value {
         padding: 0 0.5rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       &.column-select {

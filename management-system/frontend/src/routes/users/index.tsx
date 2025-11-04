@@ -20,7 +20,7 @@ import { createEffect, createSignal, Show } from "solid-js";
 import * as v from "valibot";
 
 const UserTableSchema = v.object({
-  role: v.pipe(v.string(), v.title("Role"), v.metadata(FieldMetadata({ icon: "🏅", width: "50px" }))),
+  role: v.pipe(v.string(), v.title("Role"), v.metadata(FieldMetadata({ icon: "🏅", width: "60px" }))),
   email: v.pipe(v.string(), v.title("Email"), v.metadata(FieldMetadata({ icon: "📧" }))),
   name: v.pipe(v.string(), v.title("Name"), v.metadata(FieldMetadata({ icon: "👤" }))),
   paidUp: v.pipe(v.boolean(), v.title("Paid"), v.metadata(FieldMetadata({ icon: "£", width: "60px" }))),

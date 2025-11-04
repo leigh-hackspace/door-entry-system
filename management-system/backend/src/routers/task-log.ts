@@ -18,11 +18,7 @@ export const TaskLogRouter = tRPC.router({
 
       const quickSearchCondition = search ? or(ilike(TaskLogTable.notes, `%${search}%`)) : and();
 
-      const filterCondition = and(
-        filter.level ? inArray(TaskLogTable.level, filter.level) : undefined,
-        filter.type ? inArray(TaskLogTable.type, filter.type) : undefined,
-        filter.job_started ? inArray(TaskLogTable.job_started, filter.job_started) : undefined,
-      );
+      const filterCondition = getFilterCondition(filter);
 
       const condition = and(quickSearchCondition, filterCondition);
 
@@ -48,11 +44,7 @@ export const TaskLogRouter = tRPC.router({
 
       const quickSearchCondition = search ? or(ilike(TaskLogTable.notes, `%${search}%`)) : and();
 
-      const filterCondition = and(
-        filter.level ? inArray(TaskLogTable.level, filter.level) : undefined,
-        filter.type ? inArray(TaskLogTable.type, filter.type) : undefined,
-        filter.job_started ? inArray(TaskLogTable.job_started, filter.job_started) : undefined,
-      );
+      const filterCondition = getFilterCondition(filter, colName); // Exclude the current column we're finding options for
 
       const condition = and(quickSearchCondition, filterCondition);
 
@@ -60,3 +52,11 @@ export const TaskLogRouter = tRPC.router({
     },
   ),
 });
+
+function getFilterCondition(filter: TaskLogFilter, exclude?: string) {
+  return and(
+    filter.level && exclude !== "level" ? inArray(TaskLogTable.level, filter.level) : undefined,
+    filter.type && exclude !== "type" ? inArray(TaskLogTable.type, filter.type) : undefined,
+    filter.job_started && exclude !== "job_started" ? inArray(TaskLogTable.job_started, filter.job_started) : undefined,
+  );
+}

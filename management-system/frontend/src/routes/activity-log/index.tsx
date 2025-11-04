@@ -7,7 +7,6 @@ import {
   MagicBrowser,
   type RowData,
   RowDataDefault,
-  RowSelectionDefault,
   SearchBar,
 } from "@frontend/components";
 import { openAlert } from "@frontend/dialogs";
@@ -34,7 +33,6 @@ export function ActivityLogs(props: RouteSectionProps) {
 
   const cursorSignal = createSignal(initialCursor);
   const searchSignal = createSignal("");
-  const selectionSignal = createSignal(RowSelectionDefault);
 
   const fetchRows = async () => {
     const cursor = cursorSignal[0]();
@@ -50,8 +48,6 @@ export function ActivityLogs(props: RouteSectionProps) {
 
   createEffect(fetchRows);
 
-  const onRowClick = async (row: ActivityLogSearchRecord) => {};
-
   return (
     <main>
       <Card colour="primary">
@@ -60,12 +56,7 @@ export function ActivityLogs(props: RouteSectionProps) {
           <div class="p-2">
             <SearchBar search={searchSignal} />
           </div>
-          <MagicBrowser
-            schema={ActivityLogTableSchema}
-            rowData={rows()}
-            cursor={cursorSignal}
-            selection={selectionSignal}
-          />
+          <MagicBrowser schema={ActivityLogTableSchema} rowData={rows()} cursor={cursorSignal} />
         </Card.Body>
       </Card>
     </main>

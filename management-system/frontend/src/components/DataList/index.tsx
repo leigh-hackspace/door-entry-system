@@ -124,19 +124,27 @@ export function DataList<TRow>(props: Props<TRow>) {
           <div class="data-item-values">
             <For each={dataColumns}>
               {(column) => (
-                <div>
-                  <div
-                    style={{ cursor: props.onSort ? "pointer" : undefined }}
+                <div class="data-item-header">
+                  <a
+                    href="javascript:void(0)"
+                    classList={{
+                      "data-item-header-label": true,
+                      sortable: !!props.onSort,
+                    }}
                     on:click={() => column.name !== "select" && props.onSort?.(column.name)}
                   >
                     {column.renderHeader ? column.renderHeader() : column.label ?? column.name}
                     {renderColumnSort(column.name)}
-                  </div>
+                  </a>
 
                   {column.filter && (
-                    <div class="data-item-filter" on:click={() => props.onFilter?.(column.name)}>
+                    <a
+                      href="javascript:void(0)"
+                      class="data-item-header-filter"
+                      on:click={() => props.onFilter?.(column.name)}
+                    >
                       Filter
-                    </div>
+                    </a>
                   )}
                 </div>
               )}

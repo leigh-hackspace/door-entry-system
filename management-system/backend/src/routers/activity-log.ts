@@ -31,7 +31,7 @@ export const ActivityLogRouter = tRPC.router({
         .where(condition)
         .limit(take)
         .offset(skip)
-        .orderBy(toDrizzleOrderBy(ActivityLogTable, orderBy));
+        .orderBy(toDrizzleOrderBy(ActivityLogTable, orderBy, { user_name: UserTable.name }));
 
       const rows = await query;
 
