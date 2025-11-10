@@ -11,6 +11,7 @@
     "@/db": "./src/db/index.ts",
     "@/services": "./src/services/index.ts",
     "@/tasks": "./src/tasks/index.ts",
+    "@/model": "./src/model/index.ts",
     "@/routers": "./src/routers/index.ts",
     "@slack/web-api": "npm:@slack/web-api@^7.9.3",
     "@trpc/server": "npm:@trpc/server@^11.4.3",

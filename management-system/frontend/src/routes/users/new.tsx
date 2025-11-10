@@ -19,7 +19,7 @@ export function UserNew(props: RouteSectionProps) {
     setSubmittedCount(submittedCount() + 1);
     const res = v.parse(UserCreateSchema, user());
 
-    const id = await tRPC.User.Create.mutate(res);
+    const id = await tRPC.User.create.mutate(res);
 
     toastService.addToast({ title: "Save", message: "Save successful", life: 5000 });
     navigate(`/users/${id}`);

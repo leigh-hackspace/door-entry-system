@@ -2,12 +2,12 @@ import { db, TaskLogTable } from "@/db";
 import { keys, TaskLogFilter } from "@door-entry-management-system/common";
 import { and, count, desc, getTableColumns, ilike, inArray, or } from "drizzle-orm";
 import * as v from "valibot";
-import { assertRole, PaginationSchema, SearchSchema, toDrizzleOrderBy } from "./common.ts";
+import { assertRole, Pagination, QuickSearch, toDrizzleOrderBy } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 
-const TaskLogSearchSchema = v.intersect([PaginationSchema, SearchSchema, v.object({ filter: TaskLogFilter })]);
+const TaskLogSearchSchema = v.intersect([Pagination, QuickSearch, v.object({ filter: TaskLogFilter })]);
 const TaskLogGetFilterOptionsSchema = v.intersect([
-  SearchSchema,
+  QuickSearch,
   v.object({ filter: TaskLogFilter, colName: v.picklist(keys(getTableColumns(TaskLogTable))) }),
 ]);
 

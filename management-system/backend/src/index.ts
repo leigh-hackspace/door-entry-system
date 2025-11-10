@@ -1,6 +1,6 @@
 /// <reference types='@types/node' />
 import { Config } from "@/config";
-import { AppRouter, tRPC } from "@/routers";
+import { getAppRouter, tRPC } from "@/routers";
 import { bootstrap, DeviceCollection, getWebSocketRouter, HomeAssistantService } from "@/services";
 import { CheckPaymentsTask, SyncAuthentikTask, SyncGocardlessTask, TaskManager } from "@/tasks";
 import { createHTTPHandler } from "@trpc/server/adapters/standalone";
@@ -11,7 +11,7 @@ import { PushTagCodesTask } from "./tasks/push-tag-codes.ts";
 
 const Port = Config.DE_BACKEND_PORT;
 
-export type AppRouter = ReturnType<typeof AppRouter>;
+export type AppRouter = ReturnType<typeof getAppRouter>;
 
 async function start() {
   const deviceCollectionWs = new DeviceCollection();
@@ -31,7 +31,7 @@ async function start() {
   app.set("shutdown timeout", 1000);
 
   const trpcHandler = createHTTPHandler({
-    router: AppRouter(taskManager, deviceCollectionWs),
+    router: getAppRouter(taskManager, deviceCollectionWs),
     createContext: tRPC.createContext,
   });
 
@@ -48,7 +48,7 @@ async function start() {
 
   const homeAssistantService = new HomeAssistantService(
     Config.DE_HOME_ASSISTANT_WS_URL,
-    Config.DE_HOME_ASSISTANT_ACCESS_TOKEN
+    Config.DE_HOME_ASSISTANT_ACCESS_TOKEN,
   );
 
   homeAssistantService.initialize();

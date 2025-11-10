@@ -5,21 +5,25 @@ import { EmailAddress, FieldMetadata, Password } from "./common.ts";
 export const UserRole = ["admin", "user"] as const;
 export type UserRole = ElementOf<typeof UserRole>;
 
-export interface UserInfo {
-  id: string;
-  name: string;
-  role: UserRole;
-  email: string;
-  created?: Date;
-  updated?: Date;
-}
-
 export const LoginDataSchema = v.object({
   email: EmailAddress,
   password: Password("Password"),
 });
 
 export type LoginData = v.InferInput<typeof LoginDataSchema>;
+
+export interface UserSelect {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  paidUp: boolean;
+  created: Date;
+  updated: Date;
+  gocardlessCustomerId: string | null;
+  notes: string | null;
+  imageUrl: string;
+}
 
 export const UserCreateSchema = v.object({
   role: v.pipe(v.picklist(["admin", "user"]), v.title("Role"), v.metadata(FieldMetadata({ icon: "🏅" }))),

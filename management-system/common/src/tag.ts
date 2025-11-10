@@ -1,6 +1,14 @@
 import * as v from "valibot";
 import { FieldMetadata } from "./common.ts";
 
+export interface TagSelect {
+  id: string;
+  code: string;
+  description: string;
+  user_id: string | null;
+  user_name: string | null;
+}
+
 export const TagCreateSchema = v.object({
   user_id: v.optional(
     v.nullable(v.pipe(v.string(), v.uuid(), v.title("User"), v.metadata(FieldMetadata({ icon: "👤", lookup: "User" })))),

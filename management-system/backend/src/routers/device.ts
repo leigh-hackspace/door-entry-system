@@ -1,12 +1,12 @@
 import { db, DeviceTable, UserTable } from "@/db";
 import { type DeviceCollection, DeviceEvents } from "@/services";
-import { and, count, eq, getTableColumns, ilike, or } from "drizzle-orm";
+import { and, count, eq, ilike, or } from "drizzle-orm";
 import { on } from "node:events";
 import * as v from "valibot";
-import { assertOneRecord, PaginationSchema, SearchSchema, toDrizzleOrderBy, UUID } from "./common.ts";
+import { assertOneRecord, Pagination, QuickSearch, toDrizzleOrderBy, UUID } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 
-const DeviceSearchSchema = v.intersect([PaginationSchema, SearchSchema]);
+const DeviceSearchSchema = v.intersect([Pagination, QuickSearch]);
 
 export const DeviceRouter = (deviceCollectionWs: DeviceCollection) =>
   tRPC.router({
@@ -21,7 +21,7 @@ export const DeviceRouter = (deviceCollectionWs: DeviceCollection) =>
         const condition = and(quickSearchCondition);
 
         const query = db
-          .select({ ...getTableColumns(DeviceTable) })
+          .select()
           .from(DeviceTable)
           .where(condition)
           .limit(take)
@@ -44,8 +44,6 @@ export const DeviceRouter = (deviceCollectionWs: DeviceCollection) =>
 
     Stats: tRPC.ProtectedProcedure.input(v.parser(UUID)).query(async ({ ctx, input }) => {
       if (ctx.session.user.role !== "admin") throw new Error("No access");
-
-      // const device = assertOneRecord(await db.select().from(DeviceTable).where(eq(DeviceTable.id, input)));
 
       const connection = deviceCollectionWs.getDeviceConnection(input);
       if (!connection) return null;

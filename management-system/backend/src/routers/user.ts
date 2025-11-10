@@ -1,120 +1,30 @@
-import { db, PaymentTable, UserTable } from "@/db";
-import { getHexEncodedSha256, GoCardlessService, scryptAsync } from "@/services";
-import { RowSelection, UserCreateSchema, UserUpdateSchema } from "@door-entry-management-system/common";
-import { and, eq, ilike, inArray, or } from "drizzle-orm";
-import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
-import { assert } from "ts-essentials";
-import * as uuid from "uuid";
+import { SearchArgs, UserDataModel, UUID, withId } from "@/model";
+import { RowSelection } from "@door-entry-management-system/common";
 import * as v from "valibot";
-import { assertOneRecord, assertRole, PaginationSchema, SearchSchema, toDrizzleOrderBy, UUID, withId } from "./common.ts";
 import { tRPC } from "./trpc.ts";
 
-const UserSearchSchema = v.intersect([PaginationSchema, SearchSchema]);
+export function getUserRouter() {
+  const dataModel = new UserDataModel();
 
-export const UserRouter = tRPC.router({
-  Search: tRPC.ProtectedProcedure.input(v.parser(UserSearchSchema)).query(
-    async ({ input: { take, skip, orderBy, search } }) => {
-      const quickSearchCondition = search ? or(ilike(UserTable.email, `%${search}%`), ilike(UserTable.name, `%${search}%`)) : and();
+  return tRPC.router({
+    search: tRPC.ProtectedProcedure.input(v.parser(SearchArgs)).query(async ({ ctx, input }) => {
+      return dataModel.search(ctx.session.user, input);
+    }),
 
-      const condition = and(quickSearchCondition);
+    getOne: tRPC.ProtectedProcedure.input(v.parser(UUID)).query(async ({ ctx, input }) => {
+      return dataModel.getOne(ctx.session.user, input);
+    }),
 
-      const query = db
-        .select()
-        .from(UserTable)
-        .where(condition)
-        .limit(take)
-        .offset(skip)
-        .orderBy(toDrizzleOrderBy(UserTable, orderBy));
+    create: tRPC.ProtectedProcedure.input(v.parser(dataModel.getCreateSchema())).mutation(async ({ ctx, input }) => {
+      return dataModel.create(ctx.session.user, input!);
+    }),
 
-      const db_rows = await query;
-      const total = await db.$count(UserTable, condition);
+    update: tRPC.ProtectedProcedure.input(v.parser(withId(dataModel.getUpdateSchema()))).mutation(async ({ ctx, input: [id, fields] }) => {
+      return dataModel.update(ctx.session.user, id, fields);
+    }),
 
-      const rows = await Promise.all(
-        db_rows.map(async (user) => ({
-          ...user,
-          image_url: "https://gravatar.com/avatar/" + (await getHexEncodedSha256(user.email)),
-        })),
-      );
-
-      return { rows, total } as const;
-    },
-  ),
-
-  One: tRPC.ProtectedProcedure.input(v.parser(UUID)).query(async ({ input }) => {
-    return assertOneRecord(await db.select().from(UserTable).where(eq(UserTable.id, input)));
-  }),
-
-  OneDetailed: tRPC.ProtectedProcedure.input(v.parser(UUID)).query(async ({ input }) => {
-    const user = assertOneRecord(await db.select().from(UserTable).where(eq(UserTable.id, input)));
-
-    const payments = await db.select().from(PaymentTable).where(eq(PaymentTable.user_id, input));
-
-    return {
-      ...user,
-      payments,
-    };
-  }),
-
-  Create: tRPC.ProtectedProcedure.input(v.parser(UserCreateSchema)).mutation(async ({ ctx, input }) => {
-    assertRole(ctx, "admin");
-
-    const { newPassword, confirmPassword, ...rest } = input;
-
-    const id = uuid.v4();
-
-    assert(newPassword === confirmPassword, "Passwords do not match");
-
-    const passwordHash = await scryptAsync(newPassword, id);
-
-    rest.email = rest.email.toLowerCase();
-
-    await db.insert(UserTable).values({ id, ...rest, passwordHash });
-
-    return id;
-  }),
-
-  Update: tRPC.ProtectedProcedure.input(v.parser(withId(UserUpdateSchema))).mutation(
-    async ({ ctx, input: [id, fields] }) => {
-      assertRole(ctx, "admin");
-
-      const { newPassword, confirmPassword, ...rest } = fields;
-
-      if (newPassword) {
-        assert(newPassword === confirmPassword, "Passwords do not match");
-      }
-
-      const currentUser = assertOneRecord(await db.select().from(UserTable).where(eq(UserTable.id, id)));
-
-      const update: PgUpdateSetSource<typeof UserTable> = {
-        ...rest,
-        updated: new Date(),
-      };
-
-      if (rest.email) {
-        update.email = rest.email.toLowerCase();
-
-        if (!currentUser.gocardlessCustomerId) {
-          try {
-            const goCardlessService = new GoCardlessService();
-
-            update.gocardlessCustomerId = await goCardlessService.getCustomerId(update.email);
-          } catch (err: unknown) {
-            console.error("goCardlessService.getCustomerId", err);
-          }
-        }
-      }
-
-      if (newPassword) {
-        update.passwordHash = await scryptAsync(newPassword, id);
-      }
-
-      await db.update(UserTable).set(update).where(eq(UserTable.id, id));
-    },
-  ),
-
-  Delete: tRPC.ProtectedProcedure.input(RowSelection).mutation(async ({ ctx, input: { ids } }) => {
-    assertRole(ctx, "admin");
-
-    await db.delete(UserTable).where(inArray(UserTable.id, ids));
-  }),
-});
+    delete: tRPC.ProtectedProcedure.input(RowSelection).mutation(async ({ ctx, input: { ids } }) => {
+      return dataModel.delete(ctx.session.user, ids);
+    }),
+  });
+}

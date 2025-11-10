@@ -1,12 +1,9 @@
-import type { AppRouter } from "@door-entry-management-system/backend";
-import { includes } from "@door-entry-management-system/common";
-import { AppService, type InferReturn } from "@frontend/services";
+import { includes, type UserRole } from "@door-entry-management-system/common";
+import { AppService } from "@frontend/services";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { assert } from "ts-essentials";
 
-export type Role = InferReturn<AppRouter["User"]["One"]>["role"];
-
-export function beginPage(_role: Role | Role[]) {
+export function beginPage(_role: UserRole | UserRole[]) {
   const role = _role instanceof Array ? _role : [_role];
   assert(role.length > 0, "beginPage: Must have at least one role!");
 

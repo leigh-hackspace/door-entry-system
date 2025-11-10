@@ -33,8 +33,13 @@
 
     &.data-list-header {
       font-weight: bold;
+      background: var(--bs-dark-bg-subtle);
 
       .data-item {
+        .data-item-image {
+          height: 1px;
+        }
+
         .data-item-values {
           align-items: start;
         }

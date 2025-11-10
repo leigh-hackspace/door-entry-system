@@ -28,17 +28,6 @@ export const EmailAddress = v.pipe(
 export const Password = (title: string, desc = "") =>
   v.pipe(v.string(), v.minLength(8), v.title(title), v.description(desc), v.metadata(FieldMetadata({ icon: "🔑" })));
 
-export function pickPrefix<TObj extends object, TPrefix extends string>(obj: TObj, prefix: TPrefix) {
-  return Object.fromEntries(Object.entries(obj).filter(([e]) => e.startsWith(prefix))) as Pick<
-    TObj,
-    PickPrefix<Extract<keyof TObj, string>, TPrefix>
-  >;
-}
-
-type PickPrefix<S extends string, P extends string> = S extends `${P}${string}` ? S : never;
-
-// const foo: { foo_one: number; foo_two: number } = pickPrefix({ foo_one: 1, foo_two: 2, bar_one: 1 }, "foo");
-
 type AndCondition = {
   and: Condition[];
 };

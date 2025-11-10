@@ -43,7 +43,7 @@ export function Users(props: RouteSectionProps) {
     const params = fetchParamsFromCursor(cursor());
 
     try {
-      setRows(await tRPC.User.Search.query({ ...params, search: search() }));
+      setRows(await tRPC.User.search.query({ ...params, search: search() }));
     } catch (err) {
       assertError(err);
       await openAlert(`Fetch Error: ${err.name}`, err.message);
@@ -89,7 +89,7 @@ export function Users(props: RouteSectionProps) {
             rowData={rows()}
             cursor={[cursor, setCursor]}
             selection={[selection, setSelection]}
-            acquireImage={(row) => row.image_url}
+            acquireImage={(row) => row.imageUrl}
             renderRole={(row) => humanise(row.role)}
             renderPaidUp={renderPaidUp}
             onRowClick={onRowClick}

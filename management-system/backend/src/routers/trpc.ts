@@ -23,14 +23,14 @@ export namespace tRPC {
   });
 
   export const createContext = async (opts: CreateHTTPContextOptions) => {
-    const isMfa = opts.info.calls.some((c) => c.path.toLowerCase().includes("mfa"));
+    const isMfaRoute = opts.info.calls.some((c) => c.path.toLowerCase().includes("mfa"));
 
     let authorization = opts.info.connectionParams?.authorization;
     if (!authorization) authorization = opts.req.headers["authorization"];
 
     assert(opts.req.socket.remoteAddress, "No remoteAddress!");
 
-    const session = await getSession(authorization, isMfa, opts.req.socket.remoteAddress);
+    const session = await getSession(authorization, isMfaRoute, opts.req.socket.remoteAddress);
 
     const getAuthentikUserClient = async () => {
       if (!session?.user.refreshToken) throw new Error("No refresh_token!");

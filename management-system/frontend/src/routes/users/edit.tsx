@@ -1,8 +1,6 @@
 import {
   assertError,
   FieldMetadata,
-  formatDate,
-  humanise,
   type ScanEvent,
   type UserUpdate,
   UserUpdateSchema,
@@ -24,7 +22,7 @@ import { beginPage } from "@frontend/helper";
 import type { TagSearchRecord } from "@frontend/services";
 import type { RouteSectionProps } from "@solidjs/router";
 import { differenceInSeconds, formatDistanceToNow } from "date-fns";
-import { createEffect, createResource, createSignal, For, onCleanup, Show, Suspense } from "solid-js";
+import { createEffect, createResource, createSignal, onCleanup, Show, Suspense } from "solid-js";
 import * as v from "valibot";
 
 const TagTableSchema = v.object({
@@ -39,13 +37,12 @@ export function UserEdit(props: RouteSectionProps) {
 
   const id = () => props.params.id;
 
-  const [user, { mutate }] = createResource(() => tRPC.User.OneDetailed.query(id()));
+  const [user, { mutate }] = createResource(() => tRPC.User.getOne.query(id()));
   const [submittedCount, setSubmittedCount] = createSignal(0);
   const [lastScan, setLastScan] = createSignal<ScanEvent>();
 
   const [rows, setRows] = createSignal<RowData<TagSearchRecord>>(RowDataDefault);
   const [cursor, setCursor] = createSignal(CursorDefault);
-  const [search, setSearch] = createSignal("");
   const [selection, setSelection] = createSignal(RowSelectionDefault);
 
   const scanSubscription = tRPC.ActivityLog.UnknownScans.subscribe(undefined, {
@@ -73,13 +70,13 @@ export function UserEdit(props: RouteSectionProps) {
     setSubmittedCount(submittedCount() + 1);
     const res = v.parse(UserUpdateSchema, user());
 
-    await tRPC.User.Update.mutate([id(), res]);
+    await tRPC.User.update.mutate([id(), res]);
 
     toastService.addToast({ title: "Save", message: "Save successful", life: 5000 });
   };
 
   const onAddLastScan = async () => {
-    await tRPC.Tag.AddCodeToUser.mutate({ code: lastScan()!.code, user_id: id() });
+    await tRPC.Tag.addCodeToUser.mutate({ code: lastScan()!.code, user_id: id() });
     setLastScan(undefined);
 
     await fetchUserTags();
@@ -95,7 +92,7 @@ export function UserEdit(props: RouteSectionProps) {
     const res = await openConfirm("Delete tag", `Are you sure you wish to delete ${ids.length} tags`);
 
     if (res === "yes") {
-      await tRPC.Tag.Delete.mutate(ids[0]);
+      await tRPC.Tag.delete.mutate({ ids });
 
       setSelection(RowSelectionDefault);
 
@@ -107,7 +104,7 @@ export function UserEdit(props: RouteSectionProps) {
     const params = fetchParamsFromCursor(cursor());
 
     try {
-      setRows(await tRPC.Tag.Search.query({ ...params, search: search(), user_id: id() }));
+      setRows(await tRPC.Tag.search.query({ ...params, user_id: id() }));
     } catch (err) {
       assertError(err);
       await openAlert(`Fetch Error: ${err.name}`, err.message);
@@ -197,7 +194,7 @@ export function UserEdit(props: RouteSectionProps) {
                     <div>
                       <label class="form-label">GoCardless Payments</label>
                       <ol class="list-group">
-                        <For each={user().payments}>
+                        {/* <For each={user().payments}>
                           {(payment) => (
                             <li class="list-group-item">
                               <div>ID: {payment.id}</div>
@@ -207,7 +204,7 @@ export function UserEdit(props: RouteSectionProps) {
                               <div>Status: {humanise(payment.status)}</div>
                             </li>
                           )}
-                        </For>
+                        </For> */}
                       </ol>
                     </div>
                   </div>

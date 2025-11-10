@@ -21,7 +21,7 @@ export function TagNew(props: RouteSectionProps) {
     setSubmittedCount(submittedCount() + 1);
     const res = v.parse(formSchema, tag());
 
-    const id = await tRPC.Tag.Create.mutate(res);
+    const id = await tRPC.Tag.create.mutate(res);
 
     toastService.addToast({ title: "Save", message: "Save successful", life: 5000 });
     navigate(`/tags/${id}`);

@@ -10,7 +10,7 @@ export function TagEdit(props: RouteSectionProps) {
 
   const id = () => props.params.id;
 
-  const [tag, { mutate }] = createResource(() => tRPC.Tag.One.query(props.params.id));
+  const [tag, { mutate }] = createResource(() => tRPC.Tag.getOne.query(props.params.id));
   const [submittedCount, setSubmittedCount] = createSignal(0);
 
   const formSchema = user()?.role === "admin" ? TagUpdateSchema : v.omit(TagUpdateSchema, ["user_id"]);
@@ -21,7 +21,7 @@ export function TagEdit(props: RouteSectionProps) {
     setSubmittedCount(submittedCount() + 1);
     const res = v.parse(formSchema, tag());
 
-    await tRPC.Tag.Update.mutate([id(), res]);
+    await tRPC.Tag.update.mutate([id(), res]);
 
     toastService.addToast({ title: "Save", message: "Save successful", life: 5000 });
   };

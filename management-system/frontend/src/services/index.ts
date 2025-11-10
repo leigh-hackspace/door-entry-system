@@ -125,9 +125,9 @@ class LookupService {
 
   public getOne(type: EntityType, id: string): Promise<unknown> {
     if (type === "User") {
-      return this.api.User.One.query(id);
+      return this.api.User.getOne.query(id);
     } else if (type === "Tag") {
-      return this.api.Tag.One.query(id);
+      return this.api.Tag.getOne.query(id);
     } else {
       assertUnreachable(type);
     }
@@ -135,9 +135,9 @@ class LookupService {
 
   public getMany(type: EntityType, fetch: FetchParameters): Promise<{ rows: readonly { id: string }[]; total: number }> {
     if (type === "User") {
-      return this.api.User.Search.query(fetch);
+      return this.api.User.search.query(fetch);
     } else if (type === "Tag") {
-      return this.api.Tag.Search.query(fetch);
+      return this.api.Tag.search.query(fetch);
     } else {
       assertUnreachable(type);
     }

@@ -40,7 +40,13 @@ function AdminControls() {
 
   let activitySubscription: Unsubscribable | undefined;
 
-  onMount(() => {
+  onMount(async () => {
+    // const { tRPC } = AppService.get();
+    // let foo: "User" | "Tag" = "aaa" as any;
+    // tRPC[foo].Create.mutate({ description: "", code: "" });
+
+    // console.log(await tRPC.UserModel.Extra.query({}));
+
     activitySubscription = AppService.get().tRPC.Stats.DeviceState.subscribe(undefined, {
       onData: (data) => {
         setDeviceState(data.name, data.latch);

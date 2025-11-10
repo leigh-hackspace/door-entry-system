@@ -44,7 +44,7 @@ export function Tags(props: RouteSectionProps) {
     const params = fetchParamsFromCursor(cursor());
 
     try {
-      setRows(await tRPC.Tag.Search.query({ ...params, search: search() }));
+      setRows(await tRPC.Tag.search.query({ ...params, search: search() }));
     } catch (err) {
       assertError(err);
       await openAlert(`Fetch Error: ${err.name}`, err.message);
