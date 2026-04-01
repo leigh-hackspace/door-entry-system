@@ -67,10 +67,10 @@ static HEAP: Heap = Heap::empty();
 const DEVICE_NAME: &str = env!("DEVICE_NAME");
 
 bind_interrupts!(struct Irqs {
-    PIO0_IRQ_0 => embassy_rp::pio::InterruptHandler<embassy_rp::peripherals::PIO0>;
-    PIO1_IRQ_0 => embassy_rp::pio::InterruptHandler<embassy_rp::peripherals::PIO1>;
+    PIO0_IRQ_0 => pio::InterruptHandler<embassy_rp::peripherals::PIO0>;
+    PIO1_IRQ_0 => pio::InterruptHandler<embassy_rp::peripherals::PIO1>;
     PIO2_IRQ_0 => pio::InterruptHandler<PIO2>;
-    DMA_IRQ_0 => dma::InterruptHandler<DMA_CH6>, embassy_rp::dma::InterruptHandler<DMA_CH4>, dma::InterruptHandler<DMA_CH2>, dma::InterruptHandler<DMA_CH3>, dma::InterruptHandler<DMA_CH5>;
+    DMA_IRQ_0 => dma::InterruptHandler<DMA_CH2>, dma::InterruptHandler<DMA_CH3>, embassy_rp::dma::InterruptHandler<DMA_CH4>, dma::InterruptHandler<DMA_CH5>, dma::InterruptHandler<DMA_CH6>;
 });
 
 #[embassy_executor::main]
@@ -194,6 +194,7 @@ async fn main(spawner: Spawner) {
         BIT_DEPTH,
         &program,
     );
+    i2s.start();
 
     spawner.spawn(audio_task(audio_signal, shared_fs.clone(), i2s).unwrap());
 
@@ -233,7 +234,7 @@ async fn main(spawner: Spawner) {
 
         if rfid_alive && ws_alive {
             if let Ok(mut watchdog) = watchdog.try_write() {
-                watchdog.feed(Duration::from_millis(2_000));
+                watchdog.feed(Duration::from_millis(15_000));
             }
         }
 
