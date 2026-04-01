@@ -76,11 +76,13 @@ export namespace tRPC {
 
       const mfaHelper = new MfaHelper(user, remoteAddress);
 
-      const mfaPassed = mfaHelper.getMfaPassed();
+      // const isMfaRequiredForRole = user.role === "admin";
+      const isMfaRequiredForRole = false;   // Disabled for now. Authentik can handle MFA by itself
+      const isMfaPassed = mfaHelper.getMfaPassed();
 
       const triggerChallenge = !isMfaRoute && // Need to allow MFA routes to still function before MFA challenge passed
-        user.role === "admin" && // Only "admin" role requires MFA (for now)
-        !mfaPassed; // Only if MFA challenge is not already passed
+        isMfaRequiredForRole && // Only "admin" role requires MFA (for now)
+        !isMfaPassed; // Only if MFA challenge is not already passed
 
       if (triggerChallenge) {
         throw new TRPCError({
@@ -92,7 +94,7 @@ export namespace tRPC {
       return {
         user,
         remoteAddress,
-        mfaPassed,
+        mfaPassed: isMfaPassed,
         mfaHelper,
       };
     }

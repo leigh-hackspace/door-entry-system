@@ -2,9 +2,11 @@ use alloc::string::{String, ToString};
 use defmt::*;
 use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
 use embassy_rp::{
-    Peri,
+    Peri, dma,
     gpio::{Level, Output},
     peripherals::{DMA_CH2, DMA_CH3, PIN_2, PIN_3, PIN_4, PIN_5, PIN_10, PIN_11, PIN_12, PIN_13, PIO1},
+    pio_programs::spi::Spi,
+    spi::Async,
 };
 use embassy_sync::{
     blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex},
@@ -25,10 +27,6 @@ use esp_hal_mfrc522::{
 // Blue:    3654908809
 // Yellow:  308508919
 
-embassy_rp::bind_interrupts!(struct Irqs {
-    PIO1_IRQ_0 => embassy_rp::pio::InterruptHandler<embassy_rp::peripherals::PIO1>;
-});
-
 #[derive(PartialEq, Debug)]
 pub enum RfidSignalMessage {
     CodeDetected(String),
@@ -38,39 +36,7 @@ pub enum RfidSignalMessage {
 pub type RfidSignal = Signal<CriticalSectionRawMutex, RfidSignalMessage>;
 
 #[embassy_executor::task]
-pub async fn rfid_task(
-    signal: &'static RfidSignal,
-    pio: Peri<'static, PIO1>,
-    tx_dma: Peri<'static, DMA_CH2>,
-    rx_dma: Peri<'static, DMA_CH3>,
-    // mosi: Peri<'static, PIN_11>,
-    // miso: Peri<'static, PIN_12>,
-    // sclk: Peri<'static, PIN_10>,
-    // cs: Peri<'static, PIN_13>,
-    mosi: Peri<'static, PIN_4>,
-    miso: Peri<'static, PIN_5>,
-    sclk: Peri<'static, PIN_3>,
-    cs: Peri<'static, PIN_2>,
-) {
-    // let p = unsafe { embassy_rp::Peripherals::steal() };
-
-    // let miso = p.PIN_12;
-    // let mosi = p.PIN_11;
-    // let sclk = p.PIN_10;
-    // let cs = p.PIN_13;
-    // let tx_dma = p.DMA_CH2;
-    // let rx_dma = p.DMA_CH3;
-
-    let mut config = embassy_rp::spi::Config::default();
-
-    config.frequency = 100_000;
-
-    // let mut spi = embassy_rp::spi::Spi::new(p.SPI1, sclk, mosi, miso, p.DMA_CH2, p.DMA_CH3, config);
-
-    let embassy_rp::pio::Pio { mut common, sm0, .. } = embassy_rp::pio::Pio::new(pio, Irqs);
-
-    let mut spi = embassy_rp::pio_programs::spi::Spi::new(&mut common, sm0, sclk, mosi, miso, tx_dma, rx_dma, embassy_rp::spi::Config::default());
-
+pub async fn rfid_task(signal: &'static RfidSignal, spi: Spi<'static, PIO1, 0, Async>, cs: Peri<'static, PIN_2>) {
     let cs = Output::new(cs, Level::High);
 
     let spi_device = ExclusiveDevice::new_no_delay(spi, cs).unwrap();

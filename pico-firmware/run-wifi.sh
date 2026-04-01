@@ -1,3 +1,7 @@
 #!/usr/bin/env bash
 
-cargo run -r --features=wifi
+set -o allexport
+source .env
+set +o allexport
+
+cargo run -r --bin main --features=wifi

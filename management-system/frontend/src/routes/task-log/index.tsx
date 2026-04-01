@@ -1,10 +1,4 @@
-import {
-  assertError,
-  FieldMetadata,
-  formatDateTime,
-  type TaskLogFilter,
-  TaskLogLevelSchema,
-} from "@door-entry-management-system/common";
+import { assertError, FieldMetadata, formatDateTime, type TaskLogFilter, TaskLogLevelSchema } from "@door-entry-management-system/common";
 import {
   Card,
   type Cursor,
@@ -46,7 +40,7 @@ export function TaskLogs(props: RouteSectionProps) {
     const params = fetchParamsFromCursor(cursor());
 
     try {
-      setRows(await tRPC.TaskLog.Search.query({ ...params, search: search(), filter: filter() }));
+      setRows(await tRPC.TaskLog.search.query({ ...params, search: search(), filter: filter() }));
     } catch (err) {
       assertError(err);
       await openAlert(`Fetch Error: ${err.name}`, err.message);
@@ -56,7 +50,7 @@ export function TaskLogs(props: RouteSectionProps) {
   createEffect(fetchRows);
 
   const onFilter = async (colName: keyof TaskLogSearchRecord) => {
-    const options = await tRPC.TaskLog.GetFilterOptions.query({ search: search(), filter: filter(), colName });
+    const options = await tRPC.TaskLog.getFilterOptions.query({ search: search(), filter: filter(), colName });
 
     const _filter = filter();
     let previouslySelectedOptions: string[] = [];
@@ -74,7 +68,7 @@ export function TaskLogs(props: RouteSectionProps) {
         id: r.value instanceof Date ? r.value.toISOString() : String(r.value),
         text: r.value instanceof Date ? formatDateTime(r.value) : String(r.value),
       })),
-      previouslySelectedOptions
+      previouslySelectedOptions,
     );
 
     if (selectedOptions === undefined) return;

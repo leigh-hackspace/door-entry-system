@@ -1,11 +1,12 @@
 use crate::make_static;
 use crate::tasks::common::{EthernetSignal, EthernetSignalMessage};
-use cyw43::{Control, JoinOptions};
-use cyw43_pio::{DEFAULT_CLOCK_DIVIDER, PioSpi};
+use cyw43::{Control, JoinOptions, aligned_bytes};
+use cyw43_pio::{PioSpi, RM2_CLOCK_DIVIDER};
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_futures::yield_now;
 use embassy_net::{Stack, StackResources};
+use embassy_rp::dma;
 use embassy_rp::{
     Peri, bind_interrupts,
     clocks::RoscRng,
@@ -14,41 +15,28 @@ use embassy_rp::{
     pio::{InterruptHandler, Pio},
 };
 use embassy_sync::signal::Signal;
+use embassy_time::Timer;
 use static_cell::StaticCell;
-
-bind_interrupts!(struct Irqs {
-    PIO2_IRQ_0 => InterruptHandler<PIO2>;
-});
 
 const WIFI_NETWORK: &str = env!("WIFI_NETWORK");
 const WIFI_PASSWORD: &str = env!("WIFI_PASSWORD");
 
-pub async fn init_wifi(
-    spawner: Spawner,
-    pio: Peri<'static, PIO2>,
-    dio: Peri<'static, PIN_24>,
-    clk: Peri<'static, PIN_29>,
-    cs: Peri<'static, PIN_25>,
-    pwr: Peri<'static, PIN_23>,
-    dma: Peri<'static, DMA_CH6>,
-) -> (&'static EthernetSignal, Stack<'static>) {
+pub async fn init_wifi(spawner: Spawner, spi: PioSpi<'static, PIO2, 0>, pwr: Peri<'static, PIN_23>) -> (&'static EthernetSignal, Stack<'static>) {
     let ethernet_signal = make_static!(EthernetSignal, Signal::new());
 
     let mut rng = RoscRng;
 
-    let fw = include_bytes!("../../embassy/cyw43-firmware/43439A0.bin");
-    let clm = include_bytes!("../../embassy/cyw43-firmware/43439A0_clm.bin");
+    let fw = aligned_bytes!("../../firmware/43439A0.bin");
+    let clm = aligned_bytes!("../../firmware/43439A0_clm.bin");
+    let nvram = aligned_bytes!("../../firmware/nvram_rp2040.bin");
 
     let pwr = Output::new(pwr, Level::Low);
-    let cs = Output::new(cs, Level::High);
-    let mut pio = Pio::new(pio, Irqs);
-    let spi = PioSpi::new(&mut pio.common, pio.sm0, DEFAULT_CLOCK_DIVIDER, pio.irq0, cs, dio, clk, dma);
 
     info!("SPI configured");
 
     static STATE: StaticCell<cyw43::State> = StaticCell::new();
     let state = STATE.init(cyw43::State::new());
-    let (net_device, mut control, runner) = cyw43::new(state, pwr, spi, fw).await;
+    let (net_device, mut control, runner) = cyw43::new(state, pwr, spi, fw, nvram).await;
 
     spawner.spawn(cyw43_task(runner).unwrap());
     info!("WiFi task started");
@@ -69,14 +57,31 @@ pub async fn init_wifi(
     spawner.spawn(net_task(runner).unwrap());
     info!("Network task started");
 
+    // Connect in the background so other essentials tasks can run
     spawner.spawn(ethernet_dhcp_task(ethernet_signal, stack, control).unwrap());
     info!("DHCP task started");
+
+    // info!("Joining WiFi network...");
+    // while let Err(err) = control.join(WIFI_NETWORK, JoinOptions::new(WIFI_PASSWORD.as_bytes())).await {
+    //     info!("join failed with status={}", err);
+    // }
+
+    // info!("Waiting for DHCP...");
+    // let cfg = wait_for_config(stack).await;
+    // let local_addr = cfg.address.address();
+    // info!("IP address: {:?}", local_addr);
+
+    // info!("WAITING");
+    // Timer::after_secs(30).await;
+    // info!("DONE WAITING");
+
+    // ethernet_signal.signal(EthernetSignalMessage::Connected);
 
     (ethernet_signal, stack)
 }
 
 #[embassy_executor::task]
-async fn cyw43_task(runner: cyw43::Runner<'static, Output<'static>, PioSpi<'static, PIO2, 0, DMA_CH6>>) -> ! {
+async fn cyw43_task(runner: cyw43::Runner<'static, cyw43::SpiBus<Output<'static>, PioSpi<'static, PIO2, 0>>>) -> ! {
     runner.run().await
 }
 
@@ -89,7 +94,7 @@ async fn net_task(mut runner: embassy_net::Runner<'static, cyw43::NetDriver<'sta
 pub async fn ethernet_dhcp_task(signal: &'static EthernetSignal, stack: Stack<'static>, mut control: Control<'static>) {
     info!("Joining WiFi network...");
     while let Err(err) = control.join(WIFI_NETWORK, JoinOptions::new(WIFI_PASSWORD.as_bytes())).await {
-        info!("join failed with status={}", err.status);
+        info!("join failed with status={}", err);
     }
 
     info!("Waiting for DHCP...");
@@ -99,6 +104,7 @@ pub async fn ethernet_dhcp_task(signal: &'static EthernetSignal, stack: Stack<'s
 
     // Timer::after_secs(5).await;
 
+    info!("CONNECTED");
     signal.signal(EthernetSignalMessage::Connected);
 }
 

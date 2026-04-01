@@ -33,5 +33,6 @@
         "require-await"
       ]
     }
-  }
+  },
+  "allowScripts": ["npm:@parcel/watcher@2.5.1", "npm:esbuild@0.18.20", "npm:esbuild@0.19.12", "npm:esbuild@0.25.10"]
 }

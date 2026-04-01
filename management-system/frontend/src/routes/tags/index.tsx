@@ -23,7 +23,7 @@ const TagTableSchema = v.object({
   code: v.pipe(v.string(), v.title("Code"), v.metadata(FieldMetadata({ icon: "🔑", width: "140px" }))),
   description: v.pipe(v.string(), v.title("Description"), v.metadata(FieldMetadata({ icon: "✍" }))),
   user_name: v.nullable(
-    v.pipe(v.string(), v.title("User Name"), v.metadata(FieldMetadata({ icon: "👤", lookup: "User" })))
+    v.pipe(v.string(), v.title("User Name"), v.metadata(FieldMetadata({ icon: "👤", lookup: "User" }))),
   ),
   created: v.pipe(v.date(), v.title("Created"), v.metadata(FieldMetadata({ width: "140px" }))),
   updated: v.pipe(v.date(), v.title("Updated"), v.metadata(FieldMetadata({ width: "140px" }))),
@@ -60,12 +60,12 @@ export function Tags(props: RouteSectionProps) {
   const onDelete = async () => {
     const { ids } = selection();
 
-    if (ids.length !== 1) return;
+    if (ids.length === 0) return;
 
     const res = await openConfirm("Delete tag", `Are you sure you wish to delete ${ids.length} tags`);
 
     if (res === "yes") {
-      await tRPC.Tag.Delete.mutate(ids[0]);
+      await tRPC.Tag.delete.mutate({ ids });
 
       setSelection(RowSelectionDefault);
 

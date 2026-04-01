@@ -84,7 +84,7 @@ export class TagDataModel extends DataModel<typeof TagFields, TagSelect> {
   }
 
   public override async getOne(sessionUser: SessionUser, id: string) {
-    const where = and(...this.restrict(sessionUser), eq(UserTable.id, id));
+    const where = and(...this.restrict(sessionUser), eq(TagTable.id, id));
 
     return assertOneRecord(
       await db.select({ ...this.getSelectColumns(), user_name: UserTable.name })

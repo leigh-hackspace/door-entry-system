@@ -1,8 +1,8 @@
 import { db, MfaData, UserTable } from "@/db";
 import { assertUnreachable } from "@door-entry-management-system/common";
+import * as OTPAuth from "@hectorm/otpauth";
 import { addHours, parseISO } from "date-fns";
 import { eq } from "drizzle-orm";
-import * as OTPAuth from "jsr:@hectorm/otpauth";
 import { assert } from "ts-essentials";
 import * as v from "valibot";
 import type { SessionUser } from "./common.ts";

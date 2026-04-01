@@ -11,7 +11,7 @@ export type UserSearchRecord = InferSearchReturn<AppRouter["User"]["search"]>;
 export type TagSearchRecord = InferSearchReturn<AppRouter["Tag"]["search"]>;
 export type ActivityLogSearchRecord = InferSearchReturn<AppRouter["ActivityLog"]["Search"]>;
 export type DeviceSearchRecord = InferSearchReturn<AppRouter["Device"]["Search"]>;
-export type TaskLogSearchRecord = InferSearchReturn<AppRouter["TaskLog"]["Search"]>;
+export type TaskLogSearchRecord = InferSearchReturn<AppRouter["TaskLog"]["search"]>;
 
 export type UserRecord = InferReturn<AppRouter["User"]["getOne"]>;
 export type TagRecord = InferReturn<AppRouter["Tag"]["getOne"]>;

@@ -4,13 +4,10 @@ use defmt::*;
 use embassy_rp::{
     Peri,
     peripherals::{DMA_CH5, PIN_6, PIN_7, PIN_8, PIO0},
+    pio_programs::i2s::PioI2sOut,
 };
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel, signal::Signal};
 use libm::{exp, floorf, sin, sqrtf};
-
-embassy_rp::bind_interrupts!(struct Irqs {
-    PIO0_IRQ_0 => embassy_rp::pio::InterruptHandler<embassy_rp::peripherals::PIO0>;
-});
 
 #[derive(PartialEq, Debug)]
 pub enum AudioCommand {
@@ -20,35 +17,8 @@ pub enum AudioCommand {
 
 pub type AudioCommandSignal = Signal<CriticalSectionRawMutex, AudioCommand>;
 
-const SAMPLE_RATE: u32 = 22_050;
-const BIT_DEPTH: u32 = 16;
-
 #[embassy_executor::task]
-pub async fn audio_task(
-    signal: &'static AudioCommandSignal,
-    shared_fs: SharedFs,
-    pio: Peri<'static, PIO0>,
-    dma: Peri<'static, DMA_CH5>,
-    data_pin: Peri<'static, PIN_6>,
-    bit_clock_pin: Peri<'static, PIN_7>,
-    left_right_clock_pin: Peri<'static, PIN_8>,
-) {
-    // Setup pio state machine for i2s output
-    let embassy_rp::pio::Pio { mut common, sm0, .. } = embassy_rp::pio::Pio::new(pio, Irqs);
-
-    let program = embassy_rp::pio_programs::i2s::PioI2sOutProgram::new(&mut common);
-    let mut i2s = embassy_rp::pio_programs::i2s::PioI2sOut::new(
-        &mut common,
-        sm0,
-        dma,
-        data_pin,
-        bit_clock_pin,
-        left_right_clock_pin,
-        SAMPLE_RATE,
-        BIT_DEPTH,
-        &program,
-    );
-
+pub async fn audio_task(signal: &'static AudioCommandSignal, shared_fs: SharedFs, mut i2s: PioI2sOut<'static, PIO0, 0>) {
     loop {
         match signal.wait().await {
             AudioCommand::PlayFile(file_name) => {

@@ -7,6 +7,7 @@ resolver = "2"
 
 [[bin]]
 name = "pico-firmware"
+path = "bin/main.rs"
 test = false
 bench = false
 
@@ -35,19 +36,17 @@ fatfs = { version = "0.4.0", default-features = false, features = [
     "alloc",
 ], git = "https://github.com/rafalh/rust-fatfs" }
 anyhow = { version = "1.0.99", default-features = false }
-embedded-alloc = { path = "embedded-alloc" }
+embedded-alloc = { version = "*" }
 num-traits = { version = "0.2.19", default-features = false, features = [
     "libm",
 ] }
-cyw43 = { path = "embassy/cyw43", features = ["defmt"] }
-cyw43-pio = { path = "embassy/cyw43-pio", features = ["defmt"] }
-critical-section = "1.2.0"
+critical-section = { version = "*" }
 smart-leds = "0.4.0"
 
-edge-http = { path = "edge-net/edge-http" }
-edge-nal = { path = "edge-net/edge-nal" }
-edge-ws = { path = "edge-net/edge-ws" }
-edge-nal-embassy = { path = "edge-net/edge-nal-embassy" }
+edge-http = { version = "*" }
+edge-nal = { version = "*" }
+edge-ws = { version = "*" }
+edge-nal-embassy = { version = "*" }
 
 embedded-hal = "1.0.0"
 embedded-hal-async = "1.0.0"
@@ -56,69 +55,29 @@ embedded-io-async = "0.6.1"
 embedded-storage = "0.3.1"
 embedded-hal-bus = { version = "0.3.0", features = ["async"] }
 
-cortex-m-rt = "0.7.5"
-cortex-m = { version = "0.7.7", features = ["critical-section-single-core"] }
+cortex-m-rt = "*"
+cortex-m = { version = "*", features = ["critical-section-single-core"] }
 
-embassy-executor = { path = "embassy/embassy-executor", features = [
-    "arch-cortex-m",
-    "executor-thread",
-    "defmt",
-    "executor-interrupt",
-] }
-embassy-sync = { path = "embassy/embassy-sync" }
-embassy-time = { path = "embassy/embassy-time", features = [
-    "defmt",
-    "defmt-timestamp-uptime",
-] }
-embassy-rp = { path = "embassy/embassy-rp", features = [
-    "defmt",
-    "unstable-pac",
-    "time-driver",
-    # "critical-section-impl",
-    "rp235xa",
-    "binary-info",
-] }
-embassy-net-wiznet = { path = "embassy/embassy-net-wiznet", features = [
-    "defmt",
-] }
-embassy-futures = { path = "embassy/embassy-futures" }
-embassy-net = { path = "embassy/embassy-net", features = [
-    "defmt",
-    "icmp",
-    "tcp",
-    "udp",
-    "raw",
-    "dhcpv4",
-    "medium-ethernet",
-    "dns",
-] }
-embassy-embedded-hal = { path = "embassy/embassy-embedded-hal" }
 libm = "0.2.15"
 
-# embassy-executor = { version = "*", features = [
-#     "arch-cortex-m",
+# embassy-executor = { git = "https://github.com/embassy-rs/embassy?dir=embassy-executor", rev = "aad6e912", features = [
 #     "executor-thread",
 #     "defmt",
 #     "executor-interrupt",
 # ] }
-# embassy-sync = { version = "*" }
-# embassy-time = { version = "*", features = [
+# embassy-sync = { git = "https://github.com/embassy-rs/embassy?dir=embassy-sync", rev = "aad6e912" }
+# embassy-time = { git = "https://github.com/embassy-rs/embassy?dir=embassy-time", rev = "aad6e912", features = [
 #     "defmt",
 #     "defmt-timestamp-uptime",
 # ] }
-# embassy-rp = { version = "*", features = [
+# embassy-rp = { git = "https://github.com/embassy-rs/embassy?dir=embassy-rp", rev = "aad6e912", features = [
 #     "defmt",
 #     "unstable-pac",
 #     "time-driver",
-#     "critical-section-impl",
 #     "rp235xa",
 #     "binary-info",
 # ] }
-# embassy-net-wiznet = { version = "*", features = [
-#     "defmt",
-# ] }
-# embassy-futures = { version = "*" }
-# embassy-net = { version = "*", features = [
+# embassy-net = { git = "https://github.com/embassy-rs/embassy?dir=embassy-net", rev = "aad6e912", features = [
 #     "defmt",
 #     "icmp",
 #     "tcp",
@@ -128,6 +87,47 @@ libm = "0.2.15"
 #     "medium-ethernet",
 #     "dns",
 # ] }
+# embassy-embedded-hal = { git = "https://github.com/embassy-rs/embassy?dir=embassy-embedded-hal", rev = "aad6e912" }
+# embassy-futures = { git = "https://github.com/embassy-rs/embassy?dir=embassy-futures", rev = "aad6e912" }
+# embassy-net-wiznet = { git = "https://github.com/embassy-rs/embassy?dir=embassy-wiznet", rev = "aad6e912" }
+# cyw43 = { git = "https://github.com/embassy-rs/embassy?dir=cyw43", rev = "aad6e912", features = [
+#     "defmt",
+# ] }
+# cyw43-pio = { git = "https://github.com/embassy-rs/embassy?dir=cyw43-pio", rev = "aad6e912", features = [
+#     "defmt",
+# ] }
+
+reqwless = { version = "0.14.0", default-features = false }
+cyw43 = { version = "0.7.0", features = ["defmt"] }
+cyw43-pio = { version = "0.10.0", features = ["defmt"] }
+embassy-rp = { version = "0.10.0", features = [
+    "defmt",
+    "rp235xa",
+    "time-driver",
+] }
+embassy-net = { version = "0.8.0", features = [
+    "defmt",
+    "icmp",
+    "tcp",
+    "udp",
+    "raw",
+    "dhcpv4",
+    "medium-ethernet",
+    "dns",
+] }
+embassy-executor = { version = "0.10.0", features = [
+    "platform-cortex-m",
+    "executor-thread",
+    "defmt",
+    "executor-interrupt",
+] }
+embassy-sync = { version = "0.8.0", features = ["defmt"] }
+embassy-time = { version = "0.5.1", features = [
+    "defmt",
+    "defmt-timestamp-uptime",
+] }
+embassy-embedded-hal = "0.6.0"
+embassy-futures = "0.1.2"
 
 [profile.release]
 debug = 2

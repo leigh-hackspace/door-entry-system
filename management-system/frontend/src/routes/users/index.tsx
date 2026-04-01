@@ -64,7 +64,7 @@ export function Users(props: RouteSectionProps) {
     const res = await openConfirm("Delete user", `Are you sure you wish to delete ${ids.length} users`);
 
     if (res === "yes") {
-      await tRPC.User.Delete.mutate({ ids });
+      await tRPC.User.delete.mutate({ ids });
 
       setSelection(RowSelectionDefault);
 

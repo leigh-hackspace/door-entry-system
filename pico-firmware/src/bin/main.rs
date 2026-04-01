@@ -8,8 +8,11 @@
 
 extern crate alloc;
 
+#[path = "../services/mod.rs"]
 mod services;
+#[path = "../tasks/mod.rs"]
 mod tasks;
+#[path = "../utils/mod.rs"]
 mod utils;
 
 use crate::{
@@ -23,7 +26,7 @@ use crate::{
         websocket::{WebSocketIncoming, WebSocketIncomingChannel, WebSocketOutgoing, WebSocketOutgoingChannel, websocket_task},
     },
     utils::{
-        common::{Flash, SharedFs},
+        common::{BIT_DEPTH, Flash, SAMPLE_RATE, SharedFs},
         local_fs::LocalFs,
     },
 };
@@ -32,6 +35,7 @@ use core::{
     cell::UnsafeCell,
     sync::atomic::{AtomicU32, Ordering},
 };
+use cyw43_pio::{PioSpi, RM2_CLOCK_DIVIDER};
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_futures::{
@@ -39,8 +43,11 @@ use embassy_futures::{
     yield_now,
 };
 use embassy_rp::{
+    Peri, bind_interrupts, dma,
     flash::ERASE_SIZE,
     gpio::{Level, Output},
+    peripherals::{DMA_CH2, DMA_CH3, DMA_CH4, DMA_CH5, DMA_CH6, PIN_2, PIN_3, PIN_4, PIN_5, PIN_6, PIN_7, PIN_8, PIO0, PIO1, PIO2},
+    pio::{self, Irq, Pio},
     watchdog::Watchdog,
 };
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel, rwlock::RwLock, signal::Signal};
@@ -58,6 +65,13 @@ use crate::tasks::ws2812_asm::{Ws2812Message, Ws2812Signal, ws2812_asm_task};
 static HEAP: Heap = Heap::empty();
 
 const DEVICE_NAME: &str = env!("DEVICE_NAME");
+
+bind_interrupts!(struct Irqs {
+    PIO0_IRQ_0 => embassy_rp::pio::InterruptHandler<embassy_rp::peripherals::PIO0>;
+    PIO1_IRQ_0 => embassy_rp::pio::InterruptHandler<embassy_rp::peripherals::PIO1>;
+    PIO2_IRQ_0 => pio::InterruptHandler<PIO2>;
+    DMA_IRQ_0 => dma::InterruptHandler<DMA_CH6>, embassy_rp::dma::InterruptHandler<DMA_CH4>, dma::InterruptHandler<DMA_CH2>, dma::InterruptHandler<DMA_CH3>, dma::InterruptHandler<DMA_CH5>;
+});
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -94,10 +108,31 @@ async fn main(spawner: Spawner) {
     )
     .await;
 
-    #[cfg(feature = "wifi")]
-    let (ethernet_signal, stack) = tasks::wifi::init_wifi(spawner, p.PIO2, p.PIN_24, p.PIN_29, p.PIN_25, p.PIN_23, p.DMA_CH6).await;
+    let pio = p.PIO2;
+    let dio = p.PIN_24;
+    let clk = p.PIN_29;
+    let cs = p.PIN_25;
+    let pwr = p.PIN_23;
+    let dma = p.DMA_CH6;
 
-    let flash = Flash::new(p.FLASH, p.DMA_CH4);
+    // let pwr = Output::new(pwr, Level::Low);
+    let cs = Output::new(cs, Level::High);
+    let mut pio = Pio::new(pio, Irqs);
+    let spi = PioSpi::new(
+        &mut pio.common,
+        pio.sm0,
+        RM2_CLOCK_DIVIDER,
+        pio.irq0,
+        cs,
+        dio,
+        clk,
+        dma::Channel::new(dma, Irqs),
+    );
+
+    #[cfg(feature = "wifi")]
+    let (ethernet_signal, stack) = tasks::wifi::init_wifi(spawner, spi, pwr).await;
+
+    let flash = Flash::new(p.FLASH, p.DMA_CH4, Irqs);
 
     let local_fs = match LocalFs::new(flash) {
         Ok(local_fs) => {
@@ -106,7 +141,7 @@ async fn main(spawner: Spawner) {
         }
         Err(_err) => {
             let p = unsafe { embassy_rp::Peripherals::steal() };
-            let flash = Flash::new(p.FLASH, p.DMA_CH4);
+            let flash = Flash::new(p.FLASH, p.DMA_CH4, Irqs);
             LocalFs::make_new_filesystem(flash);
             defmt::panic!("New File System Created! Rebooting...");
         }
@@ -119,12 +154,48 @@ async fn main(spawner: Spawner) {
     let door_signal = make_static!(DoorSignal, Signal::new());
     let audio_signal = make_static!(AudioCommandSignal, Signal::new());
 
+    let pio: Peri<'static, PIO1> = p.PIO1;
+    let tx_dma: Peri<'static, DMA_CH2> = p.DMA_CH2;
+    let rx_dma: Peri<'static, DMA_CH3> = p.DMA_CH3;
+    let mosi: Peri<'static, PIN_4> = p.PIN_4;
+    let miso: Peri<'static, PIN_5> = p.PIN_5;
+    let sclk: Peri<'static, PIN_3> = p.PIN_3;
+    let cs: Peri<'static, PIN_2> = p.PIN_2;
+
+    let mut config = embassy_rp::spi::Config::default();
+    config.frequency = 100_000;
+    let embassy_rp::pio::Pio { mut common, sm0, .. } = embassy_rp::pio::Pio::new(pio, Irqs);
+    let mut spi = embassy_rp::pio_programs::spi::Spi::new(&mut common, sm0, sclk, mosi, miso, tx_dma, rx_dma, Irqs, embassy_rp::spi::Config::default());
+
     // Background tasks
-    // spawner.spawn(rfid_task(rfid_signal, p.PIO1, p.DMA_CH2, p.DMA_CH3, p.PIN_11, p.PIN_12, p.PIN_10, p.PIN_13).unwrap());
-    spawner.spawn(rfid_task(rfid_signal, p.PIO1, p.DMA_CH2, p.DMA_CH3, p.PIN_4, p.PIN_5, p.PIN_3, p.PIN_2).unwrap());
+    spawner.spawn(rfid_task(rfid_signal, spi, cs).unwrap());
     spawner.spawn(door_task(door_signal, p.PIN_15).unwrap());
     spawner.spawn(button_task(button_signal, p.PIN_14).unwrap());
-    spawner.spawn(audio_task(audio_signal, shared_fs.clone(), p.PIO0, p.DMA_CH5, p.PIN_6, p.PIN_7, p.PIN_8).unwrap());
+
+    let pio: Peri<'static, PIO0> = p.PIO0;
+    let dma: Peri<'static, DMA_CH5> = p.DMA_CH5;
+    let data_pin: Peri<'static, PIN_6> = p.PIN_6;
+    let bit_clock_pin: Peri<'static, PIN_7> = p.PIN_7;
+    let left_right_clock_pin: Peri<'static, PIN_8> = p.PIN_8;
+
+    // Setup pio state machine for i2s output
+    let embassy_rp::pio::Pio { mut common, sm0, .. } = embassy_rp::pio::Pio::new(pio, Irqs);
+
+    let program = embassy_rp::pio_programs::i2s::PioI2sOutProgram::new(&mut common);
+    let mut i2s = embassy_rp::pio_programs::i2s::PioI2sOut::new(
+        &mut common,
+        sm0,
+        dma,
+        Irqs,
+        data_pin,
+        bit_clock_pin,
+        left_right_clock_pin,
+        SAMPLE_RATE,
+        BIT_DEPTH,
+        &program,
+    );
+
+    spawner.spawn(audio_task(audio_signal, shared_fs.clone(), i2s).unwrap());
 
     // Flash white
     ws2812_signal.signal(Ws2812Message::Flash(50, 5, 127, 127, 127));
@@ -162,7 +233,7 @@ async fn main(spawner: Spawner) {
 
         if rfid_alive && ws_alive {
             if let Ok(mut watchdog) = watchdog.try_write() {
-                watchdog.feed();
+                watchdog.feed(Duration::from_millis(2_000));
             }
         }
 

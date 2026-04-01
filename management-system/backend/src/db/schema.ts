@@ -1,8 +1,15 @@
+import {
+  ActivityLogAction,
+  DeviceNameLength,
+  IpAddressLength,
+  IsoDateDb,
+  TaskLogLevel,
+  UserRole,
+} from "@door-entry-management-system/common"; // Drizzle Kit bodge
 import { relations, sql } from "drizzle-orm";
 import { boolean, date, jsonb, numeric, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import type { ElementOf } from "ts-essentials";
 import * as v from "valibot";
-import { ActivityLogAction, DeviceNameLength, IpAddressLength, IsoDateDb, TaskLogLevel, UserRole } from "../../../common/src/index.ts"; // Drizzle Kit bodge
 
 export type TableType =
   | typeof UserTable

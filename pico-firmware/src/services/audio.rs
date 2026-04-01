@@ -13,11 +13,7 @@ use alloc::{
 };
 use core::mem;
 use defmt::*;
-use embassy_rp::{
-    dma::{AnyChannel, Transfer},
-    peripherals::PIO0,
-    pio_programs::i2s::PioI2sOut,
-};
+use embassy_rp::{dma::Transfer, peripherals::PIO0, pio_programs::i2s::PioI2sOut};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
 use embassy_time::Instant;
 use fatfs::{File, LossyOemCpConverter, NullTimeProvider, Read, Seek};

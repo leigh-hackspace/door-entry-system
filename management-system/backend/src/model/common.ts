@@ -5,6 +5,21 @@ import type { PgColumn } from "drizzle-orm/pg-core";
 import { getTableColumns } from "drizzle-orm/utils";
 import * as v from "valibot";
 
+export interface SessionUser {
+  id: string;
+  role: "admin" | "user";
+  name: string;
+  email: string;
+  passwordHash: string;
+  refreshToken: string | null;
+  gocardlessCustomerId: string | null;
+  notes: string | null;
+  paidUp: boolean;
+  mfaData: MfaData;
+  created: Date;
+  updated: Date;
+}
+
 /** Fail if anything other than a single record is returned in a query */
 export function assertOneRecord<T>(records: readonly T[]): T {
   if (records.length === 1) return records[0];
@@ -61,19 +76,4 @@ export const UUID = v.pipe(v.string(), v.uuid());
 // deno-lint-ignore no-explicit-any
 export function withId<TSchema extends v.ObjectSchema<any, any>>(schema: TSchema) {
   return v.tuple([UUID, schema] as const);
-}
-
-export interface SessionUser {
-  id: string;
-  role: "admin" | "user";
-  name: string;
-  email: string;
-  passwordHash: string;
-  refreshToken: string | null;
-  gocardlessCustomerId: string | null;
-  notes: string | null;
-  paidUp: boolean;
-  mfaData: MfaData;
-  created: Date;
-  updated: Date;
 }

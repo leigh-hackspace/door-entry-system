@@ -45,10 +45,11 @@ export abstract class Task {
       }
     } finally {
       clearTimeout(timeoutId);
-      this.#jobStarted = null;
       await this.writeLog("debug", "Finished");
 
+      this.#jobStarted = null;
       this.#nextRunTime = this.calculateNextRunTime();
+
       console.log("Finished task:", this.name, "Next run:", new Date(this.#nextRunTime));
     }
   }

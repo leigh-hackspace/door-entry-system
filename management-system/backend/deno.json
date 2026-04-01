@@ -2,7 +2,7 @@
   "name": "@door-entry-management-system/backend",
   "exports": "./src/index.ts",
   "tasks": {
-    "dev": "deno --env-file=../.env --watch --allow-env --allow-read --allow-net --allow-sys --cached-only src/index.ts",
+    "dev": "deno --env-file=../.env --watch --allow-env --allow-read --allow-net --allow-sys src/index.ts",
     "start": "deno --allow-env --allow-read --allow-net --allow-sys --cached-only src/index.ts",
     "push": "drizzle-kit push"
   },
@@ -13,6 +13,7 @@
     "@/tasks": "./src/tasks/index.ts",
     "@/model": "./src/model/index.ts",
     "@/routers": "./src/routers/index.ts",
+    "@hectorm/otpauth": "jsr:@hectorm/otpauth@^9.5.0",
     "@slack/web-api": "npm:@slack/web-api@^7.9.3",
     "@trpc/server": "npm:@trpc/server@^11.4.3",
     "@types/jsonwebtoken": "npm:@types/jsonwebtoken@^9.0.7",

@@ -12,7 +12,8 @@
   ],
   "settings": {
     "rust-analyzer.cargo.allTargets": false,
-    "rust-analyzer.cargo.target": "riscv32imac-unknown-none-elf",
+    "rust-analyzer.cargo.target": "thumbv8m.main-none-eabihf",
+    "rust-analyzer.cargo.features": ["wifi"],
     "prettier.printWidth": 120,
     "cSpell.words": [
       "assoc",

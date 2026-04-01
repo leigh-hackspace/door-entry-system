@@ -3,6 +3,9 @@ use alloc::sync::Arc;
 use embassy_rp::{flash::ERASE_SIZE, peripherals::FLASH};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, rwlock::RwLock};
 
+pub const SAMPLE_RATE: u32 = 22_050;
+pub const BIT_DEPTH: u32 = 16;
+
 const ADDR_OFFSET: u32 = 0x300000;
 const PART_BLOCKS: usize = 256;
 const PART_SIZE: usize = PART_BLOCKS * ERASE_SIZE;

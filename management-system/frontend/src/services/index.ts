@@ -71,7 +71,7 @@ export class AppService {
     return result;
   }
 
-  public loginExternal(user: UserRecord, token: string) {
+  public loginExternal(user: Pick<UserRecord, "id" | "role" | "email" | "name">, token: string) {
     this.sessionService.newSession({
       id: user.id,
       role: user.role,

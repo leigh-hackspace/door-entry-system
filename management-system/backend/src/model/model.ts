@@ -1,9 +1,10 @@
 import type { PickOfValue, UserRole } from "@door-entry-management-system/common";
 import { assert } from "ts-essentials";
 import * as v from "valibot";
-import { Pagination, QuickSearch, SessionUser } from "./common.ts";
+import { Pagination, QuickSearch, type SessionUser } from "./common.ts";
 
 type DataFieldType = "string" | "number" | "boolean" | "date" | "object" | "unknown" | readonly string[];
+type TypeFlag = "" | "N" | "O" | "NO";
 
 type TypeToString<T> = T extends string ? "string"
   : T extends number ? "number"
@@ -20,11 +21,13 @@ type StringToType<T> = T extends "string" ? string
   : T extends "object" ? object
   : never;
 
-type TypeFlagsToType<T extends string> = T extends "N" ? null : T extends "O" ? undefined : T extends "NO" ? null | undefined : never;
+type TypeFlagsToType<T extends string> =
+  (T extends `${string}N${string}` ? null : never) |
+  (T extends `${string}O${string}` ? undefined : never);
 
-type TupleToType<T> = T extends [string | readonly string[], "" | "N" | "O" | "NO"] ? StringToType<T[0]> | TypeFlagsToType<T[1]> : never;
+type TupleToType<T> = T extends readonly [string | readonly string[], TypeFlag] ? StringToType<T[0]> | TypeFlagsToType<T[1]> : never;
 
-export interface DataField<TType extends [DataFieldType, string] = [DataFieldType, string]> {
+export interface DataField<TType extends readonly [DataFieldType, string] = readonly [DataFieldType, string]> {
   type: TType;
   select: boolean;
   create: boolean;
@@ -47,14 +50,14 @@ type FieldToSchema<T extends DataField> = v.BaseSchema<
 
 type FieldsToSchemaObject<TFields extends Record<string, DataField>> = {
   [P in keyof TFields]: undefined extends TupleToType<TFields[P]["type"]> ? v.OptionalSchema<FieldToSchema<TFields[P]>, undefined>
-    : FieldToSchema<TFields[P]>;
+  : FieldToSchema<TFields[P]>;
 };
 
 export type FieldsToObject<TFields extends Record<string, DataField>> = {
   [P in keyof TFields]: TupleToType<TFields[P]["type"]>;
 };
 
-interface RowData<TRow> {
+export interface RowData<TRow> {
   rows: readonly TRow[];
   total: number;
 }

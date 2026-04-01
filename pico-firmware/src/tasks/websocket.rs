@@ -105,7 +105,7 @@ impl From<serde_json::Error> for WsClient {
 
 async fn websocket_connect(
     dns: &edge_nal_embassy::Dns<'_>,
-    tcp: &Tcp<'_, 1>,
+    tcp: &Tcp<'_>,
     buf: &mut [u8],
     web_socket_outgoing_receiver: WebSocketOutgoingReceiver,
     web_socket_incoming_sender: WebSocketIncomingSender,

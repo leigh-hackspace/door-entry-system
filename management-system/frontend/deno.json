@@ -2,9 +2,9 @@
   "name": "@door-entry-management-system/frontend",
   "exports": "./src/app.tsx",
   "tasks": {
-    "dev": "deno run --allow-read --allow-write --allow-env --allow-net --allow-run --allow-ffi --cached-only bundle.ts --watch",
+    "dev": "deno run --allow-read --allow-write --allow-env --allow-net --allow-run --allow-ffi bundle.ts --watch",
     "build": "deno run --allow-read --allow-write --allow-env --allow-net --allow-run --allow-ffi --cached-only bundle.ts --build",
-    "serve": "deno run --env-file=../.env --allow-read --allow-net --allow-env --cached-only server.ts",
+    "serve": "deno run --env-file=../.env --allow-read --allow-net --allow-env server.ts",
     "sass-dev": "sass --watch sass/bootstrap.scss:web/css/bootstrap.css src/index.scss:web/css/index.css",
     "sass-build": "sass sass/bootstrap.scss:web/css/bootstrap.css src/index.scss:web/css/index.css"
   },

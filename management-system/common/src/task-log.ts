@@ -11,3 +11,13 @@ export const TaskLogFilter = v.object({
   job_started: v.optional(v.array(v.date())),
 });
 export type TaskLogFilter = v.InferInput<typeof TaskLogFilter>;
+
+export interface TaskLogSelect {
+  id: string;
+  level: TaskLogLevel;
+  job_started: Date;
+  type: string;
+  notes: string | null;
+  data: unknown;
+  created: Date;
+}
