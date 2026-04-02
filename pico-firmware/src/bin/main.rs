@@ -4,7 +4,6 @@
 
 #![no_std]
 #![no_main]
-#![feature(future_join)]
 
 extern crate alloc;
 
@@ -24,6 +23,7 @@ use crate::{
         file::{FileCommand, FileCommandChannel, FileMessage, FileMessageChannel, file_task},
         rfid::{RfidSignal, RfidSignalMessage, rfid_task},
         websocket::{WebSocketIncoming, WebSocketIncomingChannel, WebSocketOutgoing, WebSocketOutgoingChannel, websocket_task},
+        ws2812_asm::{Ws2812Message, Ws2812Signal, ws2812_asm_task},
     },
     utils::{
         common::{BIT_DEPTH, Flash, SAMPLE_RATE, SharedFs},
@@ -32,26 +32,20 @@ use crate::{
 };
 use alloc::{format, string::ToString, sync::Arc};
 use core::sync::atomic::{AtomicU32, Ordering};
-use cyw43_pio::{PioSpi, RM2_CLOCK_DIVIDER};
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_futures::select::{Either3, select3};
 use embassy_rp::{
     Peri, bind_interrupts, dma,
     gpio::{Level, Output},
-    peripherals::{DMA_CH2, DMA_CH3, DMA_CH4, DMA_CH5, DMA_CH6, PIN_2, PIN_3, PIN_4, PIN_5, PIN_6, PIN_7, PIN_8, PIO0, PIO1, PIO2},
-    pio::{self, Pio},
+    peripherals::{DMA_CH0, DMA_CH1, DMA_CH2, DMA_CH3, DMA_CH4, DMA_CH5, DMA_CH6, PIN_2, PIN_3, PIN_4, PIN_5, PIN_6, PIN_7, PIN_8, PIO0, PIO1, PIO2},
+    pio::{self},
     watchdog::Watchdog,
 };
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel, rwlock::RwLock, signal::Signal};
 use embassy_time::{Duration, Instant, Timer};
 use embedded_alloc::LlffHeap as Heap;
 use {defmt_rtt as _, panic_probe as _};
-
-#[cfg(feature = "wired")]
-use crate::tasks::ws2812::{Ws2812Message, Ws2812Signal, ws2812_task};
-#[cfg(feature = "wifi")]
-use crate::tasks::ws2812_asm::{Ws2812Message, Ws2812Signal, ws2812_asm_task};
 
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
@@ -62,7 +56,7 @@ bind_interrupts!(struct Irqs {
     PIO0_IRQ_0 => pio::InterruptHandler<embassy_rp::peripherals::PIO0>;
     PIO1_IRQ_0 => pio::InterruptHandler<embassy_rp::peripherals::PIO1>;
     PIO2_IRQ_0 => pio::InterruptHandler<PIO2>;
-    DMA_IRQ_0 => dma::InterruptHandler<DMA_CH2>, dma::InterruptHandler<DMA_CH3>, embassy_rp::dma::InterruptHandler<DMA_CH4>, dma::InterruptHandler<DMA_CH5>, dma::InterruptHandler<DMA_CH6>;
+    DMA_IRQ_0 => dma::InterruptHandler<DMA_CH0>, dma::InterruptHandler<DMA_CH1>, dma::InterruptHandler<DMA_CH2>, dma::InterruptHandler<DMA_CH3>, embassy_rp::dma::InterruptHandler<DMA_CH4>, dma::InterruptHandler<DMA_CH5>, dma::InterruptHandler<DMA_CH6>;
 });
 
 #[embassy_executor::main]
@@ -83,10 +77,6 @@ async fn main(spawner: Spawner) {
 
     let ws2812_signal = make_static!(Ws2812Signal, Signal::new());
 
-    #[cfg(feature = "wired")]
-    spawner.spawn(ws2812_task(ws2812_signal, p.PIO2, p.DMA_CH6, p.PIN_9).unwrap());
-
-    #[cfg(feature = "wifi")]
     spawner.spawn(ws2812_asm_task(ws2812_signal, p.PIN_9).unwrap());
 
     // Flash red
@@ -95,34 +85,55 @@ async fn main(spawner: Spawner) {
     Timer::after_millis(1_000).await;
 
     #[cfg(feature = "wired")]
-    let (ethernet_signal, stack) = tasks::ethernet::init_ethernet(
-        spawner, p.SPI0, p.PIN_16, p.PIN_19, p.PIN_18, p.PIN_17, p.PIN_21, p.PIN_20, p.DMA_CH0, p.DMA_CH1,
-    )
-    .await;
+    let spi = {
+        use embassy_rp::{
+            peripherals::{DMA_CH0, DMA_CH1, PIN_16, PIN_18, PIN_19, SPI0},
+            spi::Spi,
+        };
 
-    let pio = p.PIO2;
-    let dio = p.PIN_24;
-    let clk = p.PIN_29;
-    let cs = p.PIN_25;
-    let pwr = p.PIN_23;
-    let dma = p.DMA_CH6;
+        let spi: Peri<'static, SPI0> = p.SPI0;
+        let miso: Peri<'static, PIN_16> = p.PIN_16;
+        let mosi: Peri<'static, PIN_19> = p.PIN_19;
+        let clk: Peri<'static, PIN_18> = p.PIN_18;
+        let dma0: Peri<'static, DMA_CH0> = p.DMA_CH0;
+        let dma1: Peri<'static, DMA_CH1> = p.DMA_CH1;
 
-    // let pwr = Output::new(pwr, Level::Low);
-    let cs = Output::new(cs, Level::High);
-    let mut pio = Pio::new(pio, Irqs);
-    let spi = PioSpi::new(
-        &mut pio.common,
-        pio.sm0,
-        RM2_CLOCK_DIVIDER,
-        pio.irq0,
-        cs,
-        dio,
-        clk,
-        dma::Channel::new(dma, Irqs),
-    );
+        let mut spi_cfg = embassy_rp::spi::Config::default();
+        spi_cfg.frequency = 50_000_000;
+        Spi::new(spi, clk, mosi, miso, dma0, dma1, Irqs, spi_cfg)
+    };
+
+    #[cfg(feature = "wired")]
+    let (ethernet_signal, stack) = tasks::ethernet::init_ethernet(spawner, spi, p.PIN_17, p.PIN_21, p.PIN_20).await;
 
     #[cfg(feature = "wifi")]
-    let (ethernet_signal, stack) = tasks::wifi::init_wifi(spawner, spi, pwr).await;
+    let spi = {
+        use cyw43_pio::{PioSpi, RM2_CLOCK_DIVIDER};
+        use embassy_rp::pio::Pio;
+
+        let pio = p.PIO2;
+        let dio = p.PIN_24;
+        let clk = p.PIN_29;
+        let cs = p.PIN_25;
+        let dma = p.DMA_CH6;
+
+        // let pwr = Output::new(pwr, Level::Low);
+        let cs = Output::new(cs, Level::High);
+        let mut pio = Pio::new(pio, Irqs);
+        PioSpi::new(
+            &mut pio.common,
+            pio.sm0,
+            RM2_CLOCK_DIVIDER,
+            pio.irq0,
+            cs,
+            dio,
+            clk,
+            dma::Channel::new(dma, Irqs),
+        )
+    };
+
+    #[cfg(feature = "wifi")]
+    let (ethernet_signal, stack) = tasks::wifi::init_wifi(spawner, spi, p.PIN_23).await;
 
     let flash = Flash::new(p.FLASH, p.DMA_CH4, Irqs);
 

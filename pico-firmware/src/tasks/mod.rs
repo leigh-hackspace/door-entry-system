@@ -2,14 +2,9 @@ pub mod audio;
 pub mod button;
 pub mod common;
 pub mod door;
-#[cfg(feature = "wired")]
 pub mod ethernet;
 pub mod file;
 pub mod rfid;
 pub mod websocket;
-#[cfg(feature = "wifi")]
 pub mod wifi;
-#[cfg(feature = "wired")]
-pub mod ws2812;
-#[cfg(feature = "wifi")]
 pub mod ws2812_asm;

@@ -4,4 +4,4 @@ set -o allexport
 source .env
 set +o allexport
 
-cargo run -r --bin main --features=wired
+cargo run -r --bin pico-firmware --features=wired

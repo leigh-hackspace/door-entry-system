@@ -1,14 +1,14 @@
 {
   "folders": [
     {
-      "path": "management-system"
+      "path": "management-system",
     },
     {
-      "path": "bluetooth-web-app"
+      "path": "bluetooth-web-app",
     },
     {
-      "path": "pico-firmware"
-    }
+      "path": "pico-firmware",
+    },
   ],
   "settings": {
     "rust-analyzer.cargo.allTargets": false,
@@ -81,34 +81,34 @@
       "Unsubscribable",
       "valibot",
       "wifi",
-      "xtensa"
+      "xtensa",
     ],
     "editor.tabSize": 2,
     "editor.insertSpaces": true,
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "[typescriptreact]": {
-      "editor.defaultFormatter": "esbenp.prettier-vscode"
+      "editor.defaultFormatter": "esbenp.prettier-vscode",
     },
     "editor.formatOnSave": true,
     "eslint.codeActionsOnSave.mode": "all",
     "editor.codeActionsOnSave": {
       "source.fixAll.eslint": "always",
       "source.fixAll.ts": "always",
-      "source.organizeImports": "always"
+      "source.organizeImports": "always",
     },
     "[typescript]": {
-      "editor.defaultFormatter": "denoland.vscode-deno"
+      "editor.defaultFormatter": "denoland.vscode-deno",
     },
     "[nix]": {
-      "editor.defaultFormatter": "jnoortheen.nix-ide"
+      "editor.defaultFormatter": "jnoortheen.nix-ide",
     },
     "deno.enable": true,
     "terminal.integrated.environmentChangesRelaunch": true,
     "[rust]": {
-      "editor.defaultFormatter": "rust-lang.rust-analyzer"
+      "editor.defaultFormatter": "rust-lang.rust-analyzer",
     },
     "[toml]": {
-      "editor.defaultFormatter": "tamasfe.even-better-toml"
-    }
-  }
+      "editor.defaultFormatter": "tamasfe.even-better-toml",
+    },
+  },
 }

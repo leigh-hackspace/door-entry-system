@@ -4,4 +4,4 @@ set -o allexport
 source .env
 set +o allexport
 
-cargo run -r --bin main --features=wifi
+cargo run -r --bin pico-firmware --features=wifi

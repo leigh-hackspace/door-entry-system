@@ -1,52 +1,36 @@
 use crate::make_static;
 use crate::tasks::common::{EthernetSignal, EthernetSignalMessage};
-use core::net::Ipv6Addr;
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_futures::yield_now;
-use embassy_net::{DhcpConfig, Ipv6Cidr, Stack, StackResources, StaticConfigV6};
+use embassy_net::{DhcpConfig, Stack, StackResources};
 use embassy_net_wiznet::{Device, Runner, State, chip::W6100};
 use embassy_rp::{
     Peri,
     clocks::RoscRng,
     gpio::{Input, Level, Output, Pull},
-    pac::Interrupt::SPI0_IRQ,
-    peripherals::{DMA_CH0, DMA_CH1, PIN_16, PIN_17, PIN_18, PIN_19, PIN_20, PIN_21, SPI0},
-    spi::{Async, Config, Spi},
+    peripherals::{PIN_17, PIN_20, PIN_21, SPI0},
+    spi::{Async, Spi},
 };
-use embassy_sync::{
-    blocking_mutex::raw::CriticalSectionRawMutex,
-    signal::{self, Signal},
-};
-use embassy_time::{Delay, Timer};
-use embedded_hal_async::delay;
+use embassy_sync::signal::Signal;
+use embassy_time::Delay;
 use embedded_hal_bus::spi::ExclusiveDevice;
 use static_cell::StaticCell;
 
 pub async fn init_ethernet(
     spawner: Spawner,
-    spi: Peri<'static, SPI0>,
-    miso: Peri<'static, PIN_16>,
-    mosi: Peri<'static, PIN_19>,
-    clk: Peri<'static, PIN_18>,
+    spi: Spi<'static, SPI0, Async>,
     cs: Peri<'static, PIN_17>,
     int: Peri<'static, PIN_21>,
     reset: Peri<'static, PIN_20>,
-    dma0: Peri<'static, DMA_CH0>,
-    dma1: Peri<'static, DMA_CH1>,
 ) -> (&'static EthernetSignal, Stack<'static>) {
     let ethernet_signal = make_static!(EthernetSignal, Signal::new());
 
     let mut rng = RoscRng;
 
-    let mut spi_cfg = embassy_rp::spi::Config::default();
-    spi_cfg.frequency = 50_000_000;
-    let spi = Spi::new(spi, clk, mosi, miso, dma0, dma1, spi_cfg);
     let cs = Output::new(cs, Level::High);
     let w6100_int = Input::new(int, Pull::Up);
     let w6100_reset = Output::new(reset, Level::High);
-
-    info!("SPI configured");
 
     let mac_addr = [0x00, 0x11, 0x22, 0x33, 0x44, 0x55];
     static STATE: StaticCell<State<8, 8>> = StaticCell::new();
