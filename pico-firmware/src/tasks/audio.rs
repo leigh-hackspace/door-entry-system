@@ -1,13 +1,9 @@
 use crate::{services::audio::play_mp3, utils::common::SharedFs};
 use alloc::{string::String, vec::Vec};
 use defmt::*;
-use embassy_rp::{
-    Peri,
-    peripherals::{DMA_CH5, PIN_6, PIN_7, PIN_8, PIO0},
-    pio_programs::i2s::PioI2sOut,
-};
+use embassy_rp::{peripherals::PIO0, pio_programs::i2s::PioI2sOut};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel, signal::Signal};
-use libm::{exp, floorf, sin, sqrtf};
+use libm::sin;
 
 #[derive(PartialEq, Debug)]
 pub enum AudioCommand {

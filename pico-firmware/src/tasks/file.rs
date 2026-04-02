@@ -1,11 +1,9 @@
-use crate::utils::{common::SharedFs, flash_stream::FlashStream};
-use alloc::borrow::ToOwned;
+use crate::utils::common::SharedFs;
 use alloc::{string::String, vec::Vec};
-use core::sync::atomic::{AtomicU32, Ordering};
 use defmt::*;
 use embassy_sync::channel::{Channel, Sender};
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Receiver, rwlock::RwLock};
-use fatfs::{File, LossyOemCpConverter, NullTimeProvider, Read, Write};
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Receiver};
+use fatfs::{Read, Write};
 
 pub enum FileCommand {
     StartWriting { file_name: String, length: u32 },

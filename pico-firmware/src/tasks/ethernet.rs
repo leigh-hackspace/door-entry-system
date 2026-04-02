@@ -1,7 +1,6 @@
-use core::net::Ipv6Addr;
-
 use crate::make_static;
 use crate::tasks::common::{EthernetSignal, EthernetSignalMessage};
+use core::net::Ipv6Addr;
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_futures::yield_now;

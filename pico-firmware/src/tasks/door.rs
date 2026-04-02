@@ -1,5 +1,3 @@
-use alloc::string::{String, ToString};
-use defmt::*;
 use embassy_rp::{
     Peri,
     gpio::{Level, Output},

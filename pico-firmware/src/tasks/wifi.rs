@@ -1,21 +1,18 @@
 use crate::make_static;
 use crate::tasks::common::{EthernetSignal, EthernetSignalMessage};
 use cyw43::{Control, JoinOptions, aligned_bytes};
-use cyw43_pio::{PioSpi, RM2_CLOCK_DIVIDER};
+use cyw43_pio::PioSpi;
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_futures::yield_now;
 use embassy_net::{Stack, StackResources};
-use embassy_rp::dma;
 use embassy_rp::{
-    Peri, bind_interrupts,
+    Peri,
     clocks::RoscRng,
     gpio::{Level, Output},
-    peripherals::{DMA_CH6, PIN_23, PIN_24, PIN_25, PIN_29, PIO2},
-    pio::{InterruptHandler, Pio},
+    peripherals::{PIN_23, PIO2},
 };
 use embassy_sync::signal::Signal;
-use embassy_time::Timer;
 use static_cell::StaticCell;
 
 const WIFI_NETWORK: &str = env!("WIFI_NETWORK");

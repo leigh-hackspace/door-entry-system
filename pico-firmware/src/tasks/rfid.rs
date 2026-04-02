@@ -1,20 +1,14 @@
 use alloc::string::{String, ToString};
 use defmt::*;
-use embassy_embedded_hal::shared_bus::asynch::spi::SpiDevice;
 use embassy_rp::{
-    Peri, dma,
+    Peri,
     gpio::{Level, Output},
-    peripherals::{DMA_CH2, DMA_CH3, PIN_2, PIN_3, PIN_4, PIN_5, PIN_10, PIN_11, PIN_12, PIN_13, PIO1},
+    peripherals::{PIN_2, PIO1},
     pio_programs::spi::Spi,
     spi::Async,
 };
-use embassy_sync::{
-    blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex},
-    mutex::Mutex,
-    signal::Signal,
-};
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use embassy_time::{Duration, Timer};
-use embedded_hal::digital::OutputPin;
 use embedded_hal_bus::spi::ExclusiveDevice;
 use esp_hal_mfrc522::{
     MFRC522,

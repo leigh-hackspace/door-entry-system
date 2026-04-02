@@ -1,6 +1,5 @@
 use crate::utils::local_fs::FileEntry;
 use alloc::borrow::ToOwned;
-use alloc::fmt;
 use alloc::format;
 use alloc::string::String;
 use alloc::vec::Vec;
@@ -10,7 +9,6 @@ use edge_http::io::client::Connection;
 use edge_http::ws::{MAX_BASE64_KEY_LEN, MAX_BASE64_KEY_RESPONSE_LEN, NONCE_LEN};
 use edge_nal::AddrType;
 use edge_nal::Dns;
-use edge_nal::TcpConnect;
 use edge_nal_embassy::DnsError;
 use edge_nal_embassy::Tcp;
 use edge_nal_embassy::TcpBuffers;
@@ -18,11 +16,10 @@ use edge_nal_embassy::TcpError;
 use edge_ws::{FrameHeader, FrameType};
 use embassy_futures::select::select;
 use embassy_rp::clocks::RoscRng;
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_sync::channel::Receiver;
 use embassy_sync::channel::Sender;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
-use embassy_time::{Duration, Timer};
 use serde::Deserialize;
 use serde::Serialize;
 

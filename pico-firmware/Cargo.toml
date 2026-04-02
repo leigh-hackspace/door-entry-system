@@ -7,7 +7,7 @@ resolver = "2"
 
 [[bin]]
 name = "pico-firmware"
-path = "bin/main.rs"
+path = "src/bin/main.rs"
 test = false
 bench = false
 
@@ -42,6 +42,7 @@ num-traits = { version = "0.2.19", default-features = false, features = [
 ] }
 critical-section = { version = "*" }
 smart-leds = "0.4.0"
+libm = "0.2.15"
 
 edge-http = { version = "*" }
 edge-nal = { version = "*" }
@@ -57,45 +58,6 @@ embedded-hal-bus = { version = "0.3.0", features = ["async"] }
 
 cortex-m-rt = "*"
 cortex-m = { version = "*", features = ["critical-section-single-core"] }
-
-libm = "0.2.15"
-
-# embassy-executor = { git = "https://github.com/embassy-rs/embassy?dir=embassy-executor", rev = "aad6e912", features = [
-#     "executor-thread",
-#     "defmt",
-#     "executor-interrupt",
-# ] }
-# embassy-sync = { git = "https://github.com/embassy-rs/embassy?dir=embassy-sync", rev = "aad6e912" }
-# embassy-time = { git = "https://github.com/embassy-rs/embassy?dir=embassy-time", rev = "aad6e912", features = [
-#     "defmt",
-#     "defmt-timestamp-uptime",
-# ] }
-# embassy-rp = { git = "https://github.com/embassy-rs/embassy?dir=embassy-rp", rev = "aad6e912", features = [
-#     "defmt",
-#     "unstable-pac",
-#     "time-driver",
-#     "rp235xa",
-#     "binary-info",
-# ] }
-# embassy-net = { git = "https://github.com/embassy-rs/embassy?dir=embassy-net", rev = "aad6e912", features = [
-#     "defmt",
-#     "icmp",
-#     "tcp",
-#     "udp",
-#     "raw",
-#     "dhcpv4",
-#     "medium-ethernet",
-#     "dns",
-# ] }
-# embassy-embedded-hal = { git = "https://github.com/embassy-rs/embassy?dir=embassy-embedded-hal", rev = "aad6e912" }
-# embassy-futures = { git = "https://github.com/embassy-rs/embassy?dir=embassy-futures", rev = "aad6e912" }
-# embassy-net-wiznet = { git = "https://github.com/embassy-rs/embassy?dir=embassy-wiznet", rev = "aad6e912" }
-# cyw43 = { git = "https://github.com/embassy-rs/embassy?dir=cyw43", rev = "aad6e912", features = [
-#     "defmt",
-# ] }
-# cyw43-pio = { git = "https://github.com/embassy-rs/embassy?dir=cyw43-pio", rev = "aad6e912", features = [
-#     "defmt",
-# ] }
 
 reqwless = { version = "0.14.0", default-features = false }
 cyw43 = { version = "0.7.0", features = ["defmt"] }

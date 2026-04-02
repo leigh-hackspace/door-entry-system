@@ -30,30 +30,22 @@ use crate::{
         local_fs::LocalFs,
     },
 };
-use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, sync::Arc};
-use core::{
-    cell::UnsafeCell,
-    sync::atomic::{AtomicU32, Ordering},
-};
+use alloc::{format, string::ToString, sync::Arc};
+use core::sync::atomic::{AtomicU32, Ordering};
 use cyw43_pio::{PioSpi, RM2_CLOCK_DIVIDER};
 use defmt::*;
 use embassy_executor::Spawner;
-use embassy_futures::{
-    select::{Either, Either3, Either4, select, select3, select4},
-    yield_now,
-};
+use embassy_futures::select::{Either3, select3};
 use embassy_rp::{
     Peri, bind_interrupts, dma,
-    flash::ERASE_SIZE,
     gpio::{Level, Output},
     peripherals::{DMA_CH2, DMA_CH3, DMA_CH4, DMA_CH5, DMA_CH6, PIN_2, PIN_3, PIN_4, PIN_5, PIN_6, PIN_7, PIN_8, PIO0, PIO1, PIO2},
-    pio::{self, Irq, Pio},
+    pio::{self, Pio},
     watchdog::Watchdog,
 };
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel, rwlock::RwLock, signal::Signal};
 use embassy_time::{Duration, Instant, Timer};
 use embedded_alloc::LlffHeap as Heap;
-use fatfs::{File, LossyOemCpConverter, NullTimeProvider, Write};
 use {defmt_rtt as _, panic_probe as _};
 
 #[cfg(feature = "wired")]
