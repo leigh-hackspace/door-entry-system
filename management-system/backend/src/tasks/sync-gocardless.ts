@@ -34,7 +34,7 @@ export class SyncGocardlessTask extends Task {
           .where(eq(PaymentTable.id, payment.id));
 
         if (exists.length === 0) {
-          await this.writeLog("info", `New payment: ${payment.amount} ${payment.status}`);
+          await this.writeLog("info", `New payment: ${payment.id} ${payment.amount} ${payment.status}`);
 
           await db.insert(PaymentTable).values({
             id: payment.id,

@@ -1,15 +1,8 @@
-import {
-  ActivityLogAction,
-  DeviceNameLength,
-  IpAddressLength,
-  IsoDateDb,
-  TaskLogLevel,
-  UserRole,
-} from "@door-entry-management-system/common"; // Drizzle Kit bodge
 import { relations, sql } from "drizzle-orm";
 import { boolean, date, jsonb, numeric, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import type { ElementOf } from "ts-essentials";
 import * as v from "valibot";
+import { ActivityLogAction, DeviceNameLength, IpAddressLength, IsoDateDb, TaskLogLevel, UserRole } from "../../../common/src/index.ts"; // Drizzle Kit bodge
 
 export type TableType =
   | typeof UserTable
@@ -23,8 +16,8 @@ const UTC_NOW = sql`(NOW() AT TIME ZONE 'UTC')`;
 export const ScryptKeyLength = 64;
 const ScryptHashLength = 88; // Base64 length of 64 bytes
 
-const GoCardlessCustomerIdLength = 14;
-const GoCardlessPaymentIdLength = 14;
+const GoCardlessCustomerIdLength = 32;
+const GoCardlessPaymentIdLength = 32;
 
 export const UserRoleEnum = pgEnum("user_role", UserRole);
 
