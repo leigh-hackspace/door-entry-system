@@ -1,6 +1,8 @@
 import {
   assertError,
   FieldMetadata,
+  formatDate,
+  humanise,
   type ScanEvent,
   type UserUpdate,
   UserUpdateSchema,
@@ -22,7 +24,7 @@ import { beginPage } from "@frontend/helper";
 import type { TagSearchRecord } from "@frontend/services";
 import type { RouteSectionProps } from "@solidjs/router";
 import { differenceInSeconds, formatDistanceToNow } from "date-fns";
-import { createEffect, createResource, createSignal, onCleanup, Show, Suspense } from "solid-js";
+import { createEffect, createResource, createSignal, For, onCleanup, Show, Suspense } from "solid-js";
 import * as v from "valibot";
 
 const TagTableSchema = v.object({
@@ -37,7 +39,10 @@ export function UserEdit(props: RouteSectionProps) {
 
   const id = () => props.params.id;
 
-  const [user, { mutate }] = createResource(() => tRPC.User.getOne.query(id()));
+  const [user, { mutate }] = createResource(() => {
+    return Promise.all([tRPC.User.getOne.query(id()), tRPC.User.getUserPayments.query(id())]);
+  });
+
   const [submittedCount, setSubmittedCount] = createSignal(0);
   const [lastScan, setLastScan] = createSignal<ScanEvent>();
 
@@ -104,7 +109,7 @@ export function UserEdit(props: RouteSectionProps) {
     const params = fetchParamsFromCursor(cursor());
 
     try {
-      setRows(await tRPC.Tag.search.query({ ...params, user_id: id() }));
+      setRows(await tRPC.Tag.search.query({ ...params, userId: id() }));
     } catch (err) {
       assertError(err);
       await openAlert(`Fetch Error: ${err.name}`, err.message);
@@ -126,11 +131,11 @@ export function UserEdit(props: RouteSectionProps) {
                     <div class="d-flex flex-column gap-3">
                       <MagicFields
                         schema={UserUpdateSchema}
-                        data={user()}
+                        data={user()[0]}
                         validation={submittedCount() > 0}
                         onChange={onChange}
                       />
-                      <DateInfo record={user()} />
+                      <DateInfo record={user()[0]} />
                     </div>
                   )}
                 </Show>
@@ -188,23 +193,23 @@ export function UserEdit(props: RouteSectionProps) {
                   <div class="d-flex flex-column gap-3">
                     <div>
                       <label class="form-label">GoCardless Customer ID</label>
-                      <input class="form-control" readOnly value={user()?.gocardlessCustomerId ?? "[Unknown]"} />
+                      <input class="form-control" readOnly value={user()[0].gocardlessCustomerId ?? "[Unknown]"} />
                     </div>
 
                     <div>
                       <label class="form-label">GoCardless Payments</label>
                       <ol class="list-group">
-                        {/* <For each={user().payments}>
+                        <For each={user()[1]}>
                           {(payment) => (
                             <li class="list-group-item">
                               <div>ID: {payment.id}</div>
-                              <div>{formatDate(payment.charge_date)}</div>
+                              <div>{formatDate(payment.chargeDate)}</div>
                               <div>Amount: £{payment.amount}</div>
                               <div>{payment.description}</div>
                               <div>Status: {humanise(payment.status)}</div>
                             </li>
                           )}
-                        </For> */}
+                        </For>
                       </ol>
                     </div>
                   </div>

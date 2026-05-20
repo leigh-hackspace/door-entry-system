@@ -8,7 +8,7 @@ import { type DataField, DataModel } from "./model.ts";
 export const TaskLogFields = {
   id: { type: ["string", ""], select: true, create: false, update: false },
   level: { type: [TaskLogLevel, ""], select: true, create: false, update: false },
-  job_started: { type: ["date", ""], select: true, create: false, update: false },
+  jobStarted: { type: ["date", ""], select: true, create: false, update: false },
   type: { type: ["string", ""], select: true, create: false, update: false },
   created: { type: ["date", ""], select: true, create: false, update: false },
 } as const satisfies Record<string, DataField>;
@@ -69,7 +69,7 @@ export class TaskLogDataModel extends DataModel<typeof TaskLogFields, TaskLogSel
     return and(
       filter.level && exclude !== "level" ? inArray(TaskLogTable.level, filter.level) : undefined,
       filter.type && exclude !== "type" ? inArray(TaskLogTable.type, filter.type) : undefined,
-      filter.job_started && exclude !== "job_started" ? inArray(TaskLogTable.job_started, filter.job_started) : undefined,
+      filter.jobStarted && exclude !== "job_started" ? inArray(TaskLogTable.jobStarted, filter.jobStarted) : undefined,
     );
   }
 

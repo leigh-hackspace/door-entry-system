@@ -43,12 +43,12 @@ export class DeviceConnection implements PublicDeviceInterface {
 
     if (rows.length === 0) {
       id = uuid.v4();
-      await db.insert(DeviceTable).values({ id, name: this.device.name, ip_address: this.device.ip_address });
+      await db.insert(DeviceTable).values({ id, name: this.device.name, ipAddress: this.device.ipAddress });
     } else {
       id = rows[0].id;
       await db
         .update(DeviceTable)
-        .set({ ip_address: this.device.ip_address, updated: new Date() })
+        .set({ ipAddress: this.device.ipAddress, updated: new Date() })
         .where(eq(DeviceTable.id, id));
     }
 
@@ -275,7 +275,7 @@ export class DeviceConnection implements PublicDeviceInterface {
   private statusUpdateHandler?: (update: IncomingStatusUpdate) => void;
 
   public async handleStatusUpdate(update: IncomingStatusUpdate) {
-    console.log("handleStatusUpdate", update.status, update.message);
+    // console.log("handleStatusUpdate", update.status, update.message);
 
     if (this.statusUpdateHandler) this.statusUpdateHandler(update);
   }
@@ -284,9 +284,9 @@ export class DeviceConnection implements PublicDeviceInterface {
     console.log("DeviceConnection.receiveCode:", req.code);
 
     const matchingTags = await db
-      .select({ id: TagTable.id, code: TagTable.code, user_id: UserTable.id, user_name: UserTable.name })
+      .select({ id: TagTable.id, code: TagTable.code, userId: UserTable.id, userName: UserTable.name })
       .from(TagTable)
-      .leftJoin(UserTable, eq(TagTable.user_id, UserTable.id))
+      .leftJoin(UserTable, eq(TagTable.userId, UserTable.id))
       .where(eq(TagTable.code, req.code));
 
     const tag = matchingTags.length > 0 ? matchingTags[0] : null;
@@ -294,22 +294,22 @@ export class DeviceConnection implements PublicDeviceInterface {
     const id = uuid.v4();
 
     let action: ActivityLogAction;
-    let user_id: string | null = null;
+    let userId: string | null = null;
 
     if (req.allowed) {
       action = "allowed";
 
       if (tag) {
-        user_id = tag.user_id;
+        userId = tag.userId;
 
-        await this.announceToSlack(`${tag.user_name} has entered the hackspace`);
+        await this.announceToSlack(`${tag.userName} has entered the hackspace`);
       }
     } else {
       if (tag) {
-        if (tag.user_id) {
+        if (tag.userId) {
           action = "denied-blocked";
 
-          await this.announceToSlack(`${tag.user_name} has been denied`);
+          await this.announceToSlack(`${tag.userName} has been denied`);
         } else {
           action = "denied-unassigned";
 
@@ -328,7 +328,7 @@ export class DeviceConnection implements PublicDeviceInterface {
       }
     }
 
-    await db.insert(ActivityLogTable).values({ id, user_id, code: req.code, action });
+    await db.insert(ActivityLogTable).values({ id, userId, code: req.code, action });
   }
 
   private async announceToSlack(text: string) {

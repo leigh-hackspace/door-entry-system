@@ -1,38 +1,16 @@
-import { db, UserTable } from "@/db";
+import { db, PaymentTable, UserTable } from "@/db";
 import { getHexEncodedSha256, GoCardlessService, scryptAsync } from "@/services";
-import { omit, UserCreateSchema, UserRole, type UserSelect, UserUpdateSchema } from "@door-entry-management-system/common";
+import { omit, type UserCreate, type UserRecord, type UserUpdate } from "@door-entry-management-system/common";
 import { and, eq, getTableColumns, ilike, inArray, type InferSelectModel, or, sql } from "drizzle-orm";
 import type { PgUpdateSetSource } from "drizzle-orm/pg-core";
 import { assert } from "ts-essentials";
 import * as uuid from "uuid";
-import type * as v from "valibot";
-import { assertOneRecord, type SessionUser, toDrizzleOrderBy } from "./common.ts";
-import { type DataField, DataModel, type SearchArgs } from "./model.ts";
+import { assertOneRecord, assertRole, type SessionUser, toDrizzleOrderBy } from "./common.ts";
+import type { SearchArgs } from "./model.ts";
 
-export const UserFields = {
-  id: { type: ["string", ""], select: true, create: false, update: false },
-  name: { type: ["string", ""], select: true, create: true, update: true },
-  email: { type: ["string", ""], select: true, create: true, update: true },
-  role: { type: [UserRole, ""], select: true, create: true, update: true },
-  paidUp: { type: ["boolean", ""], select: true, create: false, update: false },
-  imageUrl: { type: ["string", ""], select: true, create: false, update: false },
-  newPassword: { type: ["string", ""], select: false, create: true, update: true },
-  confirmPassword: { type: ["string", ""], select: false, create: true, update: true },
-  created: { type: ["date", ""], select: true, create: false, update: false },
-  updated: { type: ["date", ""], select: true, create: false, update: false },
-} as const satisfies Record<string, DataField>;
+type UserRow = Omit<InferSelectModel<typeof UserTable>, "passwordHash" | "refreshToken" | "mfaData">;
 
-type UserRecord = Omit<InferSelectModel<typeof UserTable>, "passwordHash" | "refreshToken" | "mfaData">;
-
-export class UserDataModel extends DataModel<typeof UserFields, UserSelect> {
-  public override getCreateSchema() {
-    return UserCreateSchema;
-  }
-
-  public override getUpdateSchema() {
-    return UserUpdateSchema;
-  }
-
+export class UserDataModel {
   private getSelectColumns() {
     return omit(getTableColumns(UserTable), ["passwordHash", "refreshToken", "mfaData"]);
   }
@@ -45,7 +23,7 @@ export class UserDataModel extends DataModel<typeof UserFields, UserSelect> {
     }
   }
 
-  private async map(record: UserRecord) {
+  private async map(record: UserRow): Promise<UserRecord> {
     const emailHash = await getHexEncodedSha256(record.email);
 
     return {
@@ -54,7 +32,7 @@ export class UserDataModel extends DataModel<typeof UserFields, UserSelect> {
     };
   }
 
-  public override async search(sessionUser: SessionUser, { take, skip, orderBy, search }: SearchArgs) {
+  public async search(sessionUser: SessionUser, { take, skip, orderBy, search }: SearchArgs) {
     const quickSearchCondition = search ? or(ilike(UserTable.email, `%${search}%`), ilike(UserTable.name, `%${search}%`)) : and();
 
     const where = and(...this.restrict(sessionUser), quickSearchCondition);
@@ -78,7 +56,7 @@ export class UserDataModel extends DataModel<typeof UserFields, UserSelect> {
     return { rows, total } as const;
   }
 
-  public override async getOne(sessionUser: SessionUser, id: string) {
+  public async getOne(sessionUser: SessionUser, id: string) {
     const where = and(...this.restrict(sessionUser), eq(UserTable.id, id));
 
     const user = assertOneRecord(await db.select(this.getSelectColumns()).from(UserTable).where(where));
@@ -86,8 +64,20 @@ export class UserDataModel extends DataModel<typeof UserFields, UserSelect> {
     return this.map(user);
   }
 
-  public override async create(sessionUser: SessionUser, data: v.InferOutput<ReturnType<this["getCreateSchema"]>>): Promise<string> {
-    this.assertRole(sessionUser, ["admin"]);
+  public async getUserPayments(sessionUser: SessionUser, id: string) {
+    return db.select({
+      id: PaymentTable.id,
+      chargeDate: PaymentTable.chargeDate,
+      amount: PaymentTable.amount,
+      description: PaymentTable.description,
+      status: PaymentTable.status,
+    }).from(PaymentTable).where(
+      eq(PaymentTable.userId, id),
+    );
+  }
+
+  public async create(sessionUser: SessionUser, data: UserCreate) {
+    assertRole(sessionUser, ["admin"]);
 
     const { newPassword, confirmPassword, ...rest } = data;
 
@@ -104,11 +94,7 @@ export class UserDataModel extends DataModel<typeof UserFields, UserSelect> {
     return id;
   }
 
-  public override async update(
-    sessionUser: SessionUser,
-    id: string,
-    data: v.InferOutput<ReturnType<this["getUpdateSchema"]>>,
-  ): Promise<void> {
+  public async update(sessionUser: SessionUser, id: string, data: UserUpdate) {
     const { newPassword, confirmPassword, ...rest } = data;
 
     const where = and(...this.restrict(sessionUser), eq(UserTable.id, id));
@@ -143,8 +129,8 @@ export class UserDataModel extends DataModel<typeof UserFields, UserSelect> {
     await db.update(UserTable).set(update).where(where);
   }
 
-  public override async delete(sessionUser: SessionUser, ids: string[]): Promise<void> {
-    this.assertRole(sessionUser, ["admin"]);
+  public async delete(sessionUser: SessionUser, ids: string[]) {
+    assertRole(sessionUser, ["admin"]);
 
     const where = inArray(UserTable.id, ids);
 

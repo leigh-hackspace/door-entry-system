@@ -20,8 +20,8 @@ export const StatsRouter = (deviceCollectionWs: DeviceCollection) =>
     }),
 
     UserStats: tRPC.ProtectedProcedure.input(v.parser(v.object({}))).query(async ({ ctx }) => {
-      const tagCount = await db.$count(TagTable, eq(TagTable.user_id, ctx.session.user.id));
-      const scanCount = await db.$count(ActivityLogTable, eq(ActivityLogTable.user_id, ctx.session.user.id));
+      const tagCount = await db.$count(TagTable, eq(TagTable.userId, ctx.session.user.id));
+      const scanCount = await db.$count(ActivityLogTable, eq(ActivityLogTable.userId, ctx.session.user.id));
 
       return { tagCount, scanCount };
     }),

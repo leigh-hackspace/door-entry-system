@@ -12,7 +12,7 @@ export const LoginDataSchema = v.object({
 
 export type LoginData = v.InferInput<typeof LoginDataSchema>;
 
-export interface UserSelect {
+export interface UserRecord {
   id: string;
   name: string;
   email: string;

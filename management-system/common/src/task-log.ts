@@ -8,14 +8,14 @@ export type TaskLogLevel = ElementOf<typeof TaskLogLevel>;
 export const TaskLogFilter = v.object({
   level: v.optional(v.array(v.picklist(TaskLogLevel))),
   type: v.optional(v.array(v.string())),
-  job_started: v.optional(v.array(v.date())),
+  jobStarted: v.optional(v.array(v.date())),
 });
 export type TaskLogFilter = v.InferInput<typeof TaskLogFilter>;
 
 export interface TaskLogSelect {
   id: string;
   level: TaskLogLevel;
-  job_started: Date;
+  jobStarted: Date;
   type: string;
   notes: string | null;
   data: unknown;

@@ -38,10 +38,10 @@ export class SyncGocardlessTask extends Task {
 
           await db.insert(PaymentTable).values({
             id: payment.id,
-            user_id: user.id,
+            userId: user.id,
             status: payment.status as PaymentStatus,
             amount: String(parseInt(payment.amount) / 100),
-            charge_date: parse(payment.charge_date, "yyyy-MM-dd", new Date()),
+            chargeDate: parse(payment.charge_date, "yyyy-MM-dd", new Date()),
             description: payment.description ?? "",
           });
         } else {

@@ -1,8 +1,9 @@
 import type { MfaData, TableType } from "@/db";
-import { includes, keys } from "@door-entry-management-system/common";
+import { includes, keys, type UserRole } from "@door-entry-management-system/common";
 import { asc, desc } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { getTableColumns } from "drizzle-orm/utils";
+import { assert } from "ts-essentials";
 import * as v from "valibot";
 
 export interface SessionUser {
@@ -18,6 +19,11 @@ export interface SessionUser {
   mfaData: MfaData;
   created: Date;
   updated: Date;
+}
+
+export function assertRole(sessionUser: SessionUser, roles: UserRole[]) {
+  // if (sessionUser.role === "system") return; // System user can do anything
+  assert(roles.includes(sessionUser.role), `Must be role of ["${roles.join('","')}"]. You are "${sessionUser.role ?? "Anon"}."`);
 }
 
 /** Fail if anything other than a single record is returned in a query */

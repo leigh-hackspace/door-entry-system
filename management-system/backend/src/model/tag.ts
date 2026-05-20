@@ -12,11 +12,11 @@ export const TagFields = {
   id: { type: ["string", ""], select: true, create: false, update: false },
   code: { type: ["string", ""], select: true, create: true, update: true },
   description: { type: ["string", ""], select: true, create: true, update: true },
-  user_id: { type: ["string", "NO"], select: true, create: true, update: true },
-  user_name: { type: ["string", "N"], select: true, create: false, update: false },
+  userId: { type: ["string", "NO"], select: true, create: true, update: true },
+  userName: { type: ["string", "N"], select: true, create: false, update: false },
 } as const satisfies Record<string, DataField>;
 
-export const TagSearchArgs = v.intersect([SearchArgs, v.object({ user_id: v.optional(UUID) })]);
+export const TagSearchArgs = v.intersect([SearchArgs, v.object({ userId: v.optional(UUID) })]);
 export type TagSearchArgs = v.InferOutput<typeof TagSearchArgs>;
 
 export const AddCodeToUserReq = v.object({ code: v.string(), user_id: UUID });
@@ -47,7 +47,7 @@ export class TagDataModel extends DataModel<typeof TagFields, TagSelect> {
     }
   }
 
-  public override async search(sessionUser: SessionUser, { take, skip, orderBy, search, user_id }: TagSearchArgs) {
+  public override async search(sessionUser: SessionUser, { take, skip, orderBy, search, userId }: TagSearchArgs) {
     const quickSearchCondition = search
       ? or(
         ilike(TagTable.code, `%${search}%`),
@@ -58,15 +58,15 @@ export class TagDataModel extends DataModel<typeof TagFields, TagSelect> {
 
     // Normal users can only see tags belonging to them
     if (sessionUser.role !== "admin") {
-      user_id = sessionUser.id;
+      userId = sessionUser.id;
     }
 
-    const where = and(...this.restrict(sessionUser), quickSearchCondition, user_id ? eq(TagTable.user_id, user_id) : undefined);
+    const where = and(...this.restrict(sessionUser), quickSearchCondition, userId ? eq(TagTable.userId, userId) : undefined);
 
     const query = db
-      .select({ ...this.getSelectColumns(), user_name: UserTable.name })
+      .select({ ...this.getSelectColumns(), userName: UserTable.name })
       .from(TagTable)
-      .leftJoin(UserTable, eq(TagTable.user_id, UserTable.id))
+      .leftJoin(UserTable, eq(TagTable.userId, UserTable.id))
       .where(where)
       .limit(take)
       .offset(skip)
@@ -77,7 +77,7 @@ export class TagDataModel extends DataModel<typeof TagFields, TagSelect> {
     const [{ count: total }] = await db
       .select({ count: count() })
       .from(TagTable)
-      .leftJoin(UserTable, eq(TagTable.user_id, UserTable.id))
+      .leftJoin(UserTable, eq(TagTable.userId, UserTable.id))
       .where(where);
 
     return { rows, total } as const;
@@ -87,9 +87,9 @@ export class TagDataModel extends DataModel<typeof TagFields, TagSelect> {
     const where = and(...this.restrict(sessionUser), eq(TagTable.id, id));
 
     return assertOneRecord(
-      await db.select({ ...this.getSelectColumns(), user_name: UserTable.name })
+      await db.select({ ...this.getSelectColumns(), userName: UserTable.name })
         .from(TagTable)
-        .leftJoin(UserTable, eq(TagTable.user_id, UserTable.id))
+        .leftJoin(UserTable, eq(TagTable.userId, UserTable.id))
         .where(where),
     );
   }
@@ -97,7 +97,7 @@ export class TagDataModel extends DataModel<typeof TagFields, TagSelect> {
   public override async create(sessionUser: SessionUser, data: v.InferOutput<ReturnType<this["getCreateSchema"]>>): Promise<string> {
     const id = uuid.v4();
 
-    let user_id = data.user_id;
+    let user_id = data.userId;
 
     if (sessionUser.role !== "admin") {
       user_id = sessionUser.id;
@@ -141,15 +141,15 @@ export class TagDataModel extends DataModel<typeof TagFields, TagSelect> {
     const [existingTag] = await db.select().from(TagTable).where(eq(TagTable.code, req.code));
 
     if (existingTag) {
-      if (existingTag.user_id) {
+      if (existingTag.userId) {
         // Tag is already owned
-        const [user] = await db.select().from(UserTable).where(eq(UserTable.id, existingTag.user_id));
+        const [user] = await db.select().from(UserTable).where(eq(UserTable.id, existingTag.userId));
         assert(user, "Tag assigned to non-existent user!");
 
         throw new Error(`Tag already exists and is assigned to "${user.email}"`);
       } else {
         // Update the existing tag (recycling this tag for a new owner)
-        await db.update(TagTable).set({ user_id: req.user_id }).where(eq(TagTable.id, existingTag.id));
+        await db.update(TagTable).set({ userId: req.user_id }).where(eq(TagTable.id, existingTag.id));
       }
     } else {
       const id = uuid.v4();
@@ -157,7 +157,7 @@ export class TagDataModel extends DataModel<typeof TagFields, TagSelect> {
       // Create a new tag (never seen this tag before)
       await db.insert(TagTable).values({
         id,
-        user_id: req.user_id,
+        userId: req.user_id,
         code: req.code,
         description: `Auto-generated tag for user "${userToAddTag.email}"`,
       });

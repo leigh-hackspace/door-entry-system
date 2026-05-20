@@ -57,13 +57,13 @@ export abstract class Task {
   protected async writeLog(level: TaskLogLevel, notes: string, data: Record<string, string> = {}) {
     try {
       assert(this.#jobStarted, "`jobStarted` not set!");
-      const job_started = new Date(this.#jobStarted);
+      const jobStarted = new Date(this.#jobStarted);
 
       const [result] = await db
         .insert(TaskLogTable)
         .values({
           level,
-          job_started,
+          jobStarted,
           type: this.constructor.name,
           notes,
           data,

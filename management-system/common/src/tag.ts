@@ -5,12 +5,12 @@ export interface TagSelect {
   id: string;
   code: string;
   description: string;
-  user_id: string | null;
-  user_name: string | null;
+  userId: string | null;
+  userName: string | null;
 }
 
 export const TagCreateSchema = v.object({
-  user_id: v.optional(
+  userId: v.optional(
     v.nullable(v.pipe(v.string(), v.uuid(), v.title("User"), v.metadata(FieldMetadata({ icon: "👤", lookup: "User" })))),
   ),
   code: v.pipe(v.string(), v.minLength(2), v.title("Code"), v.metadata(FieldMetadata({ icon: "🔑" }))),

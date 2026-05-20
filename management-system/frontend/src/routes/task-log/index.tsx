@@ -1,4 +1,10 @@
-import { assertError, FieldMetadata, formatDateTime, type TaskLogFilter, TaskLogLevelSchema } from "@door-entry-management-system/common";
+import {
+  assertError,
+  FieldMetadata,
+  formatDateTime,
+  type TaskLogFilter,
+  TaskLogLevelSchema,
+} from "@door-entry-management-system/common";
 import {
   Card,
   type Cursor,
@@ -21,7 +27,7 @@ const TaskLogTableSchema = v.object({
   level: v.pipe(v.string(), v.title("Level"), v.metadata(FieldMetadata({ icon: "L", width: "80px", filter: true }))),
   type: v.pipe(v.string(), v.title("Type"), v.metadata(FieldMetadata({ icon: "T", filter: true }))),
   notes: v.nullable(v.pipe(v.string(), v.title("Notes"), v.metadata(FieldMetadata({ icon: "N", width: "2fr" })))),
-  job_started: v.pipe(v.date(), v.title("Started"), v.metadata(FieldMetadata({ width: "140px", filter: true }))),
+  jobStarted: v.pipe(v.date(), v.title("Started"), v.metadata(FieldMetadata({ width: "140px", filter: true }))),
   created: v.pipe(v.date(), v.title("Created"), v.metadata(FieldMetadata({ width: "140px" }))),
 });
 
@@ -58,7 +64,7 @@ export function TaskLogs(props: RouteSectionProps) {
     if ((colName === "level" || colName === "type") && _filter[colName]) {
       previouslySelectedOptions = _filter[colName];
     }
-    if (colName === "job_started" && _filter[colName]) {
+    if (colName === "jobStarted" && _filter[colName]) {
       previouslySelectedOptions = _filter[colName].map((d) => d.toISOString());
     }
 
@@ -82,7 +88,7 @@ export function TaskLogs(props: RouteSectionProps) {
     if (colName === "type") {
       setFilter({ ...filter(), type: selectedOptions ? selectedOptions.map((o) => o.id) : undefined });
     }
-    if (colName === "job_started") {
+    if (colName === "jobStarted") {
       setFilter({ ...filter(), job_started: selectedOptions ? selectedOptions.map((o) => parseISO(o.id)) : undefined });
     }
   };

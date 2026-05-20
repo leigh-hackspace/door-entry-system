@@ -12,9 +12,7 @@ export const DeviceRouter = (deviceCollectionWs: DeviceCollection) =>
   tRPC.router({
     Search: tRPC.ProtectedProcedure.input(v.parser(DeviceSearchSchema)).query(
       async ({ ctx, input: { take, skip, orderBy, search } }) => {
-        const quickSearchCondition = search
-          ? or(ilike(DeviceTable.ip_address, `%${search}%`), ilike(UserTable.name, `%${search}%`))
-          : and();
+        const quickSearchCondition = search ? or(ilike(DeviceTable.ipAddress, `%${search}%`), ilike(UserTable.name, `%${search}%`)) : and();
 
         if (ctx.session.user.role !== "admin") throw new Error("No access");
 

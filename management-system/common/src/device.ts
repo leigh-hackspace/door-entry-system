@@ -6,7 +6,7 @@ export const DeviceNameLength = 16;
 export interface DeviceInfo {
   id?: string;
   name: string;
-  ip_address: string;
+  ipAddress: string;
   created?: Date;
   updated?: Date;
 }

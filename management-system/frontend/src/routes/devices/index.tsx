@@ -19,7 +19,7 @@ import * as v from "valibot";
 
 const DeviceTableSchema = v.object({
   name: v.pipe(v.string(), v.title("Name"), v.metadata(FieldMetadata({ icon: "N" }))),
-  ip_address: v.pipe(v.string(), v.title("IP Address"), v.metadata(FieldMetadata({ icon: "IP" }))),
+  ipAddress: v.pipe(v.string(), v.title("IP Address"), v.metadata(FieldMetadata({ icon: "IP" }))),
   created: v.pipe(v.date(), v.title("Created"), v.metadata(FieldMetadata({ width: "140px" }))),
   updated: v.pipe(v.date(), v.title("Updated"), v.metadata(FieldMetadata({ width: "140px" }))),
 });

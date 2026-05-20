@@ -34,7 +34,7 @@ export function getWebSocketRouter(deviceCollectionWs: DeviceCollection) {
       }
 
       while (ws.bufferedAmount > 0) {
-        console.log(ws.bufferedAmount);
+        // console.log(ws.bufferedAmount);
         await sleep(1000);
       }
     };

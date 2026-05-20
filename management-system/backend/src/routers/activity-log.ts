@@ -22,12 +22,12 @@ export const ActivityLogRouter = tRPC.router({
         user_id = ctx.session.user.id;
       }
 
-      const condition = and(quickSearchCondition, user_id ? eq(ActivityLogTable.user_id, user_id) : undefined);
+      const condition = and(quickSearchCondition, user_id ? eq(ActivityLogTable.userId, user_id) : undefined);
 
       const query = db
         .select({ ...getTableColumns(ActivityLogTable), user_name: UserTable.name })
         .from(ActivityLogTable)
-        .leftJoin(UserTable, eq(ActivityLogTable.user_id, UserTable.id))
+        .leftJoin(UserTable, eq(ActivityLogTable.userId, UserTable.id))
         .where(condition)
         .limit(take)
         .offset(skip)
@@ -38,7 +38,7 @@ export const ActivityLogRouter = tRPC.router({
       const [{ count: total }] = await db
         .select({ count: count() })
         .from(ActivityLogTable)
-        .leftJoin(UserTable, eq(ActivityLogTable.user_id, UserTable.id))
+        .leftJoin(UserTable, eq(ActivityLogTable.userId, UserTable.id))
         .where(condition);
 
       return { rows, total } as const;

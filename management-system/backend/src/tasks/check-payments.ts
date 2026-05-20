@@ -27,8 +27,8 @@ export class CheckPaymentsTask extends Task {
           .from(PaymentTable)
           .where(
             and(
-              eq(PaymentTable.user_id, user.id),
-              gt(PaymentTable.charge_date, addDays(new Date(), -45)),
+              eq(PaymentTable.userId, user.id),
+              gt(PaymentTable.chargeDate, addDays(new Date(), -45)),
               eq(PaymentTable.status, "paid_out"),
             ),
           );

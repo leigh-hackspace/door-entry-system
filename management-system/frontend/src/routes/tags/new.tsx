@@ -8,10 +8,10 @@ import * as v from "valibot";
 export function TagNew(props: RouteSectionProps) {
   const { navigate, tRPC, toastService, user } = beginPage(["admin", "user"]);
 
-  const [tag, setTag] = createSignal<Partial<TagCreate>>({ user_id: null });
+  const [tag, setTag] = createSignal<Partial<TagCreate>>({ userId: null });
   const [submittedCount, setSubmittedCount] = createSignal(0);
 
-  const formSchema = user()?.role === "admin" ? TagCreateSchema : v.omit(TagCreateSchema, ["user_id"]);
+  const formSchema = user()?.role === "admin" ? TagCreateSchema : v.omit(TagCreateSchema, ["userId"]);
 
   const onChange = (data: Partial<TagCreate>) => {
     setTag({ ...tag(), ...data });

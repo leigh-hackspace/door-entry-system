@@ -9,9 +9,9 @@ export class DeviceCollection {
 
   constructor() {}
 
-  public handleAnnounce(announce: IncomingAnnounce, ip_address: string, commander: DeviceOutgoingFn) {
+  public handleAnnounce(announce: IncomingAnnounce, ipAddress: string, commander: DeviceOutgoingFn) {
     const deviceInfo: DeviceInfo = {
-      ip_address,
+      ipAddress,
       name: announce.name,
     };
 
@@ -35,7 +35,7 @@ export class DeviceCollection {
     const rows = await db
       .select({ ...getTableColumns(TagTable), user_name: UserTable.name })
       .from(TagTable)
-      .innerJoin(UserTable, eq(TagTable.user_id, UserTable.id))
+      .innerJoin(UserTable, eq(TagTable.userId, UserTable.id))
       .where(eq(UserTable.paidUp, true));
 
     const tags = rows.map((r) => ({ tag_name: r.description, member_name: r.user_name, code: r.code }));

@@ -62,7 +62,7 @@ export const TagCodeLength = 64;
 
 export const TagTable = pgTable("tag", {
   id: uuid().primaryKey(),
-  user_id: uuid("user_id").references(() => UserTable.id),
+  userId: uuid("user_id").references(() => UserTable.id),
   code: varchar({ length: TagCodeLength }).notNull().unique(),
   description: varchar({ length: 128 }).notNull(),
   created: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
@@ -71,7 +71,7 @@ export const TagTable = pgTable("tag", {
 
 export const TagRelations = relations(TagTable, ({ one }) => ({
   user: one(UserTable, {
-    fields: [TagTable.user_id],
+    fields: [TagTable.userId],
     references: [UserTable.id],
   }),
 }));
@@ -80,7 +80,7 @@ export const ActivityLogActionEnum = pgEnum("activity_log_action", ActivityLogAc
 
 export const ActivityLogTable = pgTable("activity_log", {
   id: uuid().primaryKey(),
-  user_id: uuid("user_id").references(() => UserTable.id),
+  userId: uuid("user_id").references(() => UserTable.id),
   action: ActivityLogActionEnum().notNull(),
   code: varchar({ length: TagCodeLength }).notNull(),
   created: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
@@ -88,7 +88,7 @@ export const ActivityLogTable = pgTable("activity_log", {
 
 export const ActivityLogRelations = relations(ActivityLogTable, ({ one }) => ({
   user: one(UserTable, {
-    fields: [ActivityLogTable.user_id],
+    fields: [ActivityLogTable.userId],
     references: [UserTable.id],
   }),
 }));
@@ -96,7 +96,7 @@ export const ActivityLogRelations = relations(ActivityLogTable, ({ one }) => ({
 export const DeviceTable = pgTable("device", {
   id: uuid().primaryKey(),
   name: varchar({ length: DeviceNameLength }).notNull().unique(),
-  ip_address: varchar({ length: IpAddressLength }).notNull(),
+  ipAddress: varchar("ip_address", { length: IpAddressLength }).notNull(),
   created: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
   updated: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
 });
@@ -117,12 +117,12 @@ export const PaymentStatusEnum = pgEnum("payment_status", PaymentStatus);
 
 export const PaymentTable = pgTable("payment", {
   id: varchar({ length: GoCardlessPaymentIdLength }).primaryKey(),
-  user_id: uuid("user_id")
+  userId: uuid("user_id")
     .references(() => UserTable.id)
     .notNull(),
   status: PaymentStatusEnum().notNull(),
   amount: numeric({ scale: 2, precision: 10 }).notNull(),
-  charge_date: date({ mode: "date" }).notNull(),
+  chargeDate: date("charge_date", { mode: "date" }).notNull(),
   description: varchar({ length: 100 }).notNull(),
   created: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
   updated: timestamp({ withTimezone: false, mode: "date" }).notNull().default(UTC_NOW),
@@ -130,7 +130,7 @@ export const PaymentTable = pgTable("payment", {
 
 export const PaymentRelations = relations(PaymentTable, ({ one }) => ({
   user: one(UserTable, {
-    fields: [PaymentTable.user_id],
+    fields: [PaymentTable.userId],
     references: [UserTable.id],
   }),
 }));
@@ -142,7 +142,7 @@ export const TaskLogTable = pgTable("task_log", {
     .primaryKey()
     .default(sql`gen_random_uuid()`),
   level: TaskLogLevelEnum().notNull(),
-  job_started: timestamp({ withTimezone: false, mode: "date", precision: 3 }).notNull(),
+  jobStarted: timestamp("job_started", { withTimezone: false, mode: "date", precision: 3 }).notNull(),
   type: varchar({ length: 50 }).notNull(),
   notes: text(),
   data: jsonb()

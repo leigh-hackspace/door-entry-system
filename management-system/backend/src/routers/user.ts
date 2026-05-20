@@ -1,5 +1,5 @@
 import { SearchArgs, UserDataModel, UUID, withId } from "@/model";
-import { RowSelection } from "@door-entry-management-system/common";
+import { RowSelection, UserCreateSchema, UserUpdateSchema } from "@door-entry-management-system/common";
 import * as v from "valibot";
 import { tRPC } from "./trpc.ts";
 
@@ -15,11 +15,15 @@ export function getUserRouter() {
       return dataModel.getOne(ctx.session.user, input);
     }),
 
-    create: tRPC.ProtectedProcedure.input(v.parser(dataModel.getCreateSchema())).mutation(async ({ ctx, input }) => {
+    getUserPayments: tRPC.ProtectedProcedure.input(v.parser(UUID)).query(async ({ ctx, input }) => {
+      return dataModel.getUserPayments(ctx.session.user, input);
+    }),
+
+    create: tRPC.ProtectedProcedure.input(v.parser(UserCreateSchema)).mutation(async ({ ctx, input }) => {
       return dataModel.create(ctx.session.user, input!);
     }),
 
-    update: tRPC.ProtectedProcedure.input(v.parser(withId(dataModel.getUpdateSchema()))).mutation(async ({ ctx, input: [id, fields] }) => {
+    update: tRPC.ProtectedProcedure.input(v.parser(withId(UserUpdateSchema))).mutation(async ({ ctx, input: [id, fields] }) => {
       return dataModel.update(ctx.session.user, id, fields);
     }),
 

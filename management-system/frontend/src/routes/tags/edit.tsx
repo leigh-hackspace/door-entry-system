@@ -13,7 +13,7 @@ export function TagEdit(props: RouteSectionProps) {
   const [tag, { mutate }] = createResource(() => tRPC.Tag.getOne.query(props.params.id));
   const [submittedCount, setSubmittedCount] = createSignal(0);
 
-  const formSchema = user()?.role === "admin" ? TagUpdateSchema : v.omit(TagUpdateSchema, ["user_id"]);
+  const formSchema = user()?.role === "admin" ? TagUpdateSchema : v.omit(TagUpdateSchema, ["userId"]);
 
   const onChange = (data: TagUpdate) => mutate({ ...tag()!, ...data });
 
