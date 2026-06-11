@@ -1,5 +1,6 @@
 import { Config } from "@/config";
 import { ActivityLogTable, db, DeviceTable, TagTable, UserTable } from "@/db";
+import { assertOneRecord } from "@/model";
 import type { ActivityLogAction, DeviceInfo } from "@door-entry-management-system/common";
 import { WebClient } from "@slack/web-api";
 import { eq } from "drizzle-orm";
@@ -296,36 +297,38 @@ export class DeviceConnection implements PublicDeviceInterface {
     let action: ActivityLogAction;
     let userId: string | null = null;
 
-    if (req.allowed) {
-      action = "allowed";
-
-      if (tag) {
+    if (tag) {
+      if (tag.userId) {
         userId = tag.userId;
 
-        await this.announceToSlack(`${tag.userName} has entered the hackspace`);
-      }
-    } else {
-      if (tag) {
-        if (tag.userId) {
-          action = "denied-blocked";
+        const user = assertOneRecord(
+          await db
+            .select()
+            .from(UserTable).where(eq(UserTable.id, tag.userId)),
+        );
 
-          await this.announceToSlack(`${tag.userName} has been denied`);
+        if (user.paidUp) {
+          action = "allowed";
+
+          await this.announceToSlack(`${tag.userName} has entered the hackspace`);
         } else {
-          action = "denied-unassigned";
-
-          DeviceEvents.emit("unknownScans", {
-            code: req.code,
-            time: new Date(),
-          });
+          action = "denied-blocked";
         }
       } else {
-        action = "denied-unknown-code";
+        action = "denied-unassigned";
 
         DeviceEvents.emit("unknownScans", {
           code: req.code,
           time: new Date(),
         });
       }
+    } else {
+      action = "denied-unknown-code";
+
+      DeviceEvents.emit("unknownScans", {
+        code: req.code,
+        time: new Date(),
+      });
     }
 
     await db.insert(ActivityLogTable).values({ id, userId, code: req.code, action });

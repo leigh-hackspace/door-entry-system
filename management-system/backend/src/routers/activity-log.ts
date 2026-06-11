@@ -25,13 +25,13 @@ export const ActivityLogRouter = tRPC.router({
       const condition = and(quickSearchCondition, user_id ? eq(ActivityLogTable.userId, user_id) : undefined);
 
       const query = db
-        .select({ ...getTableColumns(ActivityLogTable), user_name: UserTable.name })
+        .select({ ...getTableColumns(ActivityLogTable), userName: UserTable.name })
         .from(ActivityLogTable)
         .leftJoin(UserTable, eq(ActivityLogTable.userId, UserTable.id))
         .where(condition)
         .limit(take)
         .offset(skip)
-        .orderBy(toDrizzleOrderBy(ActivityLogTable, orderBy, { user_name: UserTable.name }));
+        .orderBy(toDrizzleOrderBy(ActivityLogTable, orderBy, { userName: UserTable.name }));
 
       const rows = await query;
 

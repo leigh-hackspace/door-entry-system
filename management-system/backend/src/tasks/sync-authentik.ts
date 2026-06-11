@@ -14,8 +14,8 @@ export class SyncAuthentikTask extends Task {
 
     const res = await authentikService.getAllUsers();
 
-    let addedUsers = 0,
-      updatedUsers = 0;
+    let addedUsers = 0;
+    let updatedUsers = 0;
 
     for (const apiUser of res.results) {
       if (signal.aborted) return;

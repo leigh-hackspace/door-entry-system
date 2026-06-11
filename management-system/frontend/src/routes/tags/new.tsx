@@ -13,8 +13,15 @@ export function TagNew(props: RouteSectionProps) {
 
   const formSchema = user()?.role === "admin" ? TagCreateSchema : v.omit(TagCreateSchema, ["userId"]);
 
-  const onChange = (data: Partial<TagCreate>) => {
-    setTag({ ...tag(), ...data });
+  const onChange = async (data: Partial<TagCreate>) => {
+    const updated = { ...tag()!, ...data };
+
+    if ((updated.description ?? "").length === 0 && updated.userId) {
+      const user = await tRPC.User.getOne.query(updated.userId);
+      updated.description = `Tag for ${user.name}`;
+    }
+
+    setTag(updated);
   };
 
   const onSave = async () => {

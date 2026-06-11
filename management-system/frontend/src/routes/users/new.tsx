@@ -8,7 +8,7 @@ import * as v from "valibot";
 export function UserNew(props: RouteSectionProps) {
   const { navigate, tRPC, toastService } = beginPage("admin");
 
-  const [user, setUser] = createSignal<Partial<UserCreate>>({});
+  const [user, setUser] = createSignal<Partial<UserCreate>>({ role: "user", notes: "" });
   const [submittedCount, setSubmittedCount] = createSignal(0);
 
   const onChange = (data: Partial<UserCreate>) => {

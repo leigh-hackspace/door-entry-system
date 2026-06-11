@@ -67,12 +67,6 @@ export function NavBar(props: Props) {
                   📟 Devices
                 </a>
               </li>
-
-              <li class="nav-item">
-                <a class="nav-link active" href="/task-log">
-                  🪵 Tasks
-                </a>
-              </li>
             </Show>
 
             <li class="nav-item">
@@ -86,6 +80,14 @@ export function NavBar(props: Props) {
                 🪵 Scans
               </a>
             </li>
+
+            <Show when={user()?.role === "admin"}>
+              <li class="nav-item">
+                <a class="nav-link active" href="/task-log">
+                  🪵 Tasks
+                </a>
+              </li>
+            </Show>
           </ul>
 
           <Show when={user()}>

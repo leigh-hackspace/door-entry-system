@@ -1,5 +1,5 @@
-import * as v from "valibot";
 import { Config } from "@/config";
+import * as v from "valibot";
 
 export class AuthentikService {
   public async getTokenWithAuthenticationCode(code: string, return_auth: string) {
@@ -49,7 +49,7 @@ export class AuthentikService {
   }
 
   public async getAllUsers() {
-    const userRes = await fetch(`https://${Config.DE_AUTHENTIK_HOST}/api/v3/core/users/`, {
+    const userRes = await fetch(`https://${Config.DE_AUTHENTIK_HOST}/api/v3/core/users/?page_size=1000`, {
       method: "GET",
       headers: [
         ["Accept", "application/json"],

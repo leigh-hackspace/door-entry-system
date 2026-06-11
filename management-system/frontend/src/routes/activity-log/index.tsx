@@ -19,12 +19,12 @@ import * as v from "valibot";
 const ActivityLogTableSchema = v.object({
   code: v.pipe(v.string(), v.title("Code"), v.metadata(FieldMetadata({ icon: "🔑", width: "140px" }))),
   action: v.pipe(v.string(), v.title("Action"), v.metadata(FieldMetadata({ icon: "🔘", width: "200px" }))),
-  user_name: v.nullable(v.pipe(v.string(), v.title("User Name"), v.metadata(FieldMetadata({ icon: "👤" })))),
+  userName: v.nullable(v.pipe(v.string(), v.title("User Name"), v.metadata(FieldMetadata({ icon: "👤" })))),
   created: v.pipe(v.date(), v.title("Created"), v.metadata(FieldMetadata({ width: "140px" }))),
 });
 
 export function ActivityLogs(props: RouteSectionProps) {
-  const { tRPC } = beginPage(["admin", "user"]);
+  const { tRPC, toastService } = beginPage(["admin", "user"]);
 
   const [rows, setRows] = createSignal<RowData<ActivityLogSearchRecord>>(RowDataDefault);
 
@@ -48,6 +48,14 @@ export function ActivityLogs(props: RouteSectionProps) {
 
   createEffect(fetchRows);
 
+  const onRowClick = async (row: ActivityLogSearchRecord) => {
+    const type = "text/plain";
+    const clipboardItem = new ClipboardItem({ [type]: row.code });
+    await navigator.clipboard.write([clipboardItem]);
+
+    toastService.addToast({ title: "Copied", message: "Tag code copied", life: 2_000 });
+  };
+
   return (
     <main>
       <Card colour="primary">
@@ -56,7 +64,12 @@ export function ActivityLogs(props: RouteSectionProps) {
           <div class="p-2">
             <SearchBar search={searchSignal} />
           </div>
-          <MagicBrowser schema={ActivityLogTableSchema} rowData={rows()} cursor={cursorSignal} />
+          <MagicBrowser
+            schema={ActivityLogTableSchema}
+            rowData={rows()}
+            cursor={cursorSignal}
+            onRowClick={onRowClick}
+          />
         </Card.Body>
       </Card>
     </main>

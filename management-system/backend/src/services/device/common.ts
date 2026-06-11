@@ -43,7 +43,7 @@ export type IncomingLatchChanged = v.InferInput<typeof IncomingLatchChanged>;
 
 export const IncomingTagScanned = v.object({
   type: v.literal("tag_scanned"),
-  allowed: v.boolean(),
+  allowed: v.boolean(), // Whether or not the Pico granted access
   code: v.string(),
 });
 export type IncomingTagScanned = v.InferInput<typeof IncomingTagScanned>;
